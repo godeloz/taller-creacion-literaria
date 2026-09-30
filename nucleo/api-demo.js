@@ -14,6 +14,7 @@ const DINAMICAS = [
   { slug: 'cutup', nombre: 'Cut Up', descripcion: 'Construya un relato alrededor de frases ajenas, al modo de Burroughs.', color: '#00A884', estado: 'abierta', orden: 3, en_menu: true, desbloqueo: null },
   { slug: 's7', nombre: 'S+7', descripcion: 'Reescriba un cuento con el diccionario, al modo oulipiano.', color: '#FF8A00', estado: 'abierta', orden: 4, en_menu: true, desbloqueo: null },
   { slug: 'forma', nombre: 'La forma de las historias', descripcion: 'Trace el arco emocional de una historia, al modo de Vonnegut.', color: '#8B6CFF', estado: 'abierta', orden: 5, en_menu: true, desbloqueo: null },
+  { slug: 'fallar', nombre: 'Fallar mejor', descripcion: 'Revise un borrador con control de cambios y compárelo con la versión final.', color: '#5B3DF5', estado: 'abierta', orden: 6, en_menu: true, desbloqueo: null },
 ];
 
 const INSIGNIAS = [
@@ -44,15 +45,28 @@ const PERSONAS = [
 ];
 
 
+async function contenidoDePlantilla(din, m) {
+  if (!m.paquete?.plantilla) return [];
+  const js = await (await fetch(new URL('../' + m.paquete.plantilla, import.meta.url))).json();
+  return m.paquete.validar(js).items.map((it, i) => ({ dinamica: din, ...it, activo: true, orden: i + 1, actualizado: new Date().toISOString() }));
+}
+
+// Una demo guardada antes de que existiera una dinámica la recibe con su contenido de ejemplo.
+async function completarDemo(db) {
+  const faltan = DINAMICAS.filter(d => !db.dinamicas.some(x => x.slug === d.slug));
+  if (!faltan.length) return false;
+  const { MODULOS } = await import('../modulos/registro.js');
+  for (const d of faltan) {
+    db.dinamicas.push({ ...d });
+    if (MODULOS[d.slug]) db.contenidos.push(...await contenidoDePlantilla(d.slug, (await MODULOS[d.slug]()).default));
+  }
+  return true;
+}
+
 async function sembrar() {
   const { MODULOS } = await import('../modulos/registro.js');
   const contenidos = [];
-  for (const din of Object.keys(MODULOS)) {
-    const m = (await MODULOS[din]()).default;
-    if (!m.paquete?.plantilla) continue;
-    const js = await (await fetch(new URL('../' + m.paquete.plantilla, import.meta.url))).json();
-    m.paquete.validar(js).items.forEach((it, i) => contenidos.push({ dinamica: din, ...it, activo: true, orden: i + 1, actualizado: new Date().toISOString() }));
-  }
+  for (const din of Object.keys(MODULOS)) contenidos.push(...await contenidoDePlantilla(din, (await MODULOS[din]()).default));
   const hoy = hoyISO();
   const ayer = sumarDias(hoy, -1);
   const db = {
@@ -102,6 +116,7 @@ async function sembrar() {
 export async function crearApiDemo() {
   let db = local(CLAVE);
   if (!db) { db = await sembrar(); local(CLAVE, db); }
+  else if (await completarDemo(db)) local(CLAVE, db);
   const guardar = () => local(CLAVE, db);
   const oyentes = [];
   const emitir = (tabla, evento, nuevo) => { guardar(); oyentes.filter(o => o.tabla === tabla).forEach(o => o.cb({ eventType: evento, new: nuevo })); };
@@ -116,6 +131,9 @@ export async function crearApiDemo() {
   const ahora = () => new Date().toISOString();
   const pf = id => { const p = db.perfiles.find(x => x.id === id); return p && { id: p.id, nombre: p.nombre, avatar: p.avatar, foto_url: p.foto_url, rol: p.rol, modo: p.modo, grupo_id: p.grupo_id }; };
   const hizoReto = f => db.entregas.some(e => e.autor === yo.id && e.reto_fecha === f);
+  // Fallar mejor: las revisiones de un texto de la app (y su versión final) se abren al publicar la propia.
+  const hizoItem = (din, item) => db.entregas.some(e => e.autor === yo.id && e.dinamica === din && e.item_id === item);
+  const aCiegas = e => e.dinamica === 'fallar' && !!e.item_id && !e.item_id.startsWith('propio-');
   // Misma regla que la base de datos (puede_ver_autor).
   const puedeVer = a => {
     if (!yo) return false;
@@ -126,7 +144,8 @@ export async function crearApiDemo() {
     return ['participante', 'observador'].includes(yo.modo) && el.modo === 'participante' && !!yo.grupo_id && yo.grupo_id === el.grupo_id;
   };
   const visible = e => tutor() || e.autor === yo.id ||
-    (e.estado === 'publicada' && puedeVer(e.autor) && (!e.reto_fecha || e.reto_fecha < hoyISO() || hizoReto(e.reto_fecha) || yo.modo === 'observador'));
+    (e.estado === 'publicada' && puedeVer(e.autor) && (!e.reto_fecha || e.reto_fecha < hoyISO() || hizoReto(e.reto_fecha) || yo.modo === 'observador')
+      && (!aCiegas(e) || hizoItem(e.dinamica, e.item_id) || yo.modo === 'observador'));
   const comentarioVisible = c => {
     const e = db.entregas.find(x => x.id === c.entrega_id);
     return e && visible(e) && puedeVer(c.autor) && (!c.privado || c.autor === yo.id || tutor() || e.autor === yo.id);
@@ -191,6 +210,7 @@ export async function crearApiDemo() {
       return db.contenidos
         .filter(c => c.dinamica === din && (todos ? tutor() || c.activo : c.activo))
         .filter(c => din !== 'reto' || tutor() || asignadosVisibles.has(c.item_id))
+        .filter(c => din !== 'fallar' || tutor() || !c.item_id.startsWith('_autora-') || hizoItem(din, c.item_id.slice(8)))
         .sort((a, b) => a.orden - b.orden)
         .map(c => structuredClone(c));
     },
@@ -275,6 +295,7 @@ export async function crearApiDemo() {
     async editarEntrega(id, c) {
       const e = db.entregas.find(x => x.id === id);
       if (!e || e.autor !== yo.id) throw new Error('Solo puede editar sus propias entregas');
+      if (aCiegas(e) && 'datos' in c && JSON.stringify(c.datos?.runs) !== JSON.stringify(e.datos?.runs)) throw new Error('Su versión ya está publicada y no se puede cambiar. Solo puede completar sus explicaciones.');
       for (const k of ['titulo', 'texto', 'vista', 'datos']) if (k in c) e[k] = c[k];
       e.palabras = contarPalabras(e.texto); e.editada = true; e.actualizado = ahora();
       emitir('entregas', 'UPDATE', e);

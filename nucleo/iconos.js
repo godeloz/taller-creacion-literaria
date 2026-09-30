@@ -52,6 +52,11 @@ const P = {
   imprimir: '<path d="M7 9V4h10v5"/><rect x="4" y="9" width="16" height="7" rx="2"/><path d="M7 14h10v6H7z"/>',
   llave: '<circle cx="8" cy="15" r="4"/><path d="M11 12l8-8M16 7l2 2M14 9l2 2"/>',
   medalla: '<circle cx="12" cy="15" r="5"/><path d="M8.5 11L6 3h4l2 5 2-5h4l-2.5 8"/>',
+  // Fallar mejor: revisión con control de cambios
+  revision: '<path d="M4 7h7M4 17h9"/><path d="M3 12h12"/><path d="M14.5 17.5L20 7.5M18.2 6.5l2.6 1.4"/>',
+  tachar: '<path d="M7 17c1 1.3 2.8 2 5 2 2.8 0 5-1.3 5-3.6 0-1.1-.5-2-1.4-2.6"/><path d="M16.5 7C15.6 5.8 14 5 12 5 9.3 5 7.3 6.3 7.3 8.4c0 1.3.7 2.2 1.9 2.8"/><path d="M4 12h16"/>',
+  deshacer: '<path d="M9 4L4 9l5 5"/><path d="M4 9h10.5a5.5 5.5 0 0 1 0 11H11"/>',
+  rehacer: '<path d="M15 4l5 5-5 5"/><path d="M20 9H9.5a5.5 5.5 0 0 0 0 11H13"/>',
   // reacciones
   gusta: '<path d="M7 11v9H4v-9z"/><path d="M7 11l4-7c1.2 0 2 .9 2 2v3h5a2 2 0 0 1 2 2.3l-1.2 6A2 2 0 0 1 16.8 20H7"/>',
   encanta: '<path d="M12 20s-7-4.4-7-10a4 4 0 0 1 7-2.6A4 4 0 0 1 19 10c0 5.6-7 10-7 10z"/>',
