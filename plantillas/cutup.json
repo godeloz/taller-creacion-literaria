@@ -1,0 +1,46 @@
+{
+  "tipo": "cutup",
+  "nombre": "Ejemplo de paquete de Cut Up (textos de dominio público)",
+  "juegos": [
+    {
+      "id": "ejemplo-clasicos",
+      "nombre": "Tres clásicos",
+      "parrafos": 4,
+      "frases_minimas": 3,
+      "palabras_minimas": 40,
+      "fuentes": [
+        {
+          "id": "cervantes-quijote",
+          "titulo": "Don Quijote de la Mancha",
+          "autor": "Miguel de Cervantes",
+          "frases": [
+            "En un lugar de la Mancha, de cuyo nombre no quiero acordarme, no ha mucho tiempo que vivía un hidalgo.",
+            "Frisaba la edad de nuestro hidalgo con los cincuenta años.",
+            "Era de complexión recia, seco de carnes, enjuto de rostro, gran madrugador y amigo de la caza.",
+            "Se le secó el celebro, de manera que vino a perder el juicio."
+          ]
+        },
+        {
+          "id": "becquer-rimas",
+          "titulo": "Rimas",
+          "autor": "Gustavo Adolfo Bécquer",
+          "frases": [
+            "Volverán las oscuras golondrinas en tu balcón sus nidos a colgar.",
+            "¿Qué es poesía?, dices mientras clavas en mi pupila tu pupila azul.",
+            "Aquellas que aprendieron nuestros nombres, esas no volverán."
+          ]
+        },
+        {
+          "id": "dario-rey-burgues",
+          "titulo": "El rey burgués",
+          "autor": "Rubén Darío",
+          "frases": [
+            "¡Amigo! El cielo está opaco; el aire, frío; el día, triste.",
+            "Había en una ciudad inmensa y brillante un rey muy poderoso.",
+            "Y el poeta tenía hambre."
+          ]
+        }
+      ]
+    }
+  ]
+}

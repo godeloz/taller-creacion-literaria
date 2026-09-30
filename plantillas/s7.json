@@ -1,0 +1,26 @@
+{
+  "tipo": "s7",
+  "nombre": "Ejemplo de paquete de S+7 (texto de dominio público)",
+  "textos": [
+    {
+      "id": "ejemplo-quijote",
+      "titulo": "El hidalgo",
+      "autor": "Miguel de Cervantes",
+      "parrafos": [
+        "En un lugar de la Mancha, de cuyo nombre no quiero acordarme, no ha mucho tiempo que vivía un hidalgo de los de lanza en astillero, adarga antigua, rocín flaco y galgo corredor."
+      ],
+      "clases": {
+        "lugar": "sust", "mancha": "sust", "nombre": "sust", "quiero": "verb", "acordarme": "verb",
+        "mucho": "adv", "tiempo": "sust", "vivía": "verb", "hidalgo": "sust", "lanza": "sust",
+        "astillero": "sust", "adarga": "sust", "antigua": "adj", "rocín": "sust", "flaco": "adj",
+        "galgo": "sust", "corredor": "adj"
+      }
+    }
+  ],
+  "diccionario": {
+    "sust": ["abanico", "abeja", "abismo", "adarga", "agua", "aguja", "ala", "alba", "aldea", "almohada", "ancla", "arena", "armario", "astillero", "baúl", "barco", "bosque", "caballo", "calle", "campana", "cárcel", "cielo", "ciudad", "cuchillo", "espada", "espejo", "fuego", "galgo", "gato", "hidalgo", "hilo", "isla", "jardín", "lámpara", "lanza", "libro", "lugar", "luna", "mancha", "mano", "mar", "molino", "montaña", "nombre", "nube", "puerta", "reloj", "río", "rocín", "sombra", "tiempo", "torre", "ventana", "viento"],
+    "adj": ["alto", "antiguo", "antigua", "azul", "blanco", "breve", "claro", "corredor", "dulce", "flaco", "frío", "grande", "hondo", "largo", "lento", "negro", "nuevo", "oscuro", "pequeño", "raro", "rojo", "seco", "triste", "viejo"],
+    "verb": ["abrir", "acordarme", "andar", "beber", "caer", "cantar", "comer", "correr", "decir", "dormir", "escribir", "hablar", "leer", "llorar", "mirar", "morir", "nacer", "olvidar", "querer", "quiero", "reír", "saber", "soñar", "subir", "vivía", "volar"],
+    "adv": ["ahora", "antes", "apenas", "aquí", "ayer", "bien", "cerca", "después", "lejos", "mal", "mucho", "nunca", "poco", "pronto", "siempre", "tarde", "temprano", "todavía"]
+  }
+}

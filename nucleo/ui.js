@@ -64,17 +64,43 @@ export function saludo() {
 }
 
 // ---------- sanitizar HTML de entregas ----------
-const PERMITIDAS = new Set(['P', 'BR', 'EM', 'STRONG', 'I', 'B', 'SPAN', 'DIV', 'H1', 'H2', 'H3', 'H4',
-  'BLOCKQUOTE', 'UL', 'OL', 'LI', 'PRE', 'SMALL', 'HR', 'U', 'S']);
-const PELIGROSAS = new Set(['SCRIPT', 'STYLE', 'IFRAME', 'OBJECT', 'EMBED', 'SVG', 'MATH', 'TEMPLATE',
-  'LINK', 'META', 'FORM', 'INPUT', 'BUTTON', 'TEXTAREA', 'SELECT', 'IMG', 'VIDEO', 'AUDIO', 'NOSCRIPT']);
+const PERMITIDAS = new Set(['p', 'br', 'em', 'strong', 'i', 'b', 'span', 'div', 'h1', 'h2', 'h3', 'h4',
+  'blockquote', 'ul', 'ol', 'li', 'pre', 'small', 'hr', 'u', 's', 'figure', 'figcaption']);
+// Dibujos (La forma de las historias): solo formas simples, sin enlaces ni scripts.
+const SVG_PERMITIDAS = new Set(['svg', 'g', 'path', 'circle', 'line', 'rect', 'text', 'tspan', 'defs',
+  'lineargradient', 'stop', 'polyline', 'title']);
+const SVG_ATRIBUTOS = new Set(['viewbox', 'width', 'height', 'd', 'cx', 'cy', 'r', 'x', 'y', 'x1', 'y1', 'x2', 'y2',
+  'fill', 'stroke', 'stroke-width', 'stroke-dasharray', 'stroke-linecap', 'stroke-linejoin', 'opacity',
+  'fill-opacity', 'stroke-opacity', 'offset', 'stop-color', 'gradientunits', 'id', 'text-anchor', 'font-size',
+  'font-family', 'letter-spacing', 'points', 'rx', 'ry', 'role', 'aria-label', 'xmlns', 'preserveaspectratio']);
+const PELIGROSAS = new Set(['script', 'style', 'iframe', 'object', 'embed', 'math', 'template', 'link', 'meta',
+  'form', 'input', 'button', 'textarea', 'select', 'img', 'video', 'audio', 'noscript', 'foreignobject', 'a', 'use', 'image']);
 
-function limpiar(nodo) {
+function valorSeguro(v) {
+  const t = String(v).toLowerCase().replace(/\s+/g, '');
+  if (/javascript:|data:|vbscript:|expression\(/.test(t)) return false;
+  if (t.includes('url(') && !/^url\(#[\w-]+\)$/.test(t)) return false;
+  return true;
+}
+
+function limpiar(nodo, enSvg = false) {
   for (const hijo of [...nodo.childNodes]) {
     if (hijo.nodeType === 3) continue;
     if (hijo.nodeType !== 1) { hijo.remove(); continue; }
-    if (PELIGROSAS.has(hijo.tagName)) { hijo.remove(); continue; }
-    if (!PERMITIDAS.has(hijo.tagName)) {
+    const tag = hijo.tagName.toLowerCase();
+    if (PELIGROSAS.has(tag)) { hijo.remove(); continue; }
+    const esSvg = enSvg || tag === 'svg';
+    if (esSvg) {
+      if (!SVG_PERMITIDAS.has(tag)) { hijo.remove(); continue; }
+      for (const a of [...hijo.attributes]) {
+        const n = a.name.toLowerCase();
+        if ((SVG_ATRIBUTOS.has(n) || (n === 'class' && /^[\w\s-]*$/.test(a.value))) && valorSeguro(a.value)) continue;
+        hijo.removeAttribute(a.name);
+      }
+      limpiar(hijo, true);
+      continue;
+    }
+    if (!PERMITIDAS.has(tag)) {
       limpiar(hijo);
       hijo.replaceWith(...hijo.childNodes);
       continue;

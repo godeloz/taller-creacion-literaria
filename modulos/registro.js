@@ -17,4 +17,7 @@ export const MODULOS = {
   reto: () => import('./reto.js'),
   maraton: () => import('./maraton.js'),
   poema: () => import('./poema.js'),
+  cutup: () => import('./cutup.js'),
+  s7: () => import('./s7.js'),
+  forma: () => import('./forma.js'),
 };

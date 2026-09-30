@@ -22,8 +22,11 @@ export default async function vistaEntrega(cont, { params }) {
       if (c) {
         const etiqueta = e.dinamica === 'reto' ? `Reto del ${fechaLarga(e.reto_fecha)}`
           : e.dinamica === 'maraton' ? 'Carta del Maratón'
-          : e.dinamica === 'poema' ? 'Poema fuente' : d?.nombre || '';
-        consigna = `<div class="consigna-ref"><b>${esc(etiqueta)}</b>${esc(c.datos.titulo || '')}${c.datos.autor ? `, de ${esc(c.datos.autor)}` : ''}</div>`;
+          : e.dinamica === 'poema' ? 'Poema fuente'
+          : e.dinamica === 'cutup' ? 'Juego de frases'
+          : e.dinamica === 's7' ? 'Texto original'
+          : e.dinamica === 'forma' ? 'Consigna' : d?.nombre || '';
+        consigna = `<div class="consigna-ref"><b>${esc(etiqueta)}</b>${esc(c.datos.titulo || c.datos.nombre || '')}${c.datos.autor ? `, de ${esc(c.datos.autor)}` : ''}</div>`;
       }
     } catch { /* la consigna es opcional */ }
   }

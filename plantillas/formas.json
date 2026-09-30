@@ -1,0 +1,16 @@
+{
+  "tipo": "formas",
+  "nombre": "Ejemplo de paquete de La forma de las historias",
+  "consignas": [
+    {
+      "id": "ejemplo-forma-cuento",
+      "titulo": "La forma de un cuento",
+      "consigna": "Elija un cuento que haya leído. Ubique en la cuadrícula sus momentos clave y escriba en cada punto qué ocurre. Cierre el arco con el nombre del cuento."
+    },
+    {
+      "id": "ejemplo-forma-libre",
+      "titulo": "Trazo libre",
+      "consigna": "Trace el arco de una historia cualquiera: una película, una anécdota familiar, un día de su vida."
+    }
+  ]
+}

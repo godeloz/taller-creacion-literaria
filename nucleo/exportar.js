@@ -8,7 +8,7 @@ async function consignaDe(e, cache = {}) {
   if (!(k in cache)) {
     try {
       const c = await estado.api.contenido(e.dinamica, e.item_id);
-      cache[k] = c ? (c.datos.titulo || '') + (c.datos.autor ? `, de ${c.datos.autor}` : '') : '';
+      cache[k] = c ? (c.datos.titulo || c.datos.nombre || '') + (c.datos.autor ? `, de ${c.datos.autor}` : '') : '';
     } catch { cache[k] = ''; }
   }
   return cache[k];

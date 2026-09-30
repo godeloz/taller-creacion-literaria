@@ -10,9 +10,9 @@ const DINAMICAS = [
   { slug: 'reto', nombre: 'Reto del día', descripcion: 'Un ejercicio corto, el mismo para todo el grupo, que cambia cada día.', color: '#FF6B4A', estado: 'abierta', orden: 0, en_menu: false, desbloqueo: null },
   { slug: 'maraton', nombre: 'Maratón de ejercicios', descripcion: 'Cartas de escritura para escribir mucho, escribir raro, escribir lo que no se había escrito antes.', color: '#4D7CFF', estado: 'abierta', orden: 1, en_menu: true, desbloqueo: null },
   { slug: 'poema', nombre: 'El poema desarmado', descripcion: 'Desmonte un poema y escriba otro con sus mismas palabras.', color: '#FF4F7B', estado: 'abierta', orden: 2, en_menu: true, desbloqueo: null },
-  { slug: 'cutup', nombre: 'Cut Up', descripcion: 'Construya un relato alrededor de frases ajenas, al modo de Burroughs.', color: '#00A884', estado: 'proximamente', orden: 3, en_menu: true, desbloqueo: null },
-  { slug: 's7', nombre: 'S+7', descripcion: 'Reescriba un cuento con el diccionario, al modo oulipiano.', color: '#FF8A00', estado: 'proximamente', orden: 4, en_menu: true, desbloqueo: null },
-  { slug: 'forma', nombre: 'La forma de las historias', descripcion: 'Trace el arco emocional de una historia, al modo de Vonnegut.', color: '#8B6CFF', estado: 'proximamente', orden: 5, en_menu: true, desbloqueo: null },
+  { slug: 'cutup', nombre: 'Cut Up', descripcion: 'Construya un relato alrededor de frases ajenas, al modo de Burroughs.', color: '#00A884', estado: 'abierta', orden: 3, en_menu: true, desbloqueo: null },
+  { slug: 's7', nombre: 'S+7', descripcion: 'Reescriba un cuento con el diccionario, al modo oulipiano.', color: '#FF8A00', estado: 'abierta', orden: 4, en_menu: true, desbloqueo: null },
+  { slug: 'forma', nombre: 'La forma de las historias', descripcion: 'Trace el arco emocional de una historia, al modo de Vonnegut.', color: '#8B6CFF', estado: 'abierta', orden: 5, en_menu: true, desbloqueo: null },
 ];
 
 const INSIGNIAS = [
@@ -37,20 +37,15 @@ const PERSONAS = [
   ['c5', 'Isabel Mora', 'creador', 'av-9'],
 ];
 
-function itemsDePlantilla(tipo, json) {
-  if (tipo === 'reto') return json.retos.map(({ id, ...d }) => ({ item_id: id, datos: d }));
-  if (tipo === 'maraton') return json.cartas.map(({ id, ...d }) => ({ item_id: id, datos: d }));
-  if (tipo === 'poema') return json.poemas.map(({ id, ...d }) => ({ item_id: id, datos: d }));
-  return [];
-}
 
 async function sembrar() {
-  const base = new URL('../plantillas/', import.meta.url);
-  const cargar = async n => (await fetch(new URL(n, base))).json();
-  const [retos, maraton, poemas] = await Promise.all([cargar('retos.json'), cargar('maraton.json'), cargar('poemas.json')]);
+  const { MODULOS } = await import('../modulos/registro.js');
   const contenidos = [];
-  for (const [din, js] of [['reto', retos], ['maraton', maraton], ['poema', poemas]]) {
-    itemsDePlantilla(din, js).forEach((it, i) => contenidos.push({ dinamica: din, ...it, activo: true, orden: i + 1, actualizado: new Date().toISOString() }));
+  for (const din of Object.keys(MODULOS)) {
+    const m = (await MODULOS[din]()).default;
+    if (!m.paquete?.plantilla) continue;
+    const js = await (await fetch(new URL('../' + m.paquete.plantilla, import.meta.url))).json();
+    m.paquete.validar(js).items.forEach((it, i) => contenidos.push({ dinamica: din, ...it, activo: true, orden: i + 1, actualizado: new Date().toISOString() }));
   }
   const hoy = hoyISO();
   const ayer = sumarDias(hoy, -1);

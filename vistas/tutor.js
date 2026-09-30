@@ -14,8 +14,8 @@ const SECCIONES = [
   ['contenido', 'subir', 'Contenido'],
   ['dinamicas', 'ajustes', 'Dinámicas'],
 ];
-const CON_CONTENIDO = ['reto', 'maraton', 'poema'];
-const CLAVE_PAQUETE = { reto: 'retos', maraton: 'cartas', poema: 'poemas' };
+const CON_CONTENIDO = ['reto', 'maraton', 'poema', 'cutup', 's7', 'forma'];
+const CLAVE_PAQUETE = { reto: 'retos', maraton: 'cartas', poema: 'poemas', cutup: 'juegos', s7: 'textos', forma: 'consignas' };
 
 export default async function tutor(cont, { params, query }) {
   if (!esTutor()) { cont.innerHTML = `<div class="contenedor">${vacio('Esta sección es solo para el tutor')}</div>`; return; }
@@ -140,7 +140,7 @@ async function clase(c) {
     const slug = selDin.value;
     if (slug === 'reto') { $('#campo-item', c).classList.add('oculto'); return; }
     $('#campo-item', c).classList.remove('oculto');
-    const items = await estado.api.contenidos(slug);
+    const items = (await estado.api.contenidos(slug)).filter(i => !i.item_id.startsWith('_'));
     const mod = await MODULOS[slug]?.();
     selItem.innerHTML = `<option value="">Libre: cada quien elige</option>` + items.map(i => `<option value="${esc(i.item_id)}">${esc(mod?.default.paquete?.describir(i.datos) || i.item_id)}</option>`).join('');
   };
@@ -289,9 +289,12 @@ async function contenido(c, query) {
     descargarArchivo(`plantilla-${din}.json`, t, 'application/json');
   };
   $('#p-exportar', c).onclick = () => {
-    const lista = items.map(i => ({ id: i.item_id, ...i.datos }));
     const tipo = CLAVE_PAQUETE[din];
-    descargarArchivo(`contenido-${din}-${hoyISO()}.json`, JSON.stringify({ tipo, nombre: `${dinamica(din)?.nombre} (${hoyISO()})`, [tipo]: lista }, null, 2), 'application/json');
+    const lista = items.filter(i => !i.item_id.startsWith('_')).map(i => ({ id: i.item_id, ...i.datos }));
+    const extra = {};
+    const dic = items.find(i => i.item_id === '_diccionario');
+    if (dic) { const { tipo: _t, ...resto } = dic.datos; extra.diccionario = resto; }
+    descargarArchivo(`contenido-${din}-${hoyISO()}.json`, JSON.stringify({ tipo, nombre: `${dinamica(din)?.nombre} (${hoyISO()})`, [tipo]: lista, ...extra }, null, 2), 'application/json');
   };
   c.querySelectorAll('[data-activo]').forEach(ch => ch.addEventListener('change', async () => {
     try { await estado.api.activarContenido(din, ch.dataset.activo, ch.checked); aviso(ch.checked ? 'Activado.' : 'Desactivado: ya no aparecerá a los estudiantes.'); }
