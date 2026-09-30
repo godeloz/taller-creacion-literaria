@@ -28,17 +28,20 @@ export function crearApiSupabase(CONFIG) {
     return e;
   };
 
+  // Nombre con el que quedó desplegada la Edge Function en Supabase (ver LEEME, paso 3).
+  const FUNCION_USUARIOS = 'funcion-usuarios';
+
   async function llamarFuncion(cuerpo) {
-    const { data, error } = await sb.functions.invoke('usuarios', { body: cuerpo });
+    const { data, error } = await sb.functions.invoke(FUNCION_USUARIOS, { body: cuerpo });
     if (!error) return data;
     const respuesta = error.context;
     if (respuesta && typeof respuesta.status === 'number') {
-      if (respuesta.status === 404) { const e = new Error('La función «usuarios» no está instalada en Supabase.'); e.sinFuncion = true; throw e; }
+      if (respuesta.status === 404) { const e = new Error('La función «funcion-usuarios» no está instalada en Supabase.'); e.sinFuncion = true; throw e; }
       let mensaje = error.message;
       try { mensaje = (await respuesta.json()).error || mensaje; } catch { /* sin cuerpo */ }
       throw new Error(mensaje);
     }
-    const e = new Error('No se pudo contactar la función «usuarios». ¿Está instalada?');
+    const e = new Error('No se pudo contactar la función «funcion-usuarios». ¿Está instalada?');
     e.sinFuncion = true;
     throw e;
   }
@@ -286,7 +289,7 @@ export function crearApiSupabase(CONFIG) {
     async quitarDeLista(email) {
       ok(await sb.from('invitados').delete().eq('email', email));
     },
-    // Crear cuentas y cambiar contraseñas exige la función «usuarios» de Supabase.
+    // Crear cuentas y cambiar contraseñas exige la función «funcion-usuarios» de Supabase.
     async crearCuenta(p) {
       return llamarFuncion({ accion: 'crear', ...p });
     },
