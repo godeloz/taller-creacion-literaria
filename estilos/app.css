@@ -353,9 +353,17 @@ body.enfoque .mesa-barra { top: 0; }
 .poema-barra { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-bottom: 18px; }
 .tablero-poema { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 20px; align-items: start; }
 .panel-poema { background: #fff; border-radius: var(--r-lg); overflow: hidden; }
-.panel-poema-cab { display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 14px 20px; border-bottom: 1px solid var(--linea); }
+.panel-poema-cab { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 12px; padding: 14px 20px; border-bottom: 1px solid var(--linea); }
 .fuente-poema { padding: 22px 20px; min-height: 50vh; }
 .fuente-poema.resaltada { background: #F0FAD6; }
+.conmutador { display: inline-flex; background: var(--fondo); border-radius: 999px; padding: 3px; gap: 2px; }
+.conmutador button { display: inline-flex; align-items: center; gap: 6px; border: 0; background: transparent; border-radius: 999px; padding: 6px 12px; font-size: 13px; font-weight: 700; color: var(--tenue); min-height: 32px; }
+.conmutador button:hover { color: var(--tinta); }
+.conmutador button.on { background: var(--tinta); color: #fff; }
+.poema-lectura { font-family: var(--f-lectura); font-size: 17px; line-height: 1.75; color: var(--tinta); }
+/* Cada verso ocupa una línea; si la pantalla es angosta, la continuación queda sangrada, como en los libros de poesía. */
+.linea-lectura { white-space: pre-wrap; padding-left: 1.6em; text-indent: -1.6em; }
+.linea-lectura.vacia { height: .9em; }
 .poema-titulo { font-family: var(--f-display); font-size: 24px; font-weight: 500; }
 .poema-autor { font-family: var(--f-mono); font-size: 12px; letter-spacing: .1em; text-transform: uppercase; color: var(--tenue); margin: 2px 0 18px; }
 .verso { display: flex; flex-wrap: wrap; gap: 5px; min-height: 34px; align-items: center; padding: 2px 0; }
