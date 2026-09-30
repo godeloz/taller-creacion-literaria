@@ -140,7 +140,7 @@ async function formularioPersona({ fila = null, tieneCuenta = false } = {}) {
       await estado.api.guardarPersona(r);
       await modal({
         titulo: 'Falta un paso en Supabase',
-        cuerpo: `<p style="margin-top:0"><b>${esc(r.nombre)}</b> quedó en la lista del taller, pero la app todavía no puede crear cuentas: falta instalar la función <code>usuarios</code> (ver el LEEME).</p>
+        cuerpo: `<p style="margin-top:0"><b>${esc(r.nombre)}</b> quedó en la lista del taller, pero la app todavía no puede crear cuentas: falta instalar la función <code>funcion-usuarios</code> (ver el LEEME).</p>
           <p>Mientras tanto, cree la cuenta en Supabase › Authentication › Users › Add user, con este correo y esta contraseña, y marque <b>Auto Confirm User</b>:</p>
           <pre class="credenciales">${esc(r.email)}\n${esc(r.password)}</pre>`,
         acciones: [{ texto: 'Entendido', clase: 'btn-primario' }],
@@ -172,7 +172,7 @@ async function cambiarClave(p) {
     await estado.api.cambiarClaveDe(p.id, r.c);
     await mostrarCredenciales(p.nombre, p.email, r.c);
   } catch (e) {
-    if (e.sinFuncion) aviso('Para cambiar contraseñas desde la app, instale la función «usuarios» (ver el LEEME). Mientras tanto, hágalo en Supabase › Authentication › Users.', 'error', 7000);
+    if (e.sinFuncion) aviso('Para cambiar contraseñas desde la app, instale la función «funcion-usuarios» (ver el LEEME). Mientras tanto, hágalo en Supabase › Authentication › Users.', 'error', 7000);
     else errorAviso(e);
   }
 }
