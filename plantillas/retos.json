@@ -1,0 +1,35 @@
+{
+  "tipo": "retos",
+  "nombre": "Ejemplo de paquete de retos diarios",
+  "retos": [
+    {
+      "id": "ejemplo-bolsillos",
+      "titulo": "Lo que había en el bolsillo",
+      "pasos": [
+        "Piense en una prenda que usó mucho en otra época de su vida.",
+        "Escriba lo que encontraría hoy en sus bolsillos, objeto por objeto, y lo que cada cosa trae consigo."
+      ],
+      "entrena": "Opcional: una línea sobre lo que trabaja el ejercicio.",
+      "limite_palabras": 500
+    },
+    {
+      "id": "ejemplo-siete-minutos",
+      "titulo": "Siete minutos sin parar",
+      "pasos": [
+        "Active el cronómetro que aparece junto al editor.",
+        "Escriba sin detenerse hasta que suene. No corrija nada."
+      ],
+      "cronometro_min": 7,
+      "limite_palabras": 500
+    },
+    {
+      "id": "ejemplo-la-puerta",
+      "titulo": "La puerta",
+      "pasos": [
+        "Describa una puerta que conoce bien, sin decir a qué lugar da.",
+        "El lector debe adivinarlo por los detalles."
+      ],
+      "limite_palabras": 500
+    }
+  ]
+}

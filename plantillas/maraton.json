@@ -1,0 +1,20 @@
+{
+  "tipo": "maraton",
+  "nombre": "Ejemplo de paquete del Maratón",
+  "cartas": [
+    {
+      "id": "ejemplo-la-lista",
+      "titulo": "La lista",
+      "consigna": "Escriba una escena que avance <strong>solo mediante una lista</strong>: compras, pendientes, cosas perdidas. Cada elemento debe decir algo más de lo que dice.",
+      "entrena": "Trabaja la elipsis y el subtexto: lo que la forma deja fuera también cuenta la historia.",
+      "fuente": "Ejemplo"
+    },
+    {
+      "id": "ejemplo-el-testigo",
+      "titulo": "El testigo",
+      "consigna": "Cuente un hecho importante desde el punto de vista de un objeto que estuvo presente. No le dé voz humana: limítese a lo que ese objeto podría registrar.",
+      "entrena": "Obliga a pensar el punto de vista como un límite de percepción.",
+      "fuente": "Ejemplo"
+    }
+  ]
+}
