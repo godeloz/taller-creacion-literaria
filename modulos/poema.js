@@ -46,6 +46,7 @@ export default {
     // ---------- estado ----------
     let fichas = [], versos = [], lienzo = [], enLienzo = new Set();
     let revuelto = false, ordenRevuelto = [], activo = 0;
+    let modo = ctx.entrega ? 'edicion' : 'lectura';
     const lineas = String(P.texto || '').split('\n').map(l => l.trim());
     lineas.forEach((linea, iv) => {
       const ids = [];
@@ -96,7 +97,7 @@ export default {
           <h1 class="saludo" style="margin:4px 0 0;font-size:clamp(32px,4vw,46px)">${editando ? 'Editar poema' : 'Escriba otro poema con estas palabras'}</h1>
         </div>
       </div>
-      <p class="tenue" style="max-width:70ch;margin:8px 0 18px">No puede añadir palabras: solo elegir, omitir y reordenar las del poema fuente. Arrastre las fichas a los renglones, o haga clic en una ficha para enviarla al renglón activo (y clic otra vez para devolverla).</p>
+      <p class="tenue" style="max-width:70ch;margin:8px 0 18px">No puede añadir palabras: solo elegir, omitir y reordenar las del poema fuente. Lea el poema en el modo <b>Lectura</b>; pase a <b>Edición</b> para arrastrar las fichas a los renglones, o haga clic en una ficha para enviarla al renglón activo (y clic otra vez para devolverla).</p>
       <div class="poema-barra">
         ${editando ? '' : `<label class="sr" for="elegir-poema">Poema fuente</label>
         <select class="selector" id="elegir-poema" style="width:auto;min-height:40px;border-radius:999px">
@@ -112,7 +113,15 @@ export default {
       </div>
       <div class="tablero-poema">
         <section class="panel-poema">
-          <div class="panel-poema-cab"><span class="rotulo">Poema fuente</span><span class="tenue" id="estado-fuente" style="font-size:13px"></span></div>
+          <div class="panel-poema-cab">
+            <span class="rotulo">Poema fuente</span>
+            <span class="espaciador"></span>
+            <span class="tenue" id="estado-fuente" style="font-size:13px"></span>
+            <div class="conmutador" role="group" aria-label="Modo del poema fuente">
+              <button type="button" data-modo="lectura">${icono('libro', 15)}Lectura</button>
+              <button type="button" data-modo="edicion">${icono('fichas', 15)}Edición</button>
+            </div>
+          </div>
           <div class="fuente-poema" id="fuente"></div>
         </section>
         <section class="panel-poema">
@@ -130,7 +139,17 @@ export default {
     const fichaHTML = id => `<span class="ficha${fichas[id].punt ? ' punt' : ''}" data-id="${id}">${esc(fichas[id].texto)}</span>`;
 
     function pintarFuente() {
+      cont.querySelectorAll('[data-modo]').forEach(b => { b.classList.toggle('on', b.dataset.modo === modo); b.setAttribute('aria-pressed', b.dataset.modo === modo); });
       let h = `<div class="poema-titulo">${esc(P.titulo)}</div><div class="poema-autor">${esc(P.autor || '')}</div>`;
+      if (modo === 'lectura') {
+        // El poema como texto: cada verso en una sola línea, con su extensión real.
+        h += `<div class="poema-lectura">${lineas.map(l => l ? `<div class="linea-lectura">${esc(l)}</div>` : '<div class="linea-lectura vacia"></div>').join('')}</div>`;
+        elFuente.innerHTML = h;
+        elFuente.classList.add('en-lectura');
+        cont.querySelector('#estado-fuente').textContent = '';
+        return;
+      }
+      elFuente.classList.remove('en-lectura');
       if (revuelto) h += `<div class="flujo">${ordenRevuelto.filter(id => !enLienzo.has(id)).map(fichaHTML).join('')}</div>`;
       else h += versos.map(ids => `<div class="verso${ids.length ? '' : ' vacio'}">${ids.filter(id => !enLienzo.has(id)).map(fichaHTML).join('')}</div>`).join('');
       elFuente.innerHTML = h;
@@ -267,11 +286,13 @@ export default {
 
     // ---------- controles ----------
     cont.querySelector('#elegir-poema')?.addEventListener('change', ev => { location.hash = `#/d/poema/${encodeURIComponent(ev.target.value)}`; });
+    cont.querySelectorAll('[data-modo]').forEach(b => b.addEventListener('click', () => { modo = b.dataset.modo; pintarFuente(); }));
     cont.querySelector('#b-desordenar').addEventListener('click', () => {
+      modo = 'edicion';
       ordenRevuelto = barajar(fichas.map(f => f.id).filter(id => !enLienzo.has(id)));
       revuelto = true; pintarFuente();
     });
-    cont.querySelector('#b-ordenar').addEventListener('click', () => { revuelto = false; pintarFuente(); });
+    cont.querySelector('#b-ordenar').addEventListener('click', () => { modo = 'edicion'; revuelto = false; pintarFuente(); });
     cont.querySelector('#b-reiniciar').addEventListener('click', async () => {
       if (enLienzo.size && !(await confirmar('¿Vaciar el poema nuevo y devolver todas las fichas?', { si: 'Vaciar', peligro: true }))) return;
       lienzo = vacioLienzo(); enLienzo = new Set(); activo = 0; pintar(); cambio();
