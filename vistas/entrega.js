@@ -16,19 +16,25 @@ export default async function vistaEntrega(cont, { params }) {
   }
   const d = dinamica(e.dinamica);
   let consigna = '';
+  let conFinal = false;
   if (e.item_id) {
     try {
       const c = await estado.api.contenido(e.dinamica, e.item_id);
       if (c) {
+        conFinal = !!c.datos.con_final;
         const etiqueta = e.dinamica === 'reto' ? `Reto del ${fechaLarga(e.reto_fecha)}`
           : e.dinamica === 'maraton' ? 'Carta del Maratón'
           : e.dinamica === 'poema' ? 'Poema fuente'
           : e.dinamica === 'cutup' ? 'Juego de frases'
           : e.dinamica === 's7' ? 'Texto original'
-          : e.dinamica === 'forma' ? 'Consigna' : d?.nombre || '';
-        consigna = `<div class="consigna-ref"><b>${esc(etiqueta)}</b>${esc(c.datos.titulo || c.datos.nombre || '')}${c.datos.autor ? `, de ${esc(c.datos.autor)}` : ''}</div>`;
+          : e.dinamica === 'forma' ? 'Consigna'
+          : e.dinamica === 'fallar' ? 'Borrador revisado' : d?.nombre || '';
+        consigna = `<div class="consigna-ref"><b>${esc(etiqueta)}</b>${esc(c.datos.titulo || c.datos.nombre || '')}${c.datos.autor ? `, de ${esc(c.datos.autor)}` : ''}${enlaceRespuestas(e)}</div>`;
       }
     } catch { /* la consigna es opcional */ }
+  }
+  if (!consigna && e.dinamica === 'fallar' && e.item_id?.startsWith('propio-')) {
+    consigna = `<div class="consigna-ref"><b>Texto propio</b>${esc(e.datos?.base_titulo || 'Revisión de un texto de quien escribe')}</div>`;
   }
   const reacciones = await estado.api.reacciones([e.id]).catch(() => []);
   const mia = e.autor === estado.yo.id;
@@ -39,7 +45,8 @@ export default async function vistaEntrega(cont, { params }) {
     <div class="fila" style="margin-bottom:16px">
       <a class="btn btn-fantasma btn-chico" href="#/muro">${icono('izquierda', 16)}Muro</a>
       <span class="espaciador"></span>
-      ${mia ? `<a class="btn btn-chico" href="#/editar/${e.id}">${icono('lapiz', 16)}Editar</a>` : ''}
+      ${mia && e.dinamica === 'fallar' && conFinal ? `<a class="btn btn-chico btn-fantasma" href="#/d/fallar/${encodeURIComponent(e.item_id)}?autora">${icono('libro', 16)}Versión final</a>` : ''}
+      ${mia ? `<a class="btn btn-chico" href="#/editar/${e.id}">${icono('lapiz', 16)}${e.dinamica === 'fallar' && !e.item_id?.startsWith('propio-') ? 'Explicaciones' : 'Editar'}</a>` : ''}
       ${puedeDescargar ? `<button class="btn btn-chico btn-fantasma" id="b-txt">${icono('descargar', 16)}.txt</button>
         <button class="btn btn-chico btn-fantasma" id="b-pdf">${icono('imprimir', 16)}PDF</button>` : ''}
       ${esTutor() ? `<button class="btn btn-chico" id="b-ocultar">${icono(e.estado === 'oculta' ? 'ojo' : 'ojoNo', 16)}${e.estado === 'oculta' ? 'Mostrar' : 'Ocultar'}</button>
@@ -82,4 +89,12 @@ export default async function vistaEntrega(cont, { params }) {
     if (!(await confirmar('¿Borrar este texto de forma definitiva? No se puede recuperar.', { si: 'Borrar', peligro: true }))) return;
     try { await estado.api.borrarEntrega(e.id); aviso('Texto borrado.'); location.hash = '#/muro'; } catch (err) { errorAviso(err); }
   });
+}
+
+// Enlace a todas las respuestas a la misma consigna (texto, carta, poema o reto del día).
+function enlaceRespuestas(e) {
+  const href = e.dinamica === 'reto' && e.reto_fecha ? `#/muro?reto=${e.reto_fecha}`
+    : e.item_id && !e.item_id.startsWith('propio-') ? `#/muro?dinamica=${encodeURIComponent(e.dinamica)}&item=${encodeURIComponent(e.item_id)}` : '';
+  const a = { reto: 'a este reto', maraton: 'a esta carta', poema: 'a este poema', s7: 'a este texto', fallar: 'a este texto' }[e.dinamica] || 'a esta consigna';
+  return href ? `<a class="enlace-respuestas" href="${href}">Ver todas las respuestas ${a}</a>` : '';
 }

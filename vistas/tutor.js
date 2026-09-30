@@ -16,8 +16,8 @@ const SECCIONES = [
   ['contenido', 'subir', 'Contenido'],
   ['dinamicas', 'ajustes', 'Dinámicas'],
 ];
-const CON_CONTENIDO = ['reto', 'maraton', 'poema', 'cutup', 's7', 'forma'];
-const CLAVE_PAQUETE = { reto: 'retos', maraton: 'cartas', poema: 'poemas', cutup: 'juegos', s7: 'textos', forma: 'consignas' };
+const CON_CONTENIDO = ['reto', 'maraton', 'poema', 'cutup', 's7', 'forma', 'fallar'];
+const CLAVE_PAQUETE = { reto: 'retos', maraton: 'cartas', poema: 'poemas', cutup: 'juegos', s7: 'textos', forma: 'consignas', fallar: 'textos' };
 
 export default async function tutor(cont, { params, query }) {
   if (!esTutor()) { cont.innerHTML = `<div class="contenedor">${vacio('Esta sección es solo para el tutor')}</div>`; return; }
@@ -327,6 +327,10 @@ async function contenido(c, query) {
   };
   $('#p-exportar', c).onclick = () => {
     const tipo = CLAVE_PAQUETE[din];
+    if (mod.paquete.exportar) {
+      descargarArchivo(`contenido-${din}-${hoyISO()}.json`, JSON.stringify({ tipo, nombre: `${dinamica(din)?.nombre} (${hoyISO()})`, ...mod.paquete.exportar(items) }, null, 2), 'application/json');
+      return;
+    }
     const lista = items.filter(i => !i.item_id.startsWith('_')).map(i => ({ id: i.item_id, ...i.datos }));
     const extra = {};
     const dic = items.find(i => i.item_id === '_diccionario');
