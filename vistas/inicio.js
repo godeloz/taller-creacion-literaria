@@ -1,5 +1,5 @@
 // Pantalla de inicio: reto del día, racha, ranking, dinámicas y lo último publicado.
-import { estado, esTutor, estaAbierta, claseActiva } from '../nucleo/estado.js';
+import { estado, esTutor, estaAbierta, claseActiva, miModo } from '../nucleo/estado.js';
 import { esc, saludo, fechaLarga, hoyISO, enlazar } from '../nucleo/ui.js';
 import { icono, llama } from '../nucleo/iconos.js';
 import { avatar, tarjetaEntrega, vacio, revisarInsigniasNuevas } from '../nucleo/componentes.js';
@@ -43,6 +43,7 @@ export default async function inicio(cont) {
   const nombre = estado.yo.nombre.split(' ')[0];
   const dinamicas = estado.dinamicas.filter(d => d.en_menu && d.estado !== 'oculta');
   const abiertas = dinamicas.filter(estaAbierta).length;
+  const modo = miModo();
 
   let retoHTML;
   if (!reto) {
@@ -51,9 +52,11 @@ export default async function inicio(cont) {
     retoHTML = `<section class="reto-tarjeta reto-hecho">
       <span class="rotulo">${icono('check', 14)} Reto del día · publicado</span>
       <h2>${esc(reto.datos.titulo)}</h2>
-      <p>Ya publicó su texto de hoy. ${conteo > 1 ? `Ya puede leer lo que escribieron sus ${conteo - 1} compañeros.` : 'Todavía nadie más lo ha publicado.'}</p>
+      <p>Ya publicó su texto de hoy. ${modo === 'privado' ? 'Lo leerá el tutor.'
+        : modo === 'observador' ? (conteo ? `${conteo === 1 ? 'Hay una respuesta' : `Hay ${conteo} respuestas`} del grupo para leer.` : 'Todavía nadie del grupo lo ha publicado.')
+        : conteo > 1 ? `Ya puede leer lo que escribieron sus ${conteo - 1} compañeros.` : 'Todavía nadie más lo ha publicado.'}</p>
       <div class="fila">
-        <a class="btn btn-primario" href="#/muro?reto=${hoyISO()}">Leer las respuestas del grupo</a>
+        ${modo === 'privado' ? '' : `<a class="btn btn-primario" href="#/muro?reto=${hoyISO()}">Leer las respuestas del grupo</a>`}
         <a class="btn btn-fantasma" href="#/entrega/${mio.id}">Ver el mío</a>
       </div>
     </section>`;
@@ -65,7 +68,8 @@ export default async function inicio(cont) {
       ${pasos.slice(0, 3).map(p => `<p>${enlazar(p)}</p>`).join('')}
       <div class="fila">
         <a class="btn btn-blanco" href="#/reto">${icono('lapiz', 18)}Escribir el reto</a>
-        <span class="meta">${conteo ? `${conteo} ${conteo === 1 ? 'compañero ya lo publicó' : 'compañeros ya lo publicaron'} · ` : ''}Máximo ${reto.datos.limite_palabras || 500} palabras · Las respuestas se abren cuando publique la suya</span>
+        <span class="meta">${modo === 'privado' ? `Máximo ${reto.datos.limite_palabras || 500} palabras · Solo el tutor leerá su respuesta`
+          : `${conteo ? `${conteo} ${conteo === 1 ? 'compañero ya lo publicó' : 'compañeros ya lo publicaron'} · ` : ''}Máximo ${reto.datos.limite_palabras || 500} palabras · ${modo === 'observador' ? 'Puede leer las respuestas del grupo cuando quiera' : 'Las respuestas se abren cuando publique la suya'}`}</span>
       </div>
     </section>`;
   }
@@ -77,10 +81,14 @@ export default async function inicio(cont) {
       ${retoHTML}
       <div class="columna">
         ${racha ? tarjetaRacha(racha) : ''}
-        <section class="tarjeta" style="padding:22px 24px">
-          <div class="rotulo" style="margin-bottom:10px">Rachas activas</div>
+        ${modo === 'privado' ? `<section class="tarjeta" style="padding:22px 24px">
+          <div class="rotulo" style="margin-bottom:10px">Modo privado</div>
+          <p class="tenue" style="margin:0">Su racha y sus insignias cuentan igual, pero no aparecen en el ranking del grupo. Lo que publica solo lo lee el tutor.</p>
+        </section>` : `<section class="tarjeta" style="padding:22px 24px">
+          <div class="rotulo" style="margin-bottom:10px">Rachas activas${esTutor() && estado.grupos.length > 1 ? ` · ${esc(estado.grupos.find(g => g.id === estado.yo.grupo_id)?.nombre || '')}` : ''}</div>
           ${listaRanking(ranking)}
-        </section>
+          ${modo === 'observador' ? '<p class="tenue" style="margin:10px 0 0;font-size:14px">Como observador, usted no aparece en el ranking.</p>' : ''}
+        </section>`}
       </div>
     </div>
 

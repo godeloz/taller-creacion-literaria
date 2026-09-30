@@ -1,6 +1,6 @@
 // Piezas de interfaz reutilizables: avatares, tarjetas de entrega,
 // reacciones, comentarios.
-import { estado, esTutor, dinamica } from './estado.js';
+import { estado, esTutor, dinamica, soloTutor, soyVisible, MODOS } from './estado.js';
 import { esc, hace, fechaHora, aviso, errorAviso, confirmar, $, enlazar } from './ui.js';
 import { icono, avatarSVG, REACCIONES } from './iconos.js';
 
@@ -31,6 +31,12 @@ export function nombreDe(e) {
   return e.perfil?.nombre || 'Alguien del taller';
 }
 
+// Marca para textos y comentarios que solo ve el tutor (observadores y privados).
+export function etiquetaSoloTutor(p) {
+  if (!soloTutor(p)) return '';
+  return `<span class="etiqueta-solo-tutor" title="${esc(MODOS[p.modo]?.nombre || '')}: ${esc(MODOS[p.modo]?.corto || '')}">${icono('candado', 12)}Solo lo ve el tutor</span>`;
+}
+
 // ---------- tarjeta de entrega para el muro ----------
 export function tarjetaEntrega(e, reacciones = []) {
   const mias = reacciones.filter(r => r.entrega_id === e.id);
@@ -48,6 +54,7 @@ export function tarjetaEntrega(e, reacciones = []) {
       </div>
       ${etiquetaDinamica(e.dinamica)}
     </div>
+    ${etiquetaSoloTutor(e.perfil) ? `<div style="margin:-4px 0 8px">${etiquetaSoloTutor(e.perfil)}</div>` : ''}
     ${e.titulo ? `<div class="entrada-titulo">${esc(e.titulo)}</div>` : ''}
     <div class="entrada-extracto">${esc(extracto)}</div>
     <div class="entrada-pie">
@@ -120,7 +127,7 @@ export async function montarComentarios(cont, entrega) {
           ${avatar(c.perfil, 36)}
           <div class="comentario-cuerpo">
             <div class="fila" style="gap:6px">
-              <b>${esc(c.perfil?.nombre || '')}</b>${esTut ? '<span class="sello-tutor">Tutor</span>' : ''}${c.privado ? '<span class="sello-privado">Privado</span>' : ''}
+              <b>${esc(c.perfil?.nombre || '')}</b>${esTut ? '<span class="sello-tutor">Tutor</span>' : ''}${c.privado ? '<span class="sello-privado">Privado</span>' : ''}${!c.privado && soloTutor(c.perfil) ? etiquetaSoloTutor(c.perfil) : ''}
               <span class="tenue" style="font-size:13px">${hace(c.creado)}</span>
               <span class="espaciador"></span>
               ${puedeBorrar ? `<button class="btn btn-fantasma btn-chico btn-icono" data-borrar="${c.id}" aria-label="Borrar comentario" title="Borrar">${icono('basura', 16)}</button>` : ''}
@@ -132,6 +139,7 @@ export async function montarComentarios(cont, entrega) {
       <form class="form-comentario">
         <label class="sr" for="nuevo-comentario">Escriba un comentario</label>
         <textarea id="nuevo-comentario" placeholder="Escriba un comentario para quien escribió este texto…" required></textarea>
+        ${!soyVisible() ? '<p class="tenue" style="margin:6px 0 0;font-size:14px">Por su modo de participación, sus comentarios y reacciones solo los ve el tutor.</p>' : ''}
         <div class="fila">
           ${esTutor() ? '<label class="fila" style="gap:6px;font-size:14px;font-weight:600"><input type="checkbox" name="privado"> Privado (solo lo ve el autor)</label>' : ''}
           <span class="espaciador"></span>

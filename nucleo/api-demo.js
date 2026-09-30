@@ -3,8 +3,9 @@
 import { hoyISO, sumarDias, local, contarPalabras } from './ui.js';
 import { calcularRacha } from './racha.js';
 
-const CLAVE = 'taller-demo-v1';
+const CLAVE = 'taller-demo-v2';
 const GRUPO = 'grupo-demo';
+const GRUPO2 = 'grupo-invitados';
 
 const DINAMICAS = [
   { slug: 'reto', nombre: 'Reto del día', descripcion: 'Un ejercicio corto, el mismo para todo el grupo, que cambia cada día.', color: '#FF6B4A', estado: 'abierta', orden: 0, en_menu: false, desbloqueo: null },
@@ -29,12 +30,17 @@ const INSIGNIAS = [
 ].map(([slug, nombre, descripcion, icono, color, tipo], i) => ({ slug, nombre, descripcion, icono, color, tipo, orden: i + 1 }));
 
 const PERSONAS = [
-  ['tutor-demo', 'Tutor de prueba', 'tutor', 'av-10'],
-  ['c1', 'Lucía Ferrer', 'creador', 'av-1'],
-  ['c2', 'Martín Ocampo', 'creador', 'av-3'],
-  ['c3', 'Valeria Ruiz', 'creador', 'av-7'],
-  ['c4', 'Tomás Gil', 'creador', 'av-4'],
-  ['c5', 'Isabel Mora', 'creador', 'av-9'],
+  // id, nombre, rol, avatar, modo, grupo
+  ['tutor-demo', 'Tutor de prueba', 'tutor', 'av-10', 'participante', GRUPO],
+  ['c1', 'Lucía Ferrer', 'creador', 'av-1', 'participante', GRUPO],
+  ['c2', 'Martín Ocampo', 'creador', 'av-3', 'participante', GRUPO],
+  ['c3', 'Valeria Ruiz', 'creador', 'av-7', 'participante', GRUPO],
+  ['c4', 'Tomás Gil', 'creador', 'av-4', 'participante', GRUPO],
+  ['c5', 'Isabel Mora', 'creador', 'av-9', 'participante', GRUPO],
+  ['o1', 'Ana Observadora', 'invitado', 'av-11', 'observador', GRUPO],
+  ['p1', 'Pablo Privado', 'invitado', 'av-12', 'privado', GRUPO],
+  ['g1', 'Raúl Invitado', 'invitado', 'av-5', 'participante', GRUPO2],
+  ['g2', 'Elena Invitada', 'invitado', 'av-6', 'participante', GRUPO2],
 ];
 
 
@@ -51,7 +57,16 @@ async function sembrar() {
   const ayer = sumarDias(hoy, -1);
   const db = {
     sesion: null,
-    perfiles: PERSONAS.map(([id, nombre, rol, avatar]) => ({ id, nombre, rol, avatar, email: `${id}@demo`, grupo_id: GRUPO, foto_url: null })),
+    perfiles: PERSONAS.map(([id, nombre, rol, avatar, modo, grupo_id]) => ({ id, nombre, rol, avatar, modo, grupo_id, email: `${id}@demo.co`, foto_url: null })),
+    lista: [
+      ...PERSONAS.map(([id, nombre, rol, , modo, grupo_id]) => ({ email: `${id}@demo.co`, nombre, rol, modo, grupo_id, creado: new Date().toISOString() })),
+      { email: 'pendiente@demo.co', nombre: 'Invitada sin cuenta', rol: 'invitado', modo: 'observador', grupo_id: GRUPO, creado: new Date().toISOString() },
+    ],
+    grupos: [
+      { id: GRUPO, nombre: 'Creación Literaria (demostración)', descripcion: null, activo: true, creado: new Date(Date.now() - 864e5).toISOString() },
+      { id: GRUPO2, nombre: 'Grupo de invitados', descripcion: 'Un grupo aparte: solo se ven entre ellos.', activo: true, creado: new Date().toISOString() },
+    ],
+    sesiones: {},
     dinamicas: DINAMICAS,
     contenidos,
     paquetes: [],
@@ -65,11 +80,10 @@ async function sembrar() {
     borradores: {},
     insignias: INSIGNIAS,
     otorgadas: [],
-    sesionClase: null,
   };
   // Historial de ejemplo para que el muro y el ranking no arranquen vacíos.
   const ejemplo = (autor, dias, dinamica, item_id, titulo, texto) => db.entregas.push({
-    id: crypto.randomUUID(), autor, grupo_id: GRUPO, dinamica, item_id, titulo, texto,
+    id: crypto.randomUUID(), autor, grupo_id: PERSONAS.find(x => x[0] === autor)[5], dinamica, item_id, titulo, texto,
     vista: texto.split(/\n{2,}/).map(p => `<p>${p}</p>`).join(''), datos: {}, palabras: contarPalabras(texto),
     reto_fecha: dinamica === 'reto' ? sumarDias(hoy, -dias) : null, sesion_id: null, estado: 'publicada', editada: false,
     creado: new Date(Date.now() - dias * 864e5 - 3600e3).toISOString(), actualizado: new Date().toISOString(),
@@ -77,6 +91,10 @@ async function sembrar() {
   const reto = db.asignados[0].item_id;
   for (const d of [1, 2, 3, 4, 6, 7]) ejemplo('c1', d, 'reto', reto, null, '(Texto de ejemplo del modo demostración.)\n\nAquí iría el reto que escribió esta persona ese día.');
   for (const d of [1, 2]) ejemplo('c2', d, 'reto', reto, null, '(Texto de ejemplo del modo demostración.)\n\nOtro reto publicado para ver cómo se ve el muro.');
+  const carta = contenidos.find(c => c.dinamica === 'maraton').item_id;
+  ejemplo('o1', 1, 'maraton', carta, 'Carta de la observadora', '(Texto de ejemplo.)\n\nLo escribió una invitada observadora: solo lo ven ella y el tutor.');
+  ejemplo('p1', 1, 'maraton', carta, 'Carta del invitado privado', '(Texto de ejemplo.)\n\nLo escribió un invitado privado: solo lo ven él y el tutor.');
+  ejemplo('g1', 1, 'reto', reto, null, '(Texto de ejemplo.)\n\nUn reto del grupo de invitados: solo lo ve ese grupo y el tutor.');
   ejemplo('c3', 1, 'maraton', contenidos.find(c => c.dinamica === 'maraton').item_id, 'Primera carta', '(Texto de ejemplo del modo demostración.)\n\nUna carta del Maratón ya publicada.');
   return db;
 }
@@ -96,13 +114,22 @@ export async function crearApiDemo() {
   let yo = db.perfiles.find(p => p.id === db.sesion) || null;
   const tutor = () => yo?.rol === 'tutor';
   const ahora = () => new Date().toISOString();
-  const pf = id => { const p = db.perfiles.find(x => x.id === id); return p && { id: p.id, nombre: p.nombre, avatar: p.avatar, foto_url: p.foto_url, rol: p.rol }; };
+  const pf = id => { const p = db.perfiles.find(x => x.id === id); return p && { id: p.id, nombre: p.nombre, avatar: p.avatar, foto_url: p.foto_url, rol: p.rol, modo: p.modo, grupo_id: p.grupo_id }; };
   const hizoReto = f => db.entregas.some(e => e.autor === yo.id && e.reto_fecha === f);
+  // Misma regla que la base de datos (puede_ver_autor).
+  const puedeVer = a => {
+    if (!yo) return false;
+    if (a === yo.id || tutor()) return true;
+    const el = db.perfiles.find(p => p.id === a);
+    if (!el) return false;
+    if (el.rol === 'tutor') return true;
+    return ['participante', 'observador'].includes(yo.modo) && el.modo === 'participante' && !!yo.grupo_id && yo.grupo_id === el.grupo_id;
+  };
   const visible = e => tutor() || e.autor === yo.id ||
-    (e.grupo_id === yo.grupo_id && e.estado === 'publicada' && (!e.reto_fecha || e.reto_fecha < hoyISO() || hizoReto(e.reto_fecha)));
+    (e.estado === 'publicada' && puedeVer(e.autor) && (!e.reto_fecha || e.reto_fecha < hoyISO() || hizoReto(e.reto_fecha) || yo.modo === 'observador'));
   const comentarioVisible = c => {
     const e = db.entregas.find(x => x.id === c.entrega_id);
-    return e && visible(e) && (!c.privado || c.autor === yo.id || tutor() || e.autor === yo.id);
+    return e && visible(e) && puedeVer(c.autor) && (!c.privado || c.autor === yo.id || tutor() || e.autor === yo.id);
   };
   const conExtras = e => ({ ...e, perfil: pf(e.autor), n_comentarios: db.comentarios.filter(c => c.entrega_id === e.id && comentarioVisible(c)).length });
   const abierta = slug => { const d = db.dinamicas.find(x => x.slug === slug); return d && (d.estado === 'abierta' || (d.estado === 'proximamente' && d.desbloqueo && d.desbloqueo <= hoyISO())); };
@@ -154,7 +181,7 @@ export async function crearApiDemo() {
     async cambiarContrasena() {},
     alCambiarSesion() {},
 
-    async perfiles() { return db.perfiles.filter(p => p.grupo_id === yo.grupo_id).sort((a, b) => a.nombre.localeCompare(b.nombre)); },
+    async perfiles() { return db.perfiles.filter(p => puedeVer(p.id)).sort((a, b) => a.nombre.localeCompare(b.nombre)); },
     async actualizarAvatar(clave) { db.perfiles.find(p => p.id === yo.id).avatar = clave; yo.avatar = clave; guardar(); },
 
     async dinamicas() { return [...db.dinamicas].sort((a, b) => a.orden - b.orden); },
@@ -191,12 +218,16 @@ export async function crearApiDemo() {
       const c = db.contenidos.find(x => x.dinamica === 'reto' && x.item_id === id);
       return c ? { item_id: id, datos: structuredClone(c.datos), fecha: hoyISO() } : null;
     },
-    async conteoReto(f = hoyISO()) { return db.entregas.filter(e => e.reto_fecha === f && e.estado === 'publicada').length; },
+    async conteoReto(f = hoyISO()) {
+      return db.entregas.filter(e => e.reto_fecha === f && e.estado === 'publicada' && (() => { const p = db.perfiles.find(x => x.id === e.autor); return p && p.grupo_id === yo.grupo_id && p.modo === 'participante'; })()).length;
+    },
     async miRetoHoy() { return db.entregas.find(e => e.autor === yo.id && e.reto_fecha === hoyISO()) || null; },
-    async racha(u) { return calcularRacha(db.entregas.filter(e => e.autor === u && e.reto_fecha).map(e => e.reto_fecha), hoyISO()); },
-    async ranking() {
+    async racha(u) { if (!puedeVer(u)) return null; return calcularRacha(db.entregas.filter(e => e.autor === u && e.reto_fecha).map(e => e.reto_fecha), hoyISO()); },
+    async ranking(grupo) {
       const out = [];
-      for (const p of db.perfiles.filter(p => p.rol === 'creador' && p.grupo_id === yo.grupo_id)) {
+      const g = tutor() ? (grupo || yo.grupo_id) : yo.grupo_id;
+      if (!tutor() && !['participante', 'observador'].includes(yo.modo)) return out;
+      for (const p of db.perfiles.filter(p => p.rol !== 'tutor' && p.modo === 'participante' && p.grupo_id === g)) {
         const r = await this.racha(p.id);
         if (r.actual > 0) out.push({ usuario: p.id, nombre: p.nombre, avatar: p.avatar, foto_url: p.foto_url, actual: r.actual });
       }
@@ -214,7 +245,7 @@ export async function crearApiDemo() {
         .filter(visible)
         .filter(e => (!f.dinamica || e.dinamica === f.dinamica) && (!f.autor || e.autor === f.autor) &&
           (!f.item_id || e.item_id === f.item_id) && (!f.reto_fecha || e.reto_fecha === f.reto_fecha) &&
-          (!f.sesion_id || e.sesion_id === f.sesion_id) && (f.incluirOcultas || e.estado === 'publicada'))
+          (!f.sesion_id || e.sesion_id === f.sesion_id) && (!f.grupo_id || e.grupo_id === f.grupo_id) && (f.incluirOcultas || e.estado === 'publicada'))
         .sort((a, b) => b.creado.localeCompare(a.creado))
         .slice(0, f.limite || 300)
         .map(conExtras);
@@ -234,7 +265,7 @@ export async function crearApiDemo() {
         if (fila.palabras > lim) throw new Error(`El reto admite máximo ${lim} palabras (su texto tiene ${fila.palabras})`);
         if (hizoReto(fila.reto_fecha)) throw new Error('Ya publicó el reto de hoy. Puede editarlo.');
       }
-      const s = db.sesionClase;
+      const s = db.sesiones[yo.grupo_id];
       if (e.sesion_id && s && s.activa && s.id === e.sesion_id) fila.sesion_id = e.sesion_id;
       db.entregas.push(fila);
       evaluarInsignias(yo.id);
@@ -257,7 +288,7 @@ export async function crearApiDemo() {
       emitir('entregas', 'DELETE', {});
     },
 
-    async reacciones(ids) { const s = new Set(ids); return db.reacciones.filter(r => s.has(r.entrega_id)); },
+    async reacciones(ids) { const s = new Set(ids); return db.reacciones.filter(r => s.has(r.entrega_id) && puedeVer(r.usuario)); },
     async reaccionar(entrega_id, tipo, poner) {
       db.reacciones = db.reacciones.filter(r => !(r.entrega_id === entrega_id && r.tipo === tipo && r.usuario === yo.id));
       if (poner) db.reacciones.push({ entrega_id, tipo, usuario: yo.id });
@@ -279,7 +310,7 @@ export async function crearApiDemo() {
     },
 
     async insignias() { return db.insignias; },
-    async otorgadas(u) { return db.otorgadas.filter(o => !u || o.usuario === u); },
+    async otorgadas(u) { return db.otorgadas.filter(o => (!u || o.usuario === u) && puedeVer(o.usuario)); },
     async otorgar(usuario, insignia, nota) {
       exigirTutor();
       db.otorgadas = db.otorgadas.filter(o => !(o.usuario === usuario && o.insignia === insignia));
@@ -312,14 +343,53 @@ export async function crearApiDemo() {
     async guardarBorrador(clave, datos) { db.borradores[`${yo.id}:${clave}`] = { ...datos, _actualizado: ahora() }; guardar(); },
     async borrarBorrador(clave) { delete db.borradores[`${yo.id}:${clave}`]; guardar(); },
 
-    async sesionClase() { return db.sesionClase; },
-    async activarClase({ dinamica, item_id, titulo, minutos }) {
+    async sesionClase(grupo) { return db.sesiones[grupo || yo.grupo_id] || null; },
+    async activarClase({ dinamica, item_id, titulo, minutos, grupo_id }) {
       exigirTutor();
-      db.sesionClase = { grupo_id: GRUPO, id: crypto.randomUUID(), dinamica, item_id: item_id || null, titulo: titulo || null, minutos: minutos || null, inicia: ahora(), activa: true };
-      emitir('sesion_clase', 'UPDATE', db.sesionClase);
-      return db.sesionClase;
+      const g = grupo_id || yo.grupo_id;
+      db.sesiones[g] = { grupo_id: g, id: crypto.randomUUID(), dinamica, item_id: item_id || null, titulo: titulo || null, minutos: minutos || null, inicia: ahora(), activa: true };
+      emitir('sesion_clase', 'UPDATE', db.sesiones[g]);
+      return db.sesiones[g];
     },
-    async terminarClase() { exigirTutor(); if (db.sesionClase) db.sesionClase.activa = false; emitir('sesion_clase', 'UPDATE', db.sesionClase); },
+    async terminarClase(grupo) { exigirTutor(); const s = db.sesiones[grupo || yo.grupo_id]; if (s) s.activa = false; emitir('sesion_clase', 'UPDATE', s); },
+
+    // ---------- personas y grupos ----------
+    async grupos() { return [...db.grupos].sort((a, b) => a.creado.localeCompare(b.creado)); },
+    async guardarGrupo(g) {
+      exigirTutor();
+      let f = g.id && db.grupos.find(x => x.id === g.id);
+      if (!f) { f = { id: crypto.randomUUID(), creado: ahora() }; db.grupos.push(f); }
+      Object.assign(f, { nombre: g.nombre, descripcion: g.descripcion || null, activo: g.activo !== false });
+      guardar(); return { ...f };
+    },
+    async lista() { exigirTutor(); return [...db.lista].sort((a, b) => a.nombre.localeCompare(b.nombre)); },
+    async guardarPersona(p) {
+      exigirTutor();
+      const email = p.email.trim().toLowerCase();
+      let f = db.lista.find(x => x.email === email);
+      if (!f) { f = { email, creado: ahora() }; db.lista.push(f); }
+      Object.assign(f, { nombre: p.nombre.trim(), rol: p.rol, modo: p.modo, grupo_id: p.grupo_id || null });
+      const perfil = db.perfiles.find(x => x.email === email);
+      if (perfil) Object.assign(perfil, { nombre: f.nombre, rol: f.rol, modo: f.modo, grupo_id: f.grupo_id });
+      guardar();
+    },
+    async quitarDeLista(email) { exigirTutor(); db.lista = db.lista.filter(x => x.email !== email); guardar(); },
+    async crearCuenta(p) {
+      exigirTutor();
+      const email = p.email.trim().toLowerCase();
+      if (db.perfiles.some(x => x.email === email)) throw new Error('Ya existe una cuenta con ese correo. Si quiere, cámbiele la contraseña.');
+      if ((p.password || '').length < 8) throw new Error('La contraseña debe tener al menos 8 caracteres.');
+      await this.guardarPersona(p);
+      const id = crypto.randomUUID();
+      db.perfiles.push({ id, email, nombre: p.nombre.trim(), rol: p.rol, modo: p.modo, grupo_id: p.grupo_id || null, avatar: 'av-' + (1 + Math.floor(Math.random() * 12)), foto_url: null });
+      guardar();
+      return { ok: true, id };
+    },
+    async cambiarClaveDe(usuario, password) {
+      exigirTutor();
+      if ((password || '').length < 8) throw new Error('La contraseña debe tener al menos 8 caracteres.');
+      return { ok: true };
+    },
 
     suscribir(tabla, cb) {
       const o = { tabla, cb };

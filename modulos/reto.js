@@ -1,5 +1,5 @@
 // Módulo: Reto del día.
-import { estado } from '../nucleo/estado.js';
+import { estado, soyVisible, avisoPublicar, miModo } from '../nucleo/estado.js';
 import { esc, enlazar, fechaLarga, hoyISO } from '../nucleo/ui.js';
 import { icono } from '../nucleo/iconos.js';
 import { montarEscritorio } from '../nucleo/escritorio.js';
@@ -19,7 +19,11 @@ function panel(reto, fecha, { conteo = 0, editando = false } = {}) {
     <div class="consigna-extra">
       <span class="linea-ico">${icono('pagina', 16)}Máximo ${d.limite_palabras || 500} palabras.</span>
       ${d.cronometro_min ? `<span class="linea-ico">${icono('reloj', 16)}Use el cronómetro de ${d.cronometro_min} minutos de la barra del editor.</span>` : ''}
-      ${editando ? '' : `<span class="linea-ico">${icono('candado', 16)}Las respuestas del grupo se abren cuando publique la suya.${conteo ? ` Ya hay ${conteo}.` : ''}</span>`}
+      ${editando ? '' : miModo() === 'privado'
+        ? `<span class="linea-ico">${icono('candado', 16)}Participa en modo privado: su reto solo lo ve el tutor.</span>`
+        : miModo() === 'observador'
+          ? `<span class="linea-ico">${icono('ojo', 16)}Como observador puede leer las respuestas del grupo cuando quiera. Su reto solo lo ve el tutor.</span>`
+          : `<span class="linea-ico">${icono('candado', 16)}Las respuestas del grupo se abren cuando publique la suya.${conteo ? ` Ya hay ${conteo}.` : ''}</span>`}
       <span class="linea-ico">${icono('llama', 16)}Publicarlo hoy suma a su racha.</span>
     </div>`;
 }
@@ -70,7 +74,7 @@ export default {
       limite: reto.datos.limite_palabras || 500, cronometroMin: reto.datos.cronometro_min,
       placeholder: 'Empiece aquí. El texto se guarda solo mientras escribe.',
       textoBoton: 'Publicar reto',
-      avisoPublicar: 'Al publicar, el grupo podrá leer su reto y usted podrá leer el de los demás. Después podrá editarlo, pero no borrarlo.',
+      avisoPublicar: soyVisible() ? 'Al publicar, el grupo podrá leer su reto y usted podrá leer el de los demás. Después podrá editarlo, pero no borrarlo.' : avisoPublicar('su reto'),
       alPublicar: d => publicarEntrega({ dinamica: 'reto', item_id: reto.item_id, titulo: d.titulo, texto: d.texto, vista: d.html, datos: {}, modulo_version: '1.0' }, { irA: `#/muro?reto=${hoy}` }),
     });
     return () => esc_.destruir();

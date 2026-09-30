@@ -1,8 +1,8 @@
 // Perfil: avatar, racha, insignias, entregas y portafolio.
-import { estado, esTutor } from '../nucleo/estado.js';
+import { estado, esTutor, ROLES, MODOS, soloTutor } from '../nucleo/estado.js';
 import { esc, modal, aviso, errorAviso, $ } from '../nucleo/ui.js';
 import { icono, AVATARES, avatarSVG } from '../nucleo/iconos.js';
-import { avatar, tarjetaEntrega, discoInsignia, vacio } from '../nucleo/componentes.js';
+import { avatar, tarjetaEntrega, discoInsignia, vacio, etiquetaSoloTutor } from '../nucleo/componentes.js';
 import { tarjetaRacha } from './inicio.js';
 import { descargarTXT, imprimir } from '../nucleo/exportar.js';
 import { refrescarAvatarCabecera } from '../nucleo/app.js';
@@ -28,14 +28,18 @@ export default async function vistaPerfil(cont, { params }) {
     <div class="perfil-cab">
       <span id="avatar-perfil">${avatar(p, 112)}</span>
       <div style="flex:1;min-width:240px">
-        <div class="rotulo">${p.rol === 'tutor' ? 'Tutor' : 'Creador'}</div>
+        <div class="rotulo">${esc(ROLES[p.rol] || 'Creador')}${esTutor() && !propio && estado.grupos.length > 1 ? ` · ${esc(estado.grupos.find(g => g.id === p.grupo_id)?.nombre || 'Sin grupo')}` : ''}</div>
         <h1>${esc(p.nombre)}</h1>
+        ${soloTutor(p) ? `<div class="fila" style="gap:8px;margin-top:6px">${etiquetaSoloTutor(p)}<span class="tenue" style="font-size:14px">Modo ${esc(MODOS[p.modo].nombre.toLowerCase())}: ${esc(propio
+          ? (p.modo === 'observador' ? 'usted puede leer al grupo; lo que publica y comenta solo lo ve el tutor.' : 'lo que publica y comenta solo lo ve el tutor.')
+          : MODOS[p.modo].corto.toLowerCase())}</span></div>` : ''}
         <div class="fila" style="margin-top:14px">
           ${propio ? `<button class="btn btn-chico" id="b-avatar">${icono('chispa', 16)}Cambiar avatar</button>` : ''}
           ${propio && estado.api.modo !== 'demo' ? `<button class="btn btn-chico btn-fantasma" id="b-clave">${icono('llave', 16)}Cambiar contraseña</button>` : ''}
           ${(propio || esTutor()) && entregas.length ? `<button class="btn btn-chico btn-fantasma" id="b-port-pdf">${icono('imprimir', 16)}Portafolio en PDF</button>
             <button class="btn btn-chico btn-fantasma" id="b-port-txt">${icono('descargar', 16)}Portafolio .txt</button>` : ''}
-          ${esTutor() && !propio ? `<button class="btn btn-chico btn-primario" id="b-mencion">${icono('medalla', 16)}Otorgar mención</button>` : ''}
+          ${esTutor() && !propio ? `<button class="btn btn-chico btn-primario" id="b-mencion">${icono('medalla', 16)}Otorgar mención</button>
+            <a class="btn btn-chico btn-fantasma" href="#/tutor/personas?grupo=${p.grupo_id || ''}">${icono('ajustes', 16)}Modo y grupo</a>` : ''}
           ${propio ? `<button class="btn btn-chico btn-fantasma" id="b-salir">${icono('salir', 16)}Cerrar sesión</button>` : ''}
         </div>
       </div>

@@ -2,7 +2,7 @@
 import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm';
 import { hoyISO } from './ui.js';
 
-const CAMPOS_LISTA = 'id,autor,dinamica,item_id,titulo,texto,palabras,reto_fecha,sesion_id,estado,editada,creado,actualizado,perfil:perfiles!entregas_autor_fkey(id,nombre,avatar,foto_url,rol),comentarios(count)';
+const CAMPOS_LISTA = 'id,autor,dinamica,item_id,titulo,texto,palabras,reto_fecha,sesion_id,estado,editada,creado,actualizado,perfil:perfiles!entregas_autor_fkey(id,nombre,avatar,foto_url,rol,modo,grupo_id),comentarios(count)';
 
 function traducir(error) {
   const m = error?.message || String(error);
@@ -27,6 +27,21 @@ export function crearApiSupabase(CONFIG) {
     delete e.comentarios;
     return e;
   };
+
+  async function llamarFuncion(cuerpo) {
+    const { data, error } = await sb.functions.invoke('usuarios', { body: cuerpo });
+    if (!error) return data;
+    const respuesta = error.context;
+    if (respuesta && typeof respuesta.status === 'number') {
+      if (respuesta.status === 404) { const e = new Error('La función «usuarios» no está instalada en Supabase.'); e.sinFuncion = true; throw e; }
+      let mensaje = error.message;
+      try { mensaje = (await respuesta.json()).error || mensaje; } catch { /* sin cuerpo */ }
+      throw new Error(mensaje);
+    }
+    const e = new Error('No se pudo contactar la función «usuarios». ¿Está instalada?');
+    e.sinFuncion = true;
+    throw e;
+  }
 
   return {
     modo: 'supabase',
@@ -107,8 +122,8 @@ export function crearApiSupabase(CONFIG) {
     async racha(usuario) {
       return ok(await sb.rpc('racha_de', { u: usuario }));
     },
-    async ranking() {
-      return ok(await sb.rpc('ranking_rachas'));
+    async ranking(grupo) {
+      return ok(await sb.rpc('ranking_rachas', grupo ? { p_grupo: grupo } : {}));
     },
     async calendario(desde, hasta) {
       const [programados, asignados] = await Promise.all([
@@ -132,6 +147,7 @@ export function crearApiSupabase(CONFIG) {
       if (f.item_id) q = q.eq('item_id', f.item_id);
       if (f.reto_fecha) q = q.eq('reto_fecha', f.reto_fecha);
       if (f.sesion_id) q = q.eq('sesion_id', f.sesion_id);
+      if (f.grupo_id) q = q.eq('grupo_id', f.grupo_id);
       if (!f.incluirOcultas) q = q.eq('estado', 'publicada');
       q = q.limit(f.limite || 300);
       return ok(await q).map(normalizar);
@@ -172,7 +188,7 @@ export function crearApiSupabase(CONFIG) {
       else ok(await sb.from('reacciones').delete().eq('entrega_id', entrega_id).eq('tipo', tipo).eq('usuario', yo.id));
     },
     async comentarios(entrega_id) {
-      return ok(await sb.from('comentarios').select('*,perfil:perfiles!comentarios_autor_fkey(id,nombre,avatar,foto_url,rol)').eq('entrega_id', entrega_id).order('creado'));
+      return ok(await sb.from('comentarios').select('*,perfil:perfiles!comentarios_autor_fkey(id,nombre,avatar,foto_url,rol,modo)').eq('entrega_id', entrega_id).order('creado'));
     },
     async comentar(entrega_id, texto, privado = false) {
       ok(await sb.from('comentarios').insert({ entrega_id, texto, privado, autor: yo.id }));
@@ -234,18 +250,48 @@ export function crearApiSupabase(CONFIG) {
     },
 
     // ---------- clase en vivo ----------
-    async sesionClase() {
-      return ok(await sb.from('sesion_clase').select('*').maybeSingle());
+    async sesionClase(grupo) {
+      const g = grupo || yo.grupo_id;
+      if (!g) return null;
+      return ok(await sb.from('sesion_clase').select('*').eq('grupo_id', g).maybeSingle());
     },
-    async activarClase({ dinamica, item_id, titulo, minutos }) {
+    async activarClase({ dinamica, item_id, titulo, minutos, grupo_id }) {
       const fila = {
-        grupo_id: yo.grupo_id, id: crypto.randomUUID(), dinamica, item_id: item_id || null,
+        grupo_id: grupo_id || yo.grupo_id, id: crypto.randomUUID(), dinamica, item_id: item_id || null,
         titulo: titulo || null, minutos: minutos || null, inicia: new Date().toISOString(), activa: true,
       };
       return ok(await sb.from('sesion_clase').upsert(fila).select().single());
     },
-    async terminarClase() {
-      ok(await sb.from('sesion_clase').update({ activa: false }).eq('grupo_id', yo.grupo_id));
+    async terminarClase(grupo) {
+      ok(await sb.from('sesion_clase').update({ activa: false }).eq('grupo_id', grupo || yo.grupo_id));
+    },
+
+    // ---------- personas y grupos (tutor) ----------
+    async grupos() {
+      return ok(await sb.from('grupos').select('*').order('creado'));
+    },
+    async guardarGrupo(g) {
+      const fila = { nombre: g.nombre, descripcion: g.descripcion || null, activo: g.activo !== false };
+      if (g.id) return ok(await sb.from('grupos').update(fila).eq('id', g.id).select().single());
+      return ok(await sb.from('grupos').insert(fila).select().single());
+    },
+    async lista() {
+      return ok(await sb.from('invitados').select('*').order('nombre'));
+    },
+    async guardarPersona(p) {
+      ok(await sb.from('invitados').upsert({
+        email: p.email.trim().toLowerCase(), nombre: p.nombre.trim(), rol: p.rol, modo: p.modo, grupo_id: p.grupo_id || null,
+      }));
+    },
+    async quitarDeLista(email) {
+      ok(await sb.from('invitados').delete().eq('email', email));
+    },
+    // Crear cuentas y cambiar contraseñas exige la función «usuarios» de Supabase.
+    async crearCuenta(p) {
+      return llamarFuncion({ accion: 'crear', ...p });
+    },
+    async cambiarClaveDe(usuario, password) {
+      return llamarFuncion({ accion: 'clave', usuario, password });
     },
 
     // ---------- tiempo real ----------

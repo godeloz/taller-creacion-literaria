@@ -1,6 +1,6 @@
 // Módulo: Escritura Cut Up. El procedimiento de Burroughs invertido: se reciben
 // frases ya cortadas, de fuentes distintas, y se escribe la sintaxis que las acoge.
-import { estado } from '../nucleo/estado.js';
+import { estado, avisoPublicar } from '../nucleo/estado.js';
 import { esc, local, debounce, contarPalabras, confirmar, aviso, errorAviso, hace, barajar } from '../nucleo/ui.js';
 import { icono } from '../nucleo/iconos.js';
 import { publicarEntrega } from '../nucleo/publicar.js';
@@ -261,7 +261,7 @@ export default {
       const vista = `<div class="v-cutup">${usados.map(p => `<p>${p.antes ? esc(p.antes) + ' ' : ''}<span class="v-injerto">${esc(p.f.texto)}</span>${p.despues ? ' ' + esc(p.despues) : ''}</p>`).join('')}</div>
         <div class="v-procedencia"><p class="v-credito">Procedencia de las frases</p>${usados.map(p => { const f = fuenteDe(p.f.fuente); return `<p class="v-credito">«${esc(p.f.texto)}» — ${esc(f?.titulo || '')}, de ${esc(f?.autor || '')}</p>`; }).join('')}</div>`;
       const texto = usados.map(p => [p.antes, p.f.texto, p.despues].filter(Boolean).join(' ')).join('\n\n');
-      if (!editando && !(await confirmar('Al publicar, el grupo podrá leer su relato. Después podrá editarlo, pero no borrarlo.', { si: 'Publicar', no: 'Seguir escribiendo' }))) return;
+      if (!editando && !(await confirmar(avisoPublicar('su relato'), { si: 'Publicar', no: 'Seguir escribiendo' }))) return;
       const b = $('#publicar');
       b.disabled = true;
       try {

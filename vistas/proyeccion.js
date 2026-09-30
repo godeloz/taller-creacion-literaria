@@ -1,16 +1,19 @@
 // Proyección en vivo: el muro de la clase activa, a pantalla completa.
-import { estado, claseActiva, dinamica } from '../nucleo/estado.js';
+import { estado, dinamica, soloTutor } from '../nucleo/estado.js';
 import { esc, hace } from '../nucleo/ui.js';
 import { icono } from '../nucleo/iconos.js';
 import { avatar, vacio } from '../nucleo/componentes.js';
 import { formatoReloj } from '../nucleo/app.js';
 
-export default async function proyeccion(cont) {
+export default async function proyeccion(cont, { query = {} } = {}) {
   document.body.classList.add('enfoque');
-  estado.sesionClase = await estado.api.sesionClase().catch(() => null);
-  const s = claseActiva();
+  const grupo = query.grupo || estado.yo.grupo_id;
+  const sesion = await estado.api.sesionClase(grupo).catch(() => null);
+  if (grupo === estado.yo.grupo_id) estado.sesionClase = sesion;
+  const s = sesion && sesion.activa ? sesion : null;
+  const volver = `#/tutor/clase${grupo !== estado.yo.grupo_id ? `?grupo=${grupo}` : ''}`;
   if (!s) {
-    cont.innerHTML = `<div class="proyeccion">${vacio('No hay un ejercicio activo', 'Actívelo desde el panel del tutor.', '<a class="btn btn-blanco" href="#/tutor/clase">Ir al panel</a>')}</div>`;
+    cont.innerHTML = `<div class="proyeccion">${vacio('No hay un ejercicio activo', 'Actívelo desde el panel del tutor.', `<a class="btn btn-blanco" href="${volver}">Ir al panel</a>`)}</div>`;
     return;
   }
   const d = dinamica(s.dinamica);
@@ -22,16 +25,20 @@ export default async function proyeccion(cont) {
         <span class="espaciador"></span>
         <span class="tenue" id="cuenta" style="color:#A39DB0;font-size:18px"></span>
         ${s.minutos ? '<span class="reloj-grande" id="reloj"></span>' : ''}
-        <a class="btn btn-blanco btn-chico" href="#/tutor/clase">${icono('x', 16)}Salir</a>
+        <a class="btn btn-blanco btn-chico" href="${volver}">${icono('x', 16)}Salir</a>
       </div>
       <div id="tablero"></div>
     </div>`;
 
   const pintar = async () => {
     if (!cont.querySelector('#tablero')) return;
-    const lista = await estado.api.entregas({ sesion_id: s.id });
+    // En la pantalla compartida solo aparece lo que el grupo puede ver:
+    // los textos de observadores y participantes privados se quedan fuera.
+    const todas = await estado.api.entregas({ sesion_id: s.id });
+    const lista = todas.filter(e => !soloTutor(e.perfil));
+    const reservadas = todas.length - lista.length;
     if (!$('tablero')) return;
-    $('cuenta').textContent = `${lista.length} ${lista.length === 1 ? 'texto publicado' : 'textos publicados'}`;
+    $('cuenta').textContent = `${lista.length} ${lista.length === 1 ? 'texto publicado' : 'textos publicados'}${reservadas ? ` · ${reservadas} solo para el tutor` : ''}`;
     $('tablero').innerHTML = lista.length ? `<div class="muro">${lista.map(e => `
       <a class="entrada-tarjeta" href="#/entrega/${e.id}">
         <div class="autor-linea">${avatar(e.perfil, 40)}<div><div class="autor-nombre">${esc(e.perfil?.nombre || '')}</div><div class="autor-meta">${hace(e.creado)}</div></div></div>

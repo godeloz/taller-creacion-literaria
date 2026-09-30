@@ -21,7 +21,7 @@ export default async function ingreso(cont, { alEntrar }) {
           <h2>Modo demostración</h2>
           <p class="tenue">Elija con qué usuario quiere entrar. Los datos se guardan solo en este navegador.</p>
           <div class="demo-usuarios">
-            ${estado.api.usuariosDemo().map(u => `<button type="button" data-id="${u.id}">${avatarSVG(u.avatar, 38)}<span>${esc(u.nombre)}<br><small class="tenue" style="font-weight:500">${u.rol === 'tutor' ? 'Tutor' : 'Creador'}</small></span></button>`).join('')}
+            ${estado.api.usuariosDemo().map(u => `<button type="button" data-id="${u.id}">${avatarSVG(u.avatar, 38)}<span>${esc(u.nombre)}<br><small class="tenue" style="font-weight:500">${u.rol === 'tutor' ? 'Tutor' : u.rol === 'invitado' ? 'Invitado' : 'Creador'}${u.modo && u.modo !== 'participante' ? ` · ${u.modo}` : ''}</small></span></button>`).join('')}
           </div>` : `
           <h2>Bienvenido al taller</h2>
           <p class="tenue" style="margin:0 0 24px">Ingrese con el correo y la contraseña que le entregó el tutor.</p>

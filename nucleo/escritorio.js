@@ -1,6 +1,6 @@
 // Escritorio: espacio de escritura compartido por las dinámicas de texto.
 // La consigna queda siempre visible junto al editor.
-import { estado } from './estado.js';
+import { estado, avisoPublicar as avisoGeneral } from './estado.js';
 import { esc, contarPalabras, sanitizar, local, debounce, confirmar, errorAviso, hace } from './ui.js';
 import { icono } from './iconos.js';
 
@@ -152,7 +152,7 @@ export function montarEscritorio(cont, op) {
     datos.palabras = contarPalabras(datos.texto);
     if (!datos.palabras) return;
     if (!editando) {
-      const ok = await confirmar(avisoPublicar || 'Al publicar, el grupo podrá leer su texto. Después podrá editarlo, pero no borrarlo.', { si: 'Publicar', no: 'Seguir escribiendo' });
+      const ok = await confirmar(avisoPublicar || avisoGeneral(), { si: 'Publicar', no: 'Seguir escribiendo' });
       if (!ok) return;
     }
     botonPublicar.disabled = true;

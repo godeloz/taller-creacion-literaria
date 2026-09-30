@@ -1,13 +1,15 @@
 // Panel del tutor: estudiantes, entregas, clase en vivo, retos, contenido y dinámicas.
-import { estado, esTutor, dinamica, estaAbierta, claseActiva, recargarBase } from '../nucleo/estado.js';
+import { estado, esTutor, dinamica, estaAbierta, claseActiva, recargarBase, MODOS, ROLES } from '../nucleo/estado.js';
 import { esc, hoyISO, sumarDias, fechaCorta, fechaHora, fechaLarga, aviso, errorAviso, confirmar, descargarArchivo, $ } from '../nucleo/ui.js';
 import { icono, llama } from '../nucleo/iconos.js';
 import { avatar, etiquetaDinamica, vacio } from '../nucleo/componentes.js';
 import { MODULOS } from '../modulos/registro.js';
 import { descargarTXT, imprimir } from '../nucleo/exportar.js';
+import { seccionPersonas, pillModo } from './personas.js';
 
 const SECCIONES = [
-  ['estudiantes', 'usuarios', 'Estudiantes'],
+  ['estudiantes', 'medalla', 'Seguimiento'],
+  ['personas', 'usuarios', 'Personas y grupos'],
   ['entregas', 'muro', 'Entregas'],
   ['clase', 'envivo', 'Clase en vivo'],
   ['retos', 'calendario', 'Calendario de retos'],
@@ -29,26 +31,49 @@ export default async function tutor(cont, { params, query }) {
     <div id="seccion"><div class="cargando">Cargando</div></div>
   </div>`;
   const cuerpo = $('#seccion', cont);
-  const f = { estudiantes, entregas, clase, retos, contenido, dinamicas }[sec] || estudiantes;
+  const f = { estudiantes, personas: seccionPersonas, entregas, clase, retos, contenido, dinamicas }[sec] || estudiantes;
   await f(cuerpo, query);
 }
 
+// Grupo elegido en los filtros del panel ('' = todos). Se recuerda entre secciones.
+let grupoElegido = null;
+function grupoDe(query) {
+  if (query.grupo !== undefined) grupoElegido = query.grupo === 'todos' ? '' : query.grupo;
+  if (grupoElegido === null) grupoElegido = estado.yo.grupo_id || '';
+  return grupoElegido;
+}
+function chipsGrupo(seccion, g, extra = {}) {
+  if (estado.grupos.length < 2) return '';
+  const url = v => `#/tutor/${seccion}?` + new URLSearchParams(Object.entries({ ...extra, grupo: v }).filter(([, x]) => x)).toString();
+  return `<div class="filtros" style="margin-top:0">
+    <a class="chip ${!g ? 'activo' : ''}" href="${url('todos')}">Todos los grupos</a>
+    ${estado.grupos.filter(x => x.activo !== false || x.id === g).map(x => `<a class="chip ${x.id === g ? 'activo' : ''}" href="${url(x.id)}">${esc(x.nombre)}</a>`).join('')}
+  </div>`;
+}
+const personasDe = g => estado.perfiles.filter(p => p.rol !== 'tutor' && (!g || p.grupo_id === g));
+
 // ---------------------------------------------------------------------
-async function estudiantes(c) {
-  const creadores = estado.perfiles.filter(p => p.rol === 'creador');
+async function estudiantes(c, query) {
+  await recargarBase();
+  const g = grupoDe(query);
+  const creadores = personasDe(g).sort((a, b) => (a.rol === b.rol ? a.nombre.localeCompare(b.nombre) : a.rol === 'creador' ? -1 : 1));
   const todas = await estado.api.entregas({ incluirOcultas: true, limite: 5000 });
   const rachas = await Promise.all(creadores.map(p => estado.api.racha(p.id).catch(() => ({ actual: 0, mejor: 0 }))));
   const hoy = hoyISO();
+  const nEst = creadores.filter(p => p.rol === 'creador').length, nInv = creadores.length - nEst;
   c.innerHTML = `
-    <div class="fila" style="margin-bottom:14px"><p class="tenue" style="margin:0">${creadores.length} estudiantes con cuenta. Haga clic en un nombre para ver su perfil, sus textos y descargar su portafolio.</p></div>
-    <div class="tabla-envoltura"><table class="tabla">
-      <thead><tr><th>Estudiante</th><th class="num">Textos</th><th class="num">Retos</th><th class="num">Palabras</th><th class="num">Racha</th><th class="num">Mejor</th><th>Reto de hoy</th><th>Última publicación</th></tr></thead>
+    ${chipsGrupo('estudiantes', g)}
+    <div class="fila" style="margin-bottom:14px"><p class="tenue" style="margin:0">${nEst} estudiantes${nInv ? ` y ${nInv} invitados` : ''} con cuenta. Haga clic en un nombre para ver su perfil, sus textos y descargar su portafolio.</p>
+      <span class="espaciador"></span><a class="btn btn-chico" href="#/tutor/personas${g ? `?grupo=${g}` : ''}">${icono('mas', 15)}Agregar personas</a></div>
+    ${creadores.length ? `<div class="tabla-envoltura"><table class="tabla">
+      <thead><tr><th>Persona</th><th>Modo</th><th class="num">Textos</th><th class="num">Retos</th><th class="num">Palabras</th><th class="num">Racha</th><th class="num">Mejor</th><th>Reto de hoy</th><th>Última publicación</th></tr></thead>
       <tbody>${creadores.map((p, i) => {
         const suyas = todas.filter(e => e.autor === p.id);
         const ultima = suyas[0];
         const hizoHoy = suyas.some(e => e.reto_fecha === hoy);
         return `<tr>
-          <td><a href="#/perfil/${p.id}" style="display:flex;align-items:center;gap:10px;text-decoration:none;font-weight:700">${avatar(p, 32)}${esc(p.nombre)}</a></td>
+          <td><a href="#/perfil/${p.id}" style="display:flex;align-items:center;gap:10px;text-decoration:none;font-weight:700">${avatar(p, 32)}<span>${esc(p.nombre)}${p.rol === 'invitado' ? ' <span class="estado-pill">Invitado</span>' : ''}${!g && estado.grupos.length > 1 ? `<br><span class="tenue" style="font-weight:500;font-size:13px">${esc(estado.grupos.find(x => x.id === p.grupo_id)?.nombre || 'Sin grupo')}</span>` : ''}</span></a></td>
+          <td>${pillModo(p.modo || 'participante')}</td>
           <td class="num">${suyas.length}</td>
           <td class="num">${suyas.filter(e => e.dinamica === 'reto').length}</td>
           <td class="num">${suyas.reduce((s, e) => s + (e.palabras || 0), 0).toLocaleString('es-CO')}</td>
@@ -58,29 +83,33 @@ async function estudiantes(c) {
           <td class="tenue">${ultima ? fechaHora(ultima.creado) : 'Nunca'}</td>
         </tr>`;
       }).join('')}</tbody>
-    </table></div>`;
+    </table></div>` : vacio('No hay personas con cuenta en este grupo', 'Agréguelas en «Personas y grupos».')}`;
 }
 
 // ---------------------------------------------------------------------
 async function entregas(c, query) {
+  const g = grupoDe(query);
   const f = { dinamica: query.dinamica || '', autor: query.autor || '' };
-  const lista = await estado.api.entregas({ ...f, incluirOcultas: true, limite: 5000 });
-  const creadores = estado.perfiles.filter(p => p.rol === 'creador');
+  const creadores = personasDe(g);
+  if (f.autor && !creadores.some(p => p.id === f.autor)) f.autor = '';
+  const lista = (await estado.api.entregas({ ...f, incluirOcultas: true, limite: 5000 }))
+    .filter(e => !g || e.perfil?.rol === 'tutor' || (e.perfil?.grupo_id ?? e.grupo_id) === g);
   const dinamicas = estado.dinamicas.filter(d => d.slug === 'reto' || d.en_menu);
   const hash = cambios => '#/tutor/entregas?' + new URLSearchParams(Object.entries({ ...f, ...cambios }).filter(([, v]) => v)).toString();
   c.innerHTML = `
+    ${chipsGrupo('entregas', g, f)}
     <div class="filtros" style="margin-top:0">
       <select class="selector" id="f-din" style="width:auto;min-height:40px"><option value="">Todas las dinámicas</option>${dinamicas.map(d => `<option value="${d.slug}" ${d.slug === f.dinamica ? 'selected' : ''}>${esc(d.nombre)}</option>`).join('')}</select>
-      <select class="selector" id="f-aut" style="width:auto;min-height:40px"><option value="">Todos los estudiantes</option>${creadores.map(p => `<option value="${p.id}" ${p.id === f.autor ? 'selected' : ''}>${esc(p.nombre)}</option>`).join('')}</select>
+      <select class="selector" id="f-aut" style="width:auto;min-height:40px"><option value="">Todas las personas</option>${creadores.map(p => `<option value="${p.id}" ${p.id === f.autor ? 'selected' : ''}>${esc(p.nombre)}</option>`).join('')}</select>
       <span class="espaciador"></span>
       <span class="tenue">${lista.length} textos</span>
       ${lista.length ? `<button class="btn btn-chico" id="d-pdf">${icono('imprimir', 16)}PDF de esta lista</button><button class="btn btn-chico btn-fantasma" id="d-txt">${icono('descargar', 16)}.txt</button>` : ''}
     </div>
     ${lista.length ? `<div class="tabla-envoltura"><table class="tabla">
-      <thead><tr><th>Fecha</th><th>Estudiante</th><th>Dinámica</th><th>Título</th><th class="num">Palabras</th><th class="num">Coment.</th><th>Estado</th><th></th></tr></thead>
+      <thead><tr><th>Fecha</th><th>Autor</th><th>Dinámica</th><th>Título</th><th class="num">Palabras</th><th class="num">Coment.</th><th>Estado</th><th></th></tr></thead>
       <tbody>${lista.map(e => `<tr>
         <td class="tenue" style="white-space:nowrap">${fechaHora(e.creado)}</td>
-        <td>${esc(e.perfil?.nombre || '')}</td>
+        <td>${esc(e.perfil?.nombre || '')}${e.perfil && e.perfil.rol !== 'tutor' && e.perfil.modo && e.perfil.modo !== 'participante' ? ` <span class="etiqueta-solo-tutor" title="${esc(MODOS[e.perfil.modo].corto)}">${icono(MODOS[e.perfil.modo].ico, 12)}${esc(MODOS[e.perfil.modo].nombre)}</span>` : ''}</td>
         <td>${etiquetaDinamica(e.dinamica)}</td>
         <td>${esc(e.titulo || '—')}${e.editada ? ' <span class="marca-editada">editado</span>' : ''}</td>
         <td class="num">${e.palabras}</td>
@@ -105,15 +134,20 @@ async function entregas(c, query) {
 }
 
 // ---------------------------------------------------------------------
-async function clase(c) {
-  estado.sesionClase = await estado.api.sesionClase().catch(() => null);
-  const s = claseActiva();
+async function clase(c, query) {
+  let g = grupoDe(query) || estado.yo.grupo_id;
+  if (!estado.grupos.some(x => x.id === g)) g = estado.grupos[0]?.id || estado.yo.grupo_id;
+  const sesion = await estado.api.sesionClase(g).catch(() => null);
+  if (g === estado.yo.grupo_id) estado.sesionClase = sesion;
+  const s = sesion && sesion.activa ? sesion : null;
+  const nombreG = estado.grupos.find(x => x.id === g)?.nombre || '';
   const abiertas = estado.dinamicas.filter(d => estaAbierta(d) && (d.slug === 'reto' || MODULOS[d.slug]));
   c.innerHTML = `
+    ${estado.grupos.length > 1 ? `<div class="filtros" style="margin-top:0"><span class="etiqueta" style="margin:0">Grupo</span>${estado.grupos.filter(x => x.activo !== false || x.id === g).map(x => `<a class="chip ${x.id === g ? 'activo' : ''}" href="#/tutor/clase?grupo=${x.id}">${esc(x.nombre)}</a>`).join('')}</div>` : ''}
     <div class="dos-col">
       <section class="bloque">
         <h3>${s ? 'Cambiar el ejercicio de la clase' : 'Activar un ejercicio para la clase'}</h3>
-        <p class="tenue" style="margin-top:0">A todos les aparecerá un aviso para entrar. Lo que publiquen durante la clase queda agrupado y se puede proyectar en vivo.</p>
+        <p class="tenue" style="margin-top:0">A ${estado.grupos.length > 1 ? `todas las personas de <b>${esc(nombreG)}</b>` : 'todo el grupo'} les aparecerá un aviso para entrar. Lo que publiquen durante la clase queda agrupado y se puede proyectar en vivo.</p>
         <div class="campo"><label for="c-din">Dinámica</label>
           <select class="selector" id="c-din">${abiertas.map(d => `<option value="${d.slug}">${esc(d.nombre)}</option>`).join('')}</select></div>
         <div class="campo" id="campo-item"><label for="c-item">Contenido</label><select class="selector" id="c-item"></select>
@@ -128,7 +162,7 @@ async function clase(c) {
           <p style="margin-top:0"><b>En curso:</b> ${esc(s.titulo || dinamica(s.dinamica)?.nombre || '')}<br>
           <span class="tenue" style="color:var(--tinta-2)">${esc(dinamica(s.dinamica)?.nombre || '')} · desde ${fechaHora(s.inicia)}${s.minutos ? ` · ${s.minutos} minutos` : ''}</span></p>
           <div class="fila">
-            <a class="btn btn-primario" href="#/proyectar">${icono('proyectar', 18)}Proyectar muro de la clase</a>
+            <a class="btn btn-primario" href="#/proyectar?grupo=${g}">${icono('proyectar', 18)}Proyectar muro de la clase</a>
             <a class="btn" href="#/muro?sesion=${s.id}">Ver en el muro</a>
             <button class="btn btn-peligro" id="c-terminar">Terminar</button>
           </div>` : '<p class="tenue" style="margin:0">No hay ningún ejercicio activo.</p>'}
@@ -150,18 +184,21 @@ async function clase(c) {
     try {
       const d = dinamica(selDin.value);
       const itemSel = selDin.value === 'reto' ? null : selItem.value || null;
-      estado.sesionClase = await estado.api.activarClase({
-        dinamica: selDin.value, item_id: itemSel,
+      await estado.api.activarClase({
+        dinamica: selDin.value, item_id: itemSel, grupo_id: g,
         titulo: $('#c-tit', c).value.trim() || (itemSel ? selItem.selectedOptions[0].textContent : d?.nombre),
         minutos: Number($('#c-min', c).value) || null,
       });
       aviso('Ejercicio activado. El grupo ya ve el aviso.', 'exito');
-      location.reload();
+      if (g === estado.yo.grupo_id) location.reload(); else await clase(c, { grupo: g });
     } catch (e) { errorAviso(e); }
   };
   $('#c-terminar', c)?.addEventListener('click', async () => {
     if (!(await confirmar('¿Terminar el ejercicio de la clase? Los textos publicados se conservan.', { si: 'Terminar' }))) return;
-    try { await estado.api.terminarClase(); location.reload(); } catch (e) { errorAviso(e); }
+    try {
+      await estado.api.terminarClase(g);
+      if (g === estado.yo.grupo_id) location.reload(); else await clase(c, { grupo: g });
+    } catch (e) { errorAviso(e); }
   });
 }
 

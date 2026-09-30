@@ -2,7 +2,7 @@
 import { estado, esTutor, dinamica } from '../nucleo/estado.js';
 import { esc, sanitizar, parrafos, fechaHora, fechaLarga, errorAviso, confirmar, aviso } from '../nucleo/ui.js';
 import { icono } from '../nucleo/iconos.js';
-import { avatar, etiquetaDinamica, barraReacciones, activarReacciones, montarComentarios, vacio } from '../nucleo/componentes.js';
+import { avatar, etiquetaDinamica, barraReacciones, activarReacciones, montarComentarios, vacio, etiquetaSoloTutor } from '../nucleo/componentes.js';
 import { descargarTXT, imprimir } from '../nucleo/exportar.js';
 
 export default async function vistaEntrega(cont, { params }) {
@@ -50,7 +50,8 @@ export default async function vistaEntrega(cont, { params }) {
         <a href="#/perfil/${e.autor}" style="display:flex;gap:12px;align-items:center;text-decoration:none">
           ${avatar(e.perfil, 48)}
           <div><div class="autor-nombre" style="font-size:17px">${esc(e.perfil?.nombre || '')}</div>
-          <div class="autor-meta">${esc(fechaHora(e.creado))}${e.editada ? ` · <span class="marca-editada">editado</span>` : ''}${e.estado === 'oculta' ? ' · oculto para el grupo' : ''}</div></div>
+          <div class="autor-meta">${esc(fechaHora(e.creado))}${e.editada ? ` · <span class="marca-editada">editado</span>` : ''}${e.estado === 'oculta' ? ' · oculto para el grupo' : ''}</div>
+          ${etiquetaSoloTutor(e.perfil) ? `<div style="margin-top:4px">${etiquetaSoloTutor(e.perfil)}</div>` : ''}</div>
         </a>
         <span class="espaciador"></span>
         ${etiquetaDinamica(e.dinamica)}

@@ -1,7 +1,7 @@
 // Módulo: S+7 (Oulipo). Reescribir un cuento cambiando palabras por otras de la
 // misma clase gramatical, tomadas del diccionario. La ★ marca la regla clásica de
 // Jean Lescure: la entrada que está siete lugares después.
-import { estado } from '../nucleo/estado.js';
+import { estado, avisoPublicar } from '../nucleo/estado.js';
 import { esc, local, debounce, confirmar, aviso, errorAviso, hace } from '../nucleo/ui.js';
 import { icono } from '../nucleo/iconos.js';
 import { publicarEntrega } from '../nucleo/publicar.js';
@@ -243,7 +243,7 @@ export default {
       const vista = `<div class="v-s7">${parrafos.map(ps => `<p>${ps.map(x => x.t === 'sep' ? esc(x.texto)
         : cambios[x.clave] !== undefined ? `<span class="v-cambiada">${esc(actual(x.clave))}</span>` : esc(x.texto)).join('')}</p>`).join('')}</div><p class="v-credito">${esc(credito)}</p>`;
       const plano = parrafos.map(ps => ps.map(x => x.t === 'sep' ? x.texto : actual(x.clave)).join('')).join('\n\n') + `\n\n${credito}`;
-      if (!editando && !(await confirmar('Al publicar, el grupo podrá leer su versión. Después podrá editarla, pero no borrarla.', { si: 'Publicar', no: 'Seguir cambiando' }))) return;
+      if (!editando && !(await confirmar(avisoPublicar('su versión', 'la'), { si: 'Publicar', no: 'Seguir cambiando' }))) return;
       const b = $('#publicar');
       b.disabled = true;
       try {

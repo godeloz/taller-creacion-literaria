@@ -1,6 +1,6 @@
 // Módulo: La forma de las historias. Trazar arcos emocionales sobre una cuadrícula
 // de tiempo (principio → fin) y fortuna (desdicha ↔ bienestar), al modo de Vonnegut.
-import { estado } from '../nucleo/estado.js';
+import { estado, avisoPublicar } from '../nucleo/estado.js';
 import { esc, local, debounce, confirmar, modal, aviso, errorAviso, hace } from '../nucleo/ui.js';
 import { icono } from '../nucleo/iconos.js';
 import { publicarEntrega } from '../nucleo/publicar.js';
@@ -327,7 +327,7 @@ export default {
       const escenas = visibles.map(a => `<h3>${esc(a.nombre)}</h3>${a.puntos.map(p => `<p class="v-escena"><strong>Momento ${p.col + 1} · ${nivel(p.val)}</strong> ${esc(p.texto)}</p>`).join('')}`).join('');
       const vista = `<figure class="v-forma">${svg}</figure><div class="v-escenas">${escenas}</div>`;
       const texto = visibles.map(a => `${a.nombre.toUpperCase()}\n${a.puntos.map(p => `· Momento ${p.col + 1} (nivel ${nivel(p.val)}): ${p.texto}`).join('\n')}`).join('\n\n');
-      if (!editando && !(await confirmar('Al publicar, el grupo podrá ver sus arcos. Después podrá editarlos, pero no borrarlos.', { si: 'Publicar', no: 'Seguir trazando' }))) return;
+      if (!editando && !(await confirmar(avisoPublicar('sus arcos', 'los', 'ver'), { si: 'Publicar', no: 'Seguir trazando' }))) return;
       const b = $('#publicar');
       b.disabled = true;
       try {

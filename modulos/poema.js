@@ -1,5 +1,5 @@
 // Módulo: El poema desarmado. Escribir un poema nuevo solo con las palabras de otro.
-import { estado } from '../nucleo/estado.js';
+import { estado, avisoPublicar } from '../nucleo/estado.js';
 import { esc, local, debounce, barajar, confirmar, aviso, errorAviso, hace } from '../nucleo/ui.js';
 import { icono } from '../nucleo/iconos.js';
 import { publicarEntrega } from '../nucleo/publicar.js';
@@ -309,7 +309,7 @@ export default {
       const credito = `Compuesto solo con palabras de «${P.titulo}»${P.autor ? `, de ${P.autor}` : ''}.`;
       const vista = `<div class="v-poema">${usadas.map(l => `<p class="v-verso${clase[l.align]}">${esc(l.txt)}</p>`).join('')}</div><p class="v-credito">${esc(credito)}</p>`;
       const texto = usadas.map(l => l.txt).join('\n') + `\n\n${credito}`;
-      if (!editando && !(await confirmar('Al publicar, el grupo podrá leer su poema. Después podrá editarlo, pero no borrarlo.', { si: 'Publicar', no: 'Seguir componiendo' }))) return;
+      if (!editando && !(await confirmar(avisoPublicar('su poema'), { si: 'Publicar', no: 'Seguir componiendo' }))) return;
       const boton = cont.querySelector('#b-publicar');
       boton.disabled = true;
       try {

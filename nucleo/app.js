@@ -1,7 +1,7 @@
 // Arranque, cabecera, franja de clase en vivo y enrutador.
 import { CONFIG } from '../config.js';
 import { crearApi } from './api.js';
-import { estado, esTutor, recargarBase, claseActiva, dinamica } from './estado.js';
+import { estado, esTutor, recargarBase, claseActiva, dinamica, ROLES } from './estado.js';
 import { $, esc, errorAviso, confirmar } from './ui.js';
 import { icono } from './iconos.js';
 import { avatar } from './componentes.js';
@@ -81,7 +81,7 @@ function pintarMarco() {
           ${nav.map(([ruta, ico, txt]) => `<a href="#/${ruta}" data-ruta="${ruta}">${icono(ico, 18)}<span class="txt">${txt}</span></a>`).join('')}
         </nav>
         <a class="usuario" href="#/perfil" title="Mi perfil">
-          <span class="usuario-texto"><span class="usuario-nombre">${esc(yo.nombre)}</span><span class="usuario-rol">${yo.rol === 'tutor' ? 'Tutor' : 'Creador'}</span></span>
+          <span class="usuario-texto"><span class="usuario-nombre">${esc(yo.nombre)}</span><span class="usuario-rol">${esc(ROLES[yo.rol] || 'Creador')}</span></span>
           <span id="avatar-cabecera">${avatar(yo, 42)}</span>
         </a>
       </div>
