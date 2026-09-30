@@ -1,0 +1,36 @@
+{
+  "tipo": "textos",
+  "nombre": "Ejemplo de paquete de Fallar mejor (textos escritos para el ejemplo)",
+  "ayuda": [
+    "Cada texto necesita id, titulo y borrador. El autor es opcional.",
+    "En el borrador, ~~así~~ marca lo que la autora tachó y [así] lo que dejó en duda.",
+    "Tres formas: solo borrador; borrador y final (con titulo_final si lo tiene); o borrador, final y comentario.",
+    "En el comentario, una línea en blanco separa párrafos y una línea que empieza con > es una cita.",
+    "Los estudiantes solo ven la versión final y el comentario después de publicar su revisión."
+  ],
+  "textos": [
+    {
+      "id": "ejemplo-tercer-piso",
+      "titulo": "Tercer piso",
+      "autor": "Texto de ejemplo",
+      "borrador": "Cada noche, a eso de las once, alguien subía la escalera del edificio. ~~Muy despacio.~~ Los pasos se detenían en el tercer piso, justo frente a mi puerta, y después [de un rato largo] seguían subiendo hasta la azotea, donde no vive nadie desde hace años, desde que se murió la señora Inés, que tenía palomas. Yo nunca abrí. Mi hermana dice que son las tuberías. Mi hermana vive en otra ciudad.",
+      "titulo_final": "Tercer piso",
+      "final": "Cada noche, a las once, alguien subía la escalera. Los pasos se detenían frente a mi puerta y, después de un rato largo, seguían hasta la azotea, donde no vive nadie. Yo nunca abrí. Mi hermana dice que son las tuberías. Mi hermana vive en otra ciudad.",
+      "comentario_titulo": "Por qué cambió",
+      "comentario": "Quité «a eso de» y «del edificio». La hora exacta inquieta más que la aproximada, y la escalera ya dice que hay un edificio.\n\nLa señora Inés y sus palomas eran verdad, pero explicaban la azotea, y lo que no se explica asusta más.\n\n> Los pasos se detenían en el tercer piso, justo frente a mi puerta.\n\n«De un rato largo» dejó de ser una duda: esa pausa es el centro del cuento. El final no lo toqué."
+    },
+    {
+      "id": "ejemplo-inventario",
+      "titulo": "Inventario",
+      "autor": "Texto de ejemplo",
+      "borrador": "En la caja había: tres fotografías, una de ellas rota, un reloj sin correa, la carta que nunca le mandé a mi padre ~~y que ahora ya no importa~~, dos botones azules [de un abrigo que no recuerdo] y una llave. No sé de qué puerta es la llave. Tampoco sé por qué la guardé, ni por qué la sigo guardando.",
+      "final": "En la caja había tres fotografías, un reloj sin correa, la carta que nunca le mandé a mi padre, dos botones azules y una llave. No sé de qué puerta es la llave. La sigo guardando."
+    },
+    {
+      "id": "ejemplo-sala-de-espera",
+      "titulo": "Sala de espera",
+      "autor": "Texto de ejemplo",
+      "borrador": "Hay que llegar temprano, aunque nadie lo pida. Sentarse en la silla más cerca de la puerta, porque así uno puede irse si se cansa, aunque uno nunca se cansa, o sí se cansa pero no se va.\n\nMirar el reloj de la pared, que siempre está atrasado. No preguntar a qué hora llaman. Si alguien pregunta, decirle que uno también está esperando, que es una manera de no decirle nada."
+    }
+  ]
+}
