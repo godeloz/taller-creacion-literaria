@@ -838,3 +838,120 @@ button.fm-ir:hover { color: var(--violeta); }
   .fm-autora > .fila .conmutador button { flex: 1 1 auto; justify-content: center; }
 }
 @media (min-width: 761px) { .fm-corto { display: none; } }
+
+/* =====================================================================
+   Consignas de escritura
+   ===================================================================== */
+.btn-lima { background: var(--lima); border-color: var(--lima); color: var(--tinta); }
+.btn-lima:hover { background: #fff; border-color: #fff; color: var(--tinta); }
+
+/* franja del inicio: tinta con acento lima, distinta de la tarjeta del reto */
+.consigna-franja {
+  background: var(--tinta); color: #fff; border-radius: var(--r-lg); padding: 30px 36px; margin-bottom: 20px;
+  display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 18px 36px; align-items: end; position: relative; overflow: hidden;
+}
+.consigna-franja::before { content: ''; position: absolute; left: 0; top: 0; bottom: 0; width: 8px; background: var(--lima); }
+.consigna-franja .rotulo { color: var(--lima); display: inline-flex; align-items: center; gap: 8px; }
+.consigna-franja h2 { font-family: var(--f-display); font-weight: 500; font-size: clamp(30px, 3.6vw, 46px); line-height: 1.04; letter-spacing: -.015em; margin: 10px 0 10px; }
+.consigna-franja p { margin: 0; color: #D9D5E0; font-size: 16.5px; line-height: 1.6; max-width: 64ch; }
+.cf-accion { display: flex; flex-direction: column; align-items: flex-end; gap: 10px; text-align: right; }
+.cf-meta { font-size: 13.5px; color: #BDB7C7; max-width: 30ch; }
+.cf-mas { font-size: 13.5px; color: var(--lima); }
+.consigna-franja .pill-consigna { background: rgba(255, 255, 255, .1); color: #fff; }
+.consigna-franja .pill-consigna.hecha { background: var(--lima); color: var(--tinta); }
+.consigna-franja .pill-consigna.borrador { background: var(--ambar); color: var(--tinta); }
+.cf-filas { display: flex; flex-direction: column; gap: 8px; margin-top: 12px; }
+.cf-fila { display: flex; gap: 6px 18px; flex-wrap: wrap; align-items: baseline; text-decoration: none; padding: 10px 14px; border-radius: var(--r-sm); background: rgba(255, 255, 255, .06); }
+.cf-fila:hover { background: rgba(255, 255, 255, .12); }
+.cf-fila b { font-family: var(--f-display); font-weight: 500; font-size: 22px; }
+.cf-fila span { font-size: 14px; color: #CFCAD8; }
+
+/* estado de la persona frente a una consigna */
+.pill-consigna { display: inline-flex; align-items: center; gap: 5px; font-size: 12.5px; font-weight: 700; padding: 4px 10px; border-radius: 999px; background: var(--fondo); color: var(--tinta-2); white-space: nowrap; }
+.pill-consigna.hecha { background: #E5F7EF; color: #0B5A3F; }
+.pill-consigna.borrador { background: #FFF1D6; color: #8A4B00; }
+.pill-consigna.estado-abierta { background: var(--lima); color: var(--tinta); }
+.pill-consigna.estado-cerrada { background: var(--fondo-2); color: var(--tenue); }
+.pill-consigna.estado-programada { background: #EEE9FF; color: var(--violeta); }
+
+/* lista */
+.consignas-abiertas { display: grid; grid-template-columns: repeat(auto-fill, minmax(340px, 1fr)); gap: 18px; }
+.consigna-tarjeta {
+  background: #fff; border-radius: var(--r-lg); padding: 26px 28px; text-decoration: none; display: flex; flex-direction: column; gap: 10px;
+  border-top: 6px solid var(--lima); transition: transform .15s, box-shadow .15s;
+}
+.consigna-tarjeta:hover { box-shadow: var(--sombra); transform: translateY(-2px); }
+.consigna-tarjeta h2 { font-family: var(--f-display); font-weight: 500; font-size: 30px; line-height: 1.06; letter-spacing: -.01em; margin: 0; }
+.consigna-tarjeta p { margin: 0; color: var(--tinta-2); line-height: 1.55; }
+.consigna-tarjeta .fila { margin-top: 6px; gap: 10px; }
+.consignas-cerradas { display: flex; flex-direction: column; gap: 8px; }
+.consigna-fila { display: flex; align-items: center; gap: 14px; background: #fff; border-radius: var(--r-md); padding: 14px 18px; text-decoration: none; }
+.consigna-fila:hover { box-shadow: var(--sombra); }
+.cfi-titulo { flex: 1; display: flex; flex-direction: column; min-width: 0; }
+.cfi-titulo b { font-family: var(--f-display); font-weight: 500; font-size: 21px; }
+.cfi-titulo .tenue { font-size: 13.5px; }
+
+/* panel junto al editor: ejemplos y referentes */
+.consigna-anexos { margin-top: 18px; padding-top: 16px; border-top: 1px solid var(--linea); }
+.consigna-anexos .rotulo { display: block; margin-bottom: 8px; }
+.consigna-ejemplo { border: 1px solid var(--linea); border-radius: var(--r-sm); margin-bottom: 8px; background: var(--papel); }
+.consigna-ejemplo summary { cursor: pointer; list-style: none; display: flex; gap: 8px; align-items: flex-start; padding: 10px 12px; font-size: 14.5px; }
+.consigna-ejemplo summary::-webkit-details-marker { display: none; }
+.consigna-ejemplo[open] summary { border-bottom: 1px solid var(--linea); }
+.ejemplo-texto { font-family: var(--f-lectura); font-size: 15.5px; line-height: 1.7; color: var(--tinta); padding: 12px 14px 4px; }
+.ejemplo-texto p { margin: 0 0 .9em; }
+.ejemplo-enlace { display: inline-flex; align-items: center; gap: 6px; font-size: 14px; font-weight: 700; color: var(--violeta); padding: 4px 14px 12px; }
+.consigna-referentes { margin: 0; padding-left: 1.1em; font-size: 14.5px; line-height: 1.55; color: var(--tinta-2); }
+.consigna-referentes li { margin-bottom: 6px; }
+.consigna-referentes a { color: var(--violeta); word-break: break-all; }
+.consigna-texto ul { padding-left: 1.2em; margin: 0 0 .8em; }
+
+/* detalle: cabecera, textos del grupo y su texto */
+.consigna-cabeza { background: #fff; border-radius: var(--r-lg); padding: 26px 30px; border-top: 6px solid var(--lima); margin-bottom: 26px; }
+.consigna-cabeza h1 { font-family: var(--f-display); font-weight: 500; font-size: clamp(32px, 4vw, 46px); line-height: 1.04; letter-spacing: -.015em; margin: 8px 0 12px; }
+.consigna-ver summary { cursor: pointer; list-style: none; display: inline-flex; align-items: center; gap: 8px; font-weight: 700; font-size: 14.5px; }
+.consigna-ver summary::-webkit-details-marker { display: none; }
+.consigna-ver[open] summary { margin-bottom: 14px; }
+.consigna-ver .consigna-texto { max-width: 70ch; }
+.consigna-cuerpo { display: grid; grid-template-columns: minmax(0, 1fr) 320px; gap: 24px; align-items: start; }
+.consigna-cuerpo .muro { columns: 2 300px; }
+.consigna-cuerpo aside { position: sticky; top: 96px; }
+.su-texto h3 { font-family: var(--f-display); font-weight: 500; font-size: 24px; margin: 8px 0 4px; }
+.su-texto .rotulo { display: inline-flex; gap: 6px; align-items: center; }
+.aviso-publicado { display: flex; gap: 10px; align-items: center; background: var(--lima); border-radius: var(--r-md); padding: 12px 18px; margin-bottom: 16px; font-weight: 700; }
+
+/* panel del tutor */
+.cg-linea { display: flex; flex-wrap: wrap; gap: 4px 8px; align-items: center; margin: 3px 0; font-size: 14px; }
+.cg-linea .tenue { font-size: 13px; }
+.editor-consigna { display: grid; grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr); gap: 18px; align-items: start; }
+.previa-consigna { position: sticky; top: 96px; }
+.ejemplo-editor { display: flex; flex-direction: column; gap: 8px; padding: 12px; border: 1px solid var(--linea); border-radius: var(--r-md); margin-bottom: 10px; background: var(--papel); }
+.ejemplo-editor-fila { display: grid; grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr) auto; gap: 8px; }
+.ejemplo-editor .area { min-height: 90px; }
+.asignar-grupo { display: flex; flex-wrap: wrap; gap: 0 12px; align-items: flex-end; margin-top: 18px; padding-top: 16px; border-top: 1px solid var(--linea); }
+.asignar-grupo .campo { min-width: 200px; }
+.asignar-grupo .btn { margin-bottom: 16px; }
+#k-grupos .tabla .entrada { min-height: 38px; padding: 6px 10px; font-size: 14px; }
+
+@media (max-width: 960px) {
+  .consigna-cuerpo, .editor-consigna { grid-template-columns: 1fr; }
+  .consigna-cuerpo aside { position: static; order: -1; }
+  .previa-consigna { position: static; }
+}
+@media (max-width: 760px) {
+  .consigna-franja { grid-template-columns: 1fr; padding: 24px 22px 24px 28px; }
+  .cf-accion { align-items: flex-start; text-align: left; }
+  .consignas-abiertas { grid-template-columns: 1fr; }
+  .consigna-tarjeta { padding: 22px; }
+  .consigna-tarjeta h2 { font-size: 26px; }
+  .consigna-cabeza { padding: 22px; }
+  .consigna-fila { flex-wrap: wrap; }
+  .ejemplo-editor-fila { grid-template-columns: minmax(0, 1fr) auto; }
+  .ejemplo-editor-fila [data-k=autor] { grid-column: 1; }
+}
+@media (max-width: 760px) {
+  .escritorio { grid-template-columns: minmax(0, 1fr); }
+  .mesa-pie { gap: 8px; padding: 12px 14px; }
+  .mesa-pie .btn { padding: 0 14px; }
+  .solo-ancho { display: none; }
+}
