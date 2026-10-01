@@ -66,6 +66,14 @@ function pillMio(x) {
   return '<span class="pill-consigna">Sin empezar</span>';
 }
 
+// Agrega una marca («Ya comentó», «Revisado») al pie de las tarjetas de esos textos.
+function marcarTarjetas(raiz, ids, html) {
+  for (const id of ids) {
+    const pie = raiz.querySelector(`a.entrada-tarjeta[href="#/entrega/${id}"] .entrada-pie`);
+    if (pie) pie.insertAdjacentHTML('afterbegin', html);
+  }
+}
+
 function extracto(c, n = 220) {
   const t = textoPlano(c.instrucciones);
   return t.length > n ? t.slice(0, n).replace(/\s+\S*$/, '') + '…' : t;
@@ -247,6 +255,7 @@ async function lectura(cont, c, a, est, mia, query) {
   if (puedeLeer && modo !== 'privado') textos = await estado.api.entregas({ dinamica: 'consignas', item_id: c.id }).catch(() => []);
   const otros = textos.filter(e => e.autor !== estado.yo.id);
   const reacciones = await estado.api.reacciones(otros.map(e => e.id)).catch(() => []);
+  const comentadas = await estado.api.comentadas(otros.map(e => e.id)).catch(() => []);
   const borrador = !mia ? await borradorDe(c.id) : null;
 
   let suyo;
@@ -294,7 +303,7 @@ async function lectura(cont, c, a, est, mia, query) {
       <div>
         <div class="fila" style="align-items:baseline;margin-bottom:14px">
           <h2 class="titulo-seccion">Textos del grupo</h2><span class="espaciador"></span>
-          ${modo !== 'privado' ? `<span class="tenue">${otros.length} ${otros.length === 1 ? 'texto' : 'textos'}</span>` : ''}
+          ${modo !== 'privado' && otros.length ? `<span class="tenue">Ha comentado ${comentadas.length} de ${otros.length}</span>` : ''}
         </div>
         ${est === 'cerrada' && !mia && otros.length ? '<p class="tenue" style="margin:-4px 0 16px">La consigna cerró: los textos del grupo quedaron abiertos para todos.</p>' : ''}
         ${grupo}
@@ -302,6 +311,7 @@ async function lectura(cont, c, a, est, mia, query) {
       <aside>${suyo}</aside>
     </div>
   </div>`;
+  marcarTarjetas(cont, comentadas, `<span class="ya-comente">${icono('check', 13)}Ya comentó</span>`);
 
   if (mia) {
     const completa = async () => (await estado.api.entrega(mia.id)) || mia;
@@ -322,6 +332,7 @@ async function lecturaTutor(cont, c, query) {
   const textos = (await estado.api.entregas({ dinamica: 'consignas', item_id: c.id, incluirOcultas: true }).catch(() => []))
     .filter(e => !g || (e.perfil?.grupo_id ?? e.grupo_id) === g || e.grupo_id === g);
   const reacciones = await estado.api.reacciones(textos.map(e => e.id)).catch(() => []);
+  const revisados = (await estado.api.revisiones(textos.map(e => e.id)).catch(() => [])).map(r => r.entrega_id);
   const sel = asignados.find(a => a.grupo_id === g);
   cont.innerHTML = `
   <div class="contenedor">
@@ -338,11 +349,12 @@ async function lecturaTutor(cont, c, query) {
     </div>` : '<p class="tenue">Esta consigna todavía no está asignada a ningún grupo.</p>'}
     <div class="fila" style="align-items:baseline;margin:10px 0 14px">
       <h2 class="titulo-seccion">Textos</h2><span class="espaciador"></span>
-      <span class="tenue">${textos.length} ${textos.length === 1 ? 'texto' : 'textos'}</span>
+      <span class="tenue">${textos.length} ${textos.length === 1 ? 'texto' : 'textos'}${textos.length ? ` · ${revisados.length} revisados` : ''}</span>
       ${textos.length ? `<button class="btn btn-chico" id="t-pdf">${icono('imprimir', 16)}PDF</button><button class="btn btn-chico btn-fantasma" id="t-txt">${icono('descargar', 16)}.txt</button>` : ''}
     </div>
     ${textos.length ? `<div class="muro">${textos.map(e => tarjetaEntrega(e, reacciones)).join('')}</div>` : vacio('Todavía no hay textos', g ? 'Nadie de este grupo ha publicado.' : 'Nadie ha publicado en esta consigna.')}
   </div>`;
+  marcarTarjetas(cont, revisados, `<span class="ya-comente">${icono('check', 13)}Revisado</span>`);
   const titulo = `${c.titulo}${sel ? ` · ${sel.nombre}` : ''}`;
   $('#t-pdf', cont)?.addEventListener('click', () => imprimir([...textos].reverse(), titulo, 'Consigna de escritura'));
   $('#t-txt', cont)?.addEventListener('click', () => descargarTXT([...textos].reverse(), titulo));

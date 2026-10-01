@@ -243,6 +243,7 @@ async function seguimiento(c, id, query) {
   const textos = (await estado.api.entregas({ dinamica: 'consignas', item_id: id, incluirOcultas: true, limite: 5000 }))
     .filter(e => e.grupo_id === g || (e.grupo_id === undefined && e.perfil?.grupo_id === g));
   const personas = estado.perfiles.filter(p => p.rol !== 'tutor' && p.grupo_id === g).sort((x, y) => x.nombre.localeCompare(y.nombre));
+  const revisados = new Set((await estado.api.revisiones(textos.map(e => e.id)).catch(() => [])).map(r => r.entrega_id));
   const deQuien = p => textos.find(e => e.autor === p.id);
   const publicaron = personas.filter(deQuien).length;
   c.innerHTML = `
@@ -257,12 +258,12 @@ async function seguimiento(c, id, query) {
       ${pillEstado(a, ahora)}
       <span class="tenue">${esc(nombreGrupo(g))} · abre ${esc(fechaCortaHora(a.apertura))} · cierra ${esc(fechaCortaHora(a.cierre))}</span>
       <span class="espaciador"></span>
-      <b>${publicaron} de ${personas.length} publicaron</b>
+      <b>${publicaron} de ${personas.length} publicaron</b>${textos.length ? `<span class="tenue">· ${textos.filter(e => revisados.has(e.id)).length} revisados</span>` : ''}
       <a class="btn btn-chico" href="#/consignas/${esc(id)}?grupo=${g}">${icono('libro', 15)}Leer los textos</a>
       ${textos.length ? `<button class="btn btn-chico btn-fantasma" id="s-pdf">${icono('imprimir', 15)}PDF</button><button class="btn btn-chico btn-fantasma" id="s-txt">${icono('descargar', 15)}.txt</button>` : ''}
     </div>
     ${personas.length ? `<div class="tabla-envoltura"><table class="tabla">
-      <thead><tr><th>Persona</th><th>Modo</th><th>Estado</th><th class="num">Palabras</th><th class="num">Coment.</th><th></th></tr></thead>
+      <thead><tr><th>Persona</th><th>Modo</th><th>Estado</th><th class="num">Palabras</th><th class="num">Coment.</th><th>Revisión</th><th></th></tr></thead>
       <tbody>${personas.map(p => {
         const e = deQuien(p);
         return `<tr>
@@ -271,7 +272,8 @@ async function seguimiento(c, id, query) {
           <td>${e ? `<span class="estado-pill si">Publicado</span> <span class="tenue" style="font-size:13px">${esc(fechaHora(e.creado))}</span>${e.estado === 'oculta' ? ' <span class="estado-pill no">Oculto</span>' : ''}` : '<span class="estado-pill">Pendiente</span>'}</td>
           <td class="num">${e ? e.palabras : ''}</td>
           <td class="num">${e?.n_comentarios || ''}</td>
-          <td>${e ? `<a class="btn btn-chico" href="#/entrega/${e.id}">Leer</a>` : ''}</td>
+          <td>${e ? (revisados.has(e.id) ? '<span class="estado-pill si">Revisado</span>' : '<span class="estado-pill">Por revisar</span>') : ''}</td>
+          <td>${e ? `<a class="btn btn-chico" href="#/entrega/${e.id}">${revisados.has(e.id) ? 'Leer' : 'Revisar'}</a>` : ''}</td>
         </tr>`;
       }).join('')}</tbody></table></div>` : vacio('Este grupo no tiene personas con cuenta')}`;
   const titulo = `${cons.titulo} · ${nombreGrupo(g)}`;

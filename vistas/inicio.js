@@ -8,6 +8,22 @@ import { franjaInicio } from './consignas.js';
 
 const DIAS = ['L', 'M', 'M', 'J', 'V', 'S', 'D'];
 
+// Comentarios nuevos en mis textos (y respuestas nuevas a mis notas) desde la última vez que los abrí.
+async function novedades() {
+  const filas = (await estado.api.novedades()).sort((a, b) => b.n - a.n);
+  if (!filas.length) return '';
+  const textos = (await Promise.all(filas.slice(0, 4).map(f => estado.api.entrega(f.entrega_id).catch(() => null))))
+    .map((e, i) => e && { e, n: filas[i].n }).filter(Boolean);
+  if (!textos.length) return '';
+  const total = filas.reduce((s, f) => s + f.n, 0);
+  return `<section class="novedades" aria-label="Comentarios nuevos">
+    <span class="rotulo">${icono('comentario', 15)} ${total === 1 ? 'Un comentario nuevo' : `${total} comentarios nuevos`}</span>
+    <div class="novedades-lista">${textos.map(({ e, n }) => `<a class="novedad" href="#/entrega/${e.id}">
+      <b>${esc(e.titulo || (e.autor === estado.yo.id ? 'Su texto sin título' : `Texto de ${e.perfil?.nombre || ''}`))}</b>
+      <span>${n} ${n === 1 ? 'nuevo' : 'nuevos'}${e.autor === estado.yo.id ? '' : ' · respuestas a sus notas'}</span>${icono('derecha', 16)}</a>`).join('')}</div>
+  </section>`;
+}
+
 export function tarjetaRacha(r) {
   const nota = r.hoy_hecho ? 'Hoy ya sumó.'
     : r.actual > 0 ? 'Publique el reto de hoy para sumar un día más.'
@@ -32,14 +48,15 @@ export function listaRanking(filas) {
 
 export default async function inicio(cont) {
   const api = estado.api;
-  const [reto, mio, conteo, racha, ranking, recientes, franjaConsigna] = await Promise.all([
+  const [reto, mio, conteo, racha, ranking, recientes, franjaConsigna, avisos] = await Promise.all([
     api.retoDelDia().catch(() => null),
     api.miRetoHoy().catch(() => null),
     api.conteoReto().catch(() => 0),
     api.racha(estado.yo.id).catch(() => null),
     api.ranking().catch(() => []),
     api.entregas({ limite: 6 }).catch(() => []),
-    franjaInicio().catch(e => { console.warn(e); return ''; }),
+    franjaInicio().catch(() => ''),
+    novedades().catch(() => ''),
   ]);
   const reacciones = await api.reacciones(recientes.map(e => e.id)).catch(() => []);
   const nombre = estado.yo.nombre.split(' ')[0];
@@ -80,6 +97,7 @@ export default async function inicio(cont) {
   <div class="contenedor">
     <h1 class="saludo">${saludo()}, <em>${esc(nombre)}</em>.</h1>
     ${franjaConsigna}
+    ${avisos}
     <div class="rejilla-inicio">
       ${retoHTML}
       <div class="columna">

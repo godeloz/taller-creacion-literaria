@@ -14,6 +14,11 @@ export default async function vistaEntrega(cont, { params }) {
       '<a class="btn" href="#/muro">Volver al muro</a>')}</div>`;
     return;
   }
+  // Los textos de las consignas se leen en la vista de lectura crítica.
+  if (e.dinamica === 'consignas' && e.item_id) {
+    const { default: lecturaCritica } = await import('./lectura-critica.js');
+    return lecturaCritica(cont, e);
+  }
   const d = dinamica(e.dinamica);
   let consigna = '';
   let conFinal = false;
