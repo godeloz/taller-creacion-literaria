@@ -219,8 +219,47 @@ export function crearApiSupabase(CONFIG) {
     async comentarios(entrega_id) {
       return ok(await sb.from('comentarios').select('*,perfil:perfiles!comentarios_autor_fkey(id,nombre,avatar,foto_url,rol,modo)').eq('entrega_id', entrega_id).order('creado'));
     },
-    async comentar(entrega_id, texto, privado = false) {
-      ok(await sb.from('comentarios').insert({ entrega_id, texto, privado, autor: yo.id }));
+    // extra (lectura crítica): { ancla: { inicio, fin, cita }, padre_id, tipo }
+    async comentar(entrega_id, texto, privado = false, extra = {}) {
+      const fila = { entrega_id, texto, privado, autor: yo.id };
+      for (const k of ['ancla', 'padre_id', 'tipo']) if (extra[k]) fila[k] = extra[k];
+      return ok(await sb.from('comentarios').insert(fila).select('id').single());
+    },
+    async editarComentario(id, cambios) {
+      const c = {};
+      for (const k of ['texto', 'privado', 'tipo']) if (k in cambios) c[k] = cambios[k];
+      ok(await sb.from('comentarios').update(c).eq('id', id));
+    },
+    // ---------- lectura crítica ----------
+    async coincidencias(ids) {
+      if (!ids.length) return [];
+      return ok(await sb.from('coincidencias').select('comentario_id,usuario').in('comentario_id', ids));
+    },
+    async coincidir(comentario_id, poner) {
+      if (poner) ok(await sb.from('coincidencias').insert({ comentario_id, usuario: yo.id }));
+      else ok(await sb.from('coincidencias').delete().eq('comentario_id', comentario_id).eq('usuario', yo.id));
+    },
+    async revisiones(ids) {
+      if (!ids.length) return [];
+      return ok(await sb.from('revisiones').select('entrega_id,creado').in('entrega_id', ids));
+    },
+    async marcarRevisado(entrega_id, si) {
+      if (si) ok(await sb.from('revisiones').upsert({ entrega_id, revisado_por: yo.id }));
+      else ok(await sb.from('revisiones').delete().eq('entrega_id', entrega_id));
+    },
+    // Registra que abrí un texto y devuelve cuándo lo había visto antes (o null).
+    async abrirLectura(entrega_id) {
+      const antes = ok(await sb.from('lecturas').select('visto').eq('usuario', yo.id).eq('entrega_id', entrega_id).maybeSingle());
+      ok(await sb.from('lecturas').upsert({ usuario: yo.id, entrega_id, visto: new Date().toISOString() }));
+      return antes?.visto || null;
+    },
+    async novedades() {
+      return ok(await sb.rpc('novedades'));
+    },
+    // ¿En cuáles de estos textos ya dejé al menos un comentario?
+    async comentadas(ids) {
+      if (!ids.length) return [];
+      return [...new Set(ok(await sb.from('comentarios').select('entrega_id').eq('autor', yo.id).in('entrega_id', ids)).map(r => r.entrega_id))];
     },
     async borrarComentario(id) {
       ok(await sb.from('comentarios').delete().eq('id', id));

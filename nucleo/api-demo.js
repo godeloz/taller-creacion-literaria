@@ -57,6 +57,7 @@ async function completarDemo(db) {
   const faltan = DINAMICAS.filter(d => !db.dinamicas.some(x => x.slug === d.slug));
   let cambio = false;
   if (!db.consignas) { sembrarConsignas(db); cambio = true; }
+  if (!db.coincidencias) { sembrarLectura(db); cambio = true; }
   if (!faltan.length) return cambio;
   const { MODULOS } = await import('../modulos/registro.js');
   for (const d of faltan) {
@@ -112,6 +113,33 @@ function sembrarConsignas(db) {
   texto('c3', C2, 6, null, '(Texto de ejemplo del modo demostración.)\n\nUsted abrirá la carta mañana.');
 }
 
+// Lectura crítica de ejemplo: notas sobre fragmentos, una respuesta de la autora, un «Coincido»,
+// notas del tutor con tipo, una devolución y un texto revisado.
+function sembrarLectura(db) {
+  db.coincidencias = []; db.revisiones = []; db.lecturas = {};
+  const dia = 864e5;
+  const iso = ms => new Date(Date.now() + ms).toISOString();
+  const texto = e => (e.vista || '').replace(/<[^>]+>/g, '');
+  const ancla = (e, cita) => { const i = texto(e).indexOf(cita); return i < 0 ? null : { inicio: i, fin: i + cita.length, cita }; };
+  const nota = (e, autor, dias, txt, extra = {}) => {
+    const c = { id: crypto.randomUUID(), entrega_id: e.id, autor, texto: txt, privado: false, editado: false, creado: iso(-dias * dia), ancla: null, padre_id: null, tipo: null, ...extra };
+    db.comentarios.push(c); return c;
+  };
+  const de = (autor, item) => db.entregas.find(e => e.autor === autor && e.dinamica === 'consignas' && e.item_id === item);
+  const e2 = de('c2', 'consigna-demo-2');
+  if (e2) {
+    const n1 = nota(e2, 'c3', 4.2, 'La segunda persona funciona: me sentí acusado.', { ancla: ancla(e2, 'nadie lo nota') });
+    nota(e2, 'tutor-demo', 4, 'Buen arranque: la segunda persona aparece desde la primera palabra.', { ancla: ancla(e2, 'Usted llega tarde'), tipo: 'acierto' });
+    nota(e2, 'c2', 3.9, 'Esa era la idea.', { padre_id: n1.id });
+    nota(e2, 'tutor-demo', 3.8, '¿Quién narra? Pruebe a no revelarlo ni siquiera con el tono.', { ancla: ancla(e2, 'Texto de ejemplo'), tipo: 'pregunta', privado: true });
+    nota(e2, 'tutor-demo', 3.7, 'El texto cumple la consigna. Para la próxima versión, trabaje el futuro: todavía no aparece.', { tipo: 'devolucion', privado: true });
+    db.coincidencias.push({ comentario_id: n1.id, usuario: 'c4', creado: iso(-3.5 * dia) });
+    db.revisiones.push({ entrega_id: e2.id, revisado_por: 'tutor-demo', creado: iso(-3.6 * dia) });
+  }
+  const e4 = de('c4', 'consigna-demo-1');
+  if (e4) nota(e4, 'tutor-demo', 0.5, '¿Cuánto dura de verdad este minuto? Mídalo en frases.', { ancla: ancla(e4, 'un minuto en cerrarse'), tipo: 'revisar' });
+}
+
 async function sembrar() {
   const { MODULOS } = await import('../modulos/registro.js');
   const contenidos = [];
@@ -160,6 +188,7 @@ async function sembrar() {
   ejemplo('g1', 1, 'reto', reto, null, '(Texto de ejemplo.)\n\nUn reto del grupo de invitados: solo lo ve ese grupo y el tutor.');
   ejemplo('c3', 1, 'maraton', contenidos.find(c => c.dinamica === 'maraton').item_id, 'Primera carta', '(Texto de ejemplo del modo demostración.)\n\nUna carta del Maratón ya publicada.');
   sembrarConsignas(db);
+  sembrarLectura(db);
   return db;
 }
 
@@ -173,7 +202,7 @@ export async function crearApiDemo() {
   window.addEventListener('storage', ev => {
     if (ev.key !== CLAVE) return;
     db = local(CLAVE);
-    ['entregas', 'sesion_clase', 'comentarios', 'reacciones'].forEach(t => oyentes.filter(o => o.tabla === t).forEach(o => o.cb({ eventType: 'UPDATE' })));
+    ['entregas', 'sesion_clase', 'comentarios', 'reacciones', 'coincidencias'].forEach(t => oyentes.filter(o => o.tabla === t).forEach(o => o.cb({ eventType: 'UPDATE' })));
   });
 
   let yo = db.perfiles.find(p => p.id === db.sesion) || null;
@@ -370,7 +399,10 @@ export async function crearApiDemo() {
     async borrarEntrega(id) {
       exigirTutor();
       db.entregas = db.entregas.filter(e => e.id !== id);
+      const fuera = new Set(db.comentarios.filter(c => c.entrega_id === id).map(c => c.id));
       db.comentarios = db.comentarios.filter(c => c.entrega_id !== id);
+      db.coincidencias = db.coincidencias.filter(x => !fuera.has(x.comentario_id));
+      db.revisiones = db.revisiones.filter(r => r.entrega_id !== id);
       db.reacciones = db.reacciones.filter(r => r.entrega_id !== id);
       emitir('entregas', 'DELETE', {});
     },
@@ -426,15 +458,91 @@ export async function crearApiDemo() {
       return db.comentarios.filter(c => c.entrega_id === entrega_id && comentarioVisible(c))
         .sort((a, b) => a.creado.localeCompare(b.creado)).map(c => ({ ...c, perfil: pf(c.autor) }));
     },
-    async comentar(entrega_id, texto, privado = false) {
-      db.comentarios.push({ id: crypto.randomUUID(), entrega_id, autor: yo.id, texto, privado: privado && tutor(), editado: false, creado: ahora() });
+    async comentar(entrega_id, texto, privado = false, extra = {}) {
+      const e = db.entregas.find(x => x.id === entrega_id);
+      if (!e || !visible(e)) throw new Error('No tiene permiso para hacer esto.');
+      const c = { id: crypto.randomUUID(), entrega_id, autor: yo.id, texto, privado: privado && tutor(), editado: false, creado: ahora(),
+        ancla: null, padre_id: null, tipo: tutor() && extra.tipo ? extra.tipo : null };
+      if (extra.padre_id) {
+        const p = db.comentarios.find(x => x.id === extra.padre_id);
+        if (!p || p.entrega_id !== entrega_id) throw new Error('La respuesta no corresponde a este texto');
+        if (p.padre_id) throw new Error('Solo se puede responder a una nota, no a una respuesta');
+        c.padre_id = p.id; c.tipo = null; c.privado = p.privado;
+      } else if (extra.ancla && c.tipo !== 'devolucion') {
+        const { inicio, fin, cita } = extra.ancla;
+        if (!(Number.isInteger(inicio) && Number.isInteger(fin) && inicio >= 0 && fin > inicio && cita)) throw new Error('El fragmento señalado no es válido');
+        c.ancla = { inicio, fin, cita: String(cita).slice(0, 2000) };
+      }
+      if (c.tipo === 'devolucion' && db.comentarios.some(x => x.entrega_id === entrega_id && x.tipo === 'devolucion')) throw new Error('Este texto ya tiene una devolución. Puede editarla.');
+      db.comentarios.push(c);
       evaluarInsignias(yo.id);
       emitir('comentarios', 'INSERT', {});
+      return { id: c.id };
+    },
+    async editarComentario(id, cambios) {
+      const c = db.comentarios.find(x => x.id === id);
+      if (!c || c.autor !== yo.id) throw new Error('Solo puede editar sus propios comentarios');
+      if ('texto' in cambios && cambios.texto !== c.texto) { c.texto = cambios.texto; c.editado = true; }
+      if (tutor() && 'privado' in cambios) c.privado = !!cambios.privado;
+      if (tutor() && 'tipo' in cambios) c.tipo = cambios.tipo || null;
+      emitir('comentarios', 'UPDATE', {});
+    },
+    // ---------- lectura crítica ----------
+    async coincidencias(ids) {
+      const s = new Set(ids);
+      return db.coincidencias.filter(x => s.has(x.comentario_id) && puedeVer(x.usuario)
+        && (() => { const c = db.comentarios.find(k => k.id === x.comentario_id); return c && comentarioVisible(c); })())
+        .map(x => ({ comentario_id: x.comentario_id, usuario: x.usuario }));
+    },
+    async coincidir(comentario_id, poner) {
+      db.coincidencias = db.coincidencias.filter(x => !(x.comentario_id === comentario_id && x.usuario === yo.id));
+      if (poner) {
+        const c = db.comentarios.find(x => x.id === comentario_id);
+        if (!c || !comentarioVisible(c) || c.autor === yo.id || c.padre_id) throw new Error('No tiene permiso para hacer esto.');
+        db.coincidencias.push({ comentario_id, usuario: yo.id, creado: ahora() });
+      }
+      emitir('coincidencias', 'INSERT', {});
+    },
+    async revisiones(ids) {
+      const s = new Set(ids);
+      return db.revisiones.filter(r => s.has(r.entrega_id) && (tutor() || db.entregas.find(e => e.id === r.entrega_id)?.autor === yo.id)).map(r => ({ ...r }));
+    },
+    async marcarRevisado(entrega_id, si) {
+      exigirTutor();
+      db.revisiones = db.revisiones.filter(r => r.entrega_id !== entrega_id);
+      if (si) db.revisiones.push({ entrega_id, revisado_por: yo.id, creado: ahora() });
+      guardar();
+    },
+    async abrirLectura(entrega_id) {
+      const k = `${yo.id}:${entrega_id}`;
+      const antes = db.lecturas[k] || null;
+      db.lecturas[k] = ahora(); guardar();
+      return antes;
+    },
+    async novedades() {
+      const cuenta = {};
+      for (const c of db.comentarios) {
+        if (c.autor === yo.id || !comentarioVisible(c)) continue;
+        const e = db.entregas.find(x => x.id === c.entrega_id);
+        const p = c.padre_id && db.comentarios.find(x => x.id === c.padre_id);
+        if (!(e?.autor === yo.id || p?.autor === yo.id)) continue;
+        const visto = db.lecturas[`${yo.id}:${c.entrega_id}`];
+        if (visto && c.creado <= visto) continue;
+        cuenta[c.entrega_id] = (cuenta[c.entrega_id] || 0) + 1;
+      }
+      return Object.entries(cuenta).map(([entrega_id, n]) => ({ entrega_id, n }));
+    },
+    async comentadas(ids) {
+      const s = new Set(ids);
+      return [...new Set(db.comentarios.filter(c => c.autor === yo.id && s.has(c.entrega_id)).map(c => c.entrega_id))];
     },
     async borrarComentario(id) {
       const c = db.comentarios.find(x => x.id === id);
       if (!c || (c.autor !== yo.id && !tutor())) throw new Error('No puede borrar este comentario');
-      db.comentarios = db.comentarios.filter(x => x.id !== id); emitir('comentarios', 'DELETE', {});
+      const fuera = new Set([id, ...db.comentarios.filter(x => x.padre_id === id).map(x => x.id)]);
+      db.comentarios = db.comentarios.filter(x => !fuera.has(x.id));
+      db.coincidencias = db.coincidencias.filter(x => !fuera.has(x.comentario_id));
+      emitir('comentarios', 'DELETE', {});
     },
 
     async insignias() { return db.insignias; },
