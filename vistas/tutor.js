@@ -348,23 +348,29 @@ async function contenido(c, query) {
 // ---------------------------------------------------------------------
 async function dinamicas(c) {
   await recargarBase();
-  const lista = estado.dinamicas;
-  c.innerHTML = `
-    <p class="tenue" style="margin-top:0">Abra o cierre dinámicas, o programe la fecha en que se desbloquean. Una dinámica «próximamente» con fecha se abre sola ese día. Las dinámicas nuevas se agregan al código de la app (carpeta <code>modulos/</code>) y aquí aparecen para abrirlas.</p>
-    <div class="tabla-envoltura"><table class="tabla"><thead><tr><th>Dinámica</th><th>Estado</th><th>Se desbloquea</th><th>Orden</th><th>Módulo en la app</th></tr></thead>
-    <tbody>${lista.map(d => `<tr>
-      <td><span style="display:flex;gap:8px;align-items:center;font-weight:700"><span class="punto" style="background:${esc(d.color)}"></span>${esc(d.nombre)}</span></td>
+  // Las de la cuadrícula (inicio y Dinámicas) se ordenan arrastrando; el número es la posición.
+  // El Reto del día y las Consignas no van en la cuadrícula: tienen su propio lugar.
+  const enMenu = estado.dinamicas.filter(d => d.en_menu);
+  const fuera = estado.dinamicas.filter(d => !d.en_menu);
+  const fila = (d, i) => `<tr data-fila="${d.slug}">
+      <td class="col-orden">${d.en_menu
+        ? `<button type="button" class="asa" data-asa aria-label="Mover ${esc(d.nombre)}: arrastre o use las flechas arriba y abajo" title="Arrastre para cambiar el orden">${icono('arrastrar', 18, { grosor: 2.4 })}</button><b class="orden-num">${i + 1}</b>`
+        : '<span class="orden-fijo tenue" title="No va en la cuadrícula de dinámicas">—</span>'}</td>
+      <td><span style="display:flex;gap:8px;align-items:center;font-weight:700"><span class="punto" style="background:${esc(d.color)}"></span>${esc(d.nombre)}</span>${d.en_menu ? '' : `<span class="tenue" style="display:block;font-size:13px;margin-top:2px">${d.slug === 'reto' ? 'Tiene su propio lugar en el inicio' : 'Tiene su propia sección en el menú'}</span>`}</td>
       <td><select class="selector" data-campo="estado" data-slug="${d.slug}" style="min-height:38px">${['abierta', 'proximamente', 'oculta'].map(e => `<option value="${e}" ${d.estado === e ? 'selected' : ''}>${{ abierta: 'Abierta', proximamente: 'Próximamente', oculta: 'Oculta' }[e]}</option>`).join('')}</select></td>
       <td><input class="entrada" type="date" data-campo="desbloqueo" data-slug="${d.slug}" value="${d.desbloqueo || ''}" style="min-height:38px"></td>
-      <td><input class="entrada" type="number" data-campo="orden" data-slug="${d.slug}" value="${d.orden}" style="min-height:38px;width:80px"></td>
       <td>${MODULOS[d.slug] || d.slug === 'reto' || d.slug === 'consignas' ? '<span class="estado-pill si">Instalado</span>' : '<span class="estado-pill">Pendiente</span>'}</td>
-    </tr>`).join('')}</tbody></table></div>`;
+    </tr>`;
+  c.innerHTML = `
+    <p class="tenue" style="margin-top:0">Abra o cierre dinámicas, o programe la fecha en que se desbloquean. Una dinámica «próximamente» con fecha se abre sola ese día. Para cambiar el orden en que aparecen en el inicio y en Dinámicas, arrastre cada una hacia arriba o hacia abajo tomándola por los seis puntos de la izquierda. Las dinámicas nuevas se agregan al código de la app (carpeta <code>modulos/</code>) y aquí aparecen para abrirlas.</p>
+    <div class="tabla-envoltura"><table class="tabla tabla-dinamicas"><thead><tr><th>Orden</th><th>Dinámica</th><th>Estado</th><th>Se desbloquea</th><th>Módulo en la app</th></tr></thead>
+    <tbody id="d-orden">${enMenu.map(fila).join('')}</tbody>
+    <tbody class="d-fuera">${fuera.map(d => fila(d)).join('')}</tbody></table></div>`;
   c.onchange = async ev => {
     const el = ev.target.closest('[data-campo]');
     if (!el) return;
     const campo = el.dataset.campo;
     let valor = el.value;
-    if (campo === 'orden') valor = Number(valor) || 0;
     if (campo === 'desbloqueo') valor = valor || null;
     try {
       if (campo === 'estado' && valor === 'abierta' && !MODULOS[el.dataset.slug] && !['reto', 'consignas'].includes(el.dataset.slug)) {
@@ -375,4 +381,72 @@ async function dinamicas(c) {
       aviso('Guardado.', 'exito');
     } catch (e) { errorAviso(e); }
   };
+
+  // --- Orden por arrastre (ratón, dedo o teclado) ---
+  const cuerpo = $('#d-orden', c);
+  const orden = () => [...cuerpo.querySelectorAll('tr')].map(tr => tr.dataset.fila);
+  const numerar = () => cuerpo.querySelectorAll('.orden-num').forEach((b, i) => { b.textContent = i + 1; });
+  let cola = Promise.resolve();
+  // Guarda solo las posiciones que cambiaron; en cola, para que dos movimientos seguidos no se crucen.
+  const guardarOrden = () => { cola = cola.then(async () => {
+    const cambios = orden().map((slug, i) => ({ slug, orden: i + 1 })).filter(x => dinamica(x.slug)?.orden !== x.orden);
+    if (!cambios.length) return;
+    try {
+      await Promise.all(cambios.map(x => estado.api.actualizarDinamica(x.slug, { orden: x.orden })));
+      await recargarBase();
+      aviso('Orden guardado.', 'exito');
+    } catch (e) {
+      errorAviso(e);
+      if (c.isConnected) dinamicas(c);
+    }
+  }); };
+
+  let arrastre = null;
+  cuerpo.addEventListener('pointerdown', ev => {
+    const asa = ev.target.closest('[data-asa]');
+    if (!asa || ev.button > 0) return;
+    ev.preventDefault();
+    asa.focus({ preventScroll: true });
+    asa.setPointerCapture(ev.pointerId);
+    arrastre = { tr: asa.closest('tr'), id: ev.pointerId, inicial: orden().join() };
+    arrastre.tr.classList.add('arrastrando');
+    cuerpo.classList.add('ordenando');
+  });
+  cuerpo.addEventListener('pointermove', ev => {
+    if (!arrastre || ev.pointerId !== arrastre.id) return;
+    const { tr } = arrastre;
+    const otras = [...cuerpo.querySelectorAll('tr')].filter(f => f !== tr);
+    const antesDe = otras.find(f => { const r = f.getBoundingClientRect(); return ev.clientY < r.top + r.height / 2; });
+    if (antesDe) { if (tr.nextElementSibling !== antesDe) cuerpo.insertBefore(tr, antesDe); }
+    else if (cuerpo.lastElementChild !== tr) cuerpo.appendChild(tr);
+    numerar();
+    // Si la lista no cabe en la pantalla, desplaza al acercarse al borde.
+    if (ev.clientY < 70) window.scrollBy(0, -12);
+    else if (ev.clientY > window.innerHeight - 70) window.scrollBy(0, 12);
+  });
+  const soltar = ev => {
+    if (!arrastre || ev.pointerId !== arrastre.id) return;
+    const cambio = orden().join() !== arrastre.inicial;
+    arrastre.tr.classList.remove('arrastrando');
+    cuerpo.classList.remove('ordenando');
+    arrastre = null;
+    if (cambio) guardarOrden();
+  };
+  cuerpo.addEventListener('pointerup', soltar);
+  cuerpo.addEventListener('pointercancel', soltar);
+
+  let tTeclas = null;
+  cuerpo.addEventListener('keydown', ev => {
+    const asa = ev.target.closest('[data-asa]');
+    if (!asa || !['ArrowUp', 'ArrowDown'].includes(ev.key)) return;
+    ev.preventDefault();
+    const tr = asa.closest('tr');
+    if (ev.key === 'ArrowUp' && tr.previousElementSibling) cuerpo.insertBefore(tr, tr.previousElementSibling);
+    else if (ev.key === 'ArrowDown' && tr.nextElementSibling) cuerpo.insertBefore(tr.nextElementSibling, tr);
+    else return;
+    numerar();
+    asa.focus();
+    clearTimeout(tTeclas);
+    tTeclas = setTimeout(guardarOrden, 600);
+  });
 }

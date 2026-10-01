@@ -48,7 +48,7 @@ export function listaRanking(filas) {
 
 export default async function inicio(cont) {
   const api = estado.api;
-  const [reto, mio, conteo, racha, ranking, recientes, franjaConsigna, avisos] = await Promise.all([
+  const [reto, mio, conteo, racha, ranking, recientes, franjaConsigna, avisos, hechas] = await Promise.all([
     api.retoDelDia().catch(() => null),
     api.miRetoHoy().catch(() => null),
     api.conteoReto().catch(() => 0),
@@ -57,6 +57,7 @@ export default async function inicio(cont) {
     api.entregas({ limite: 6 }).catch(() => []),
     franjaInicio().catch(() => ''),
     novedades().catch(() => ''),
+    api.realizadas().catch(() => ({})),
   ]);
   const reacciones = await api.reacciones(recientes.map(e => e.id)).catch(() => []);
   const nombre = estado.yo.nombre.split(' ')[0];
@@ -118,7 +119,7 @@ export default async function inicio(cont) {
         <h2 class="titulo-seccion">Dinámicas</h2><span class="espaciador"></span>
         <span class="tenue">${abiertas} abiertas · ${dinamicas.length - abiertas} en camino</span>
       </div>
-      <div class="rejilla-dinamicas">${dinamicas.map(d => tileDinamica(d)).join('')}</div>
+      <div class="rejilla-dinamicas">${dinamicas.map(d => tileDinamica(d, { hechas })).join('')}</div>
     </section>
 
     <section style="margin-top:40px">
