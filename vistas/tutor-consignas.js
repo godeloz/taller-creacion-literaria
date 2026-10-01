@@ -114,6 +114,7 @@ async function editor(c, id) {
         <div class="fila">
           <button class="btn btn-primario" id="k-guardar">${icono('check', 18)}${id ? 'Guardar cambios' : 'Crear consigna'}</button>
           <span class="espaciador"></span>
+          ${id ? `<button class="btn btn-fantasma btn-chico" id="k-duplicar" title="Crea una copia sin grupos, para hacer una variante">${icono('copiar', 15)}Duplicar</button>` : ''}
           ${id ? `<button class="btn btn-fantasma btn-chico" id="k-archivar">${cons.archivada ? 'Sacar del archivo' : 'Archivar'}</button>` : ''}
         </div>
         ${id && asignadas.length ? '<p class="nota-campo" style="margin-top:10px">Los cambios se ven en todos los grupos que tienen esta consigna.</p>' : ''}
@@ -186,6 +187,18 @@ async function editor(c, id) {
       await editor(c, id);
     } catch (e) { errorAviso(e); }
   };
+  // Duplicar: una copia de la versión guardada, sin grupos ni textos, para hacer una variante.
+  $('#k-duplicar', c)?.addEventListener('click', async () => {
+    if (!(await confirmar('Se creará una copia de esta consigna (la versión guardada), sin grupos asignados. Los cambios que haga en la copia no afectan a la original. ¿Duplicar?', { si: 'Duplicar' }))) return;
+    try {
+      const r = await estado.api.guardarConsigna({
+        titulo: `${cons.titulo} (copia)`.slice(0, 140), instrucciones: cons.instrucciones, ejemplos: cons.ejemplos || [],
+        referentes: cons.referentes || '', limite_palabras: cons.limite_palabras || null, archivada: false,
+      });
+      aviso('Copia creada. Ajústela y asígnela a un grupo.', 'exito', 4500);
+      location.hash = `#/tutor/consignas?editar=${r.id}`;
+    } catch (e) { errorAviso(e); }
+  });
   $('#k-archivar', c)?.addEventListener('click', async () => {
     try {
       await estado.api.guardarConsigna({ ...leer(), archivada: !cons.archivada });

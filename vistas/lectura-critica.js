@@ -226,6 +226,7 @@ export default async function lecturaCritica(cont, e) {
     return `<div class="lc-respuesta" data-c="${r.id}">
       <div class="lc-nota-cab">${avatar(r.perfil, 22)}<b>${esc(r.autor === yo ? 'Usted' : r.perfil?.nombre || '')}</b>${sellos(r)}
         <span class="tenue lc-hace">${hace(r.creado)}${r.editado ? ' · editado' : ''}</span><span class="espaciador"></span>
+        ${r.autor === yo ? `<button class="btn btn-fantasma btn-chico btn-icono" data-editar="${r.id}" title="Editar" aria-label="Editar respuesta">${icono('lapiz', 14)}</button>` : ''}
         ${r.autor === yo || tutorYo ? `<button class="btn btn-fantasma btn-chico btn-icono" data-borrar="${r.id}" title="Borrar" aria-label="Borrar respuesta">${icono('basura', 14)}</button>` : ''}</div>
       <p>${enlazar(r.texto)}</p>
     </div>`;
@@ -251,6 +252,7 @@ export default async function lecturaCritica(cont, e) {
           : cs.length ? `<span class="lc-coincido-n" title="${esc(nombres)}">${icono('check', 14)}${cs.length} ${cs.length === 1 ? 'coincide' : 'coinciden'}</span>` : ''}
         ${devol && tutorYo && c.autor === yo ? `<button class="lc-accion" data-editar-devol="${c.id}">${icono('lapiz', 14)}Editar</button>` : ''}
         <button class="lc-accion" data-responder="${c.id}">${icono('comentario', 14)}Responder</button>
+        ${!devol && c.autor === yo ? `<button class="btn btn-fantasma btn-chico btn-icono" data-editar="${c.id}" title="Editar" aria-label="Editar nota">${icono('lapiz', 15)}</button>` : ''}
         ${c.autor === yo || tutorYo ? `<button class="btn btn-fantasma btn-chico btn-icono" data-borrar="${c.id}" title="Borrar" aria-label="Borrar nota">${icono('basura', 15)}</button>` : ''}
       </div>
       ${resp.length ? `<div class="lc-respuestas">${resp.map(respuestaHTML).join('')}</div>` : ''}
@@ -544,10 +546,15 @@ export default async function lecturaCritica(cont, e) {
     if (bBo) {
       const c = comentarios.find(x => x.id === bBo.dataset.borrar);
       const n = c ? respuestasDe(c.id).length : 0;
-      if (!(await confirmar(n ? `¿Borrar esta nota y sus ${n === 1 ? 'una respuesta' : `${n} respuestas`}?` : '¿Borrar este comentario?', { si: 'Borrar', peligro: true }))) return;
+      const pregunta = !n ? '¿Borrar este comentario?'
+        : n === 1 ? '¿Borrar esta nota? También se borrará la respuesta que tiene.'
+        : `¿Borrar esta nota? También se borrarán sus ${n} respuestas.`;
+      if (!(await confirmar(pregunta, { si: 'Borrar', peligro: true }))) return;
       try { await api.borrarComentario(bBo.dataset.borrar); if (!sheet.hidden) cerrarSheet(); await recargar(); } catch (err) { errorAviso(err); }
       return;
     }
+    const bEdN = t.closest('[data-editar]');
+    if (bEdN) { editarNota(comentarios.find(x => x.id === bEdN.dataset.editar)); return; }
     if (t.closest('#lc-nueva-devol')) { editarDevolucion(null); return; }
     const bEd = t.closest('[data-editar-devol]');
     if (bEd) { editarDevolucion(comentarios.find(x => x.id === bEd.dataset.editarDevol)); return; }
@@ -594,6 +601,47 @@ export default async function lecturaCritica(cont, e) {
       nuevo.innerHTML = tarjetaNota(c, { n: n ? Number(n) : null, devol: c.tipo === 'devolucion' });
       viejo.replaceWith(nuevo.firstElementChild);
     });
+  }
+
+  // Editar una nota o respuesta propia. El fragmento señalado no cambia; queda la marca «editado».
+  // El tutor puede cambiar además el tipo y si es solo para el autor (en sus notas, no en las respuestas).
+  async function editarNota(c) {
+    if (!c) return;
+    const opcionesTutor = tutorYo && !c.padre_id;
+    const r = await modal({
+      titulo: c.padre_id ? 'Editar respuesta' : c.ancla ? 'Editar nota' : 'Editar comentario',
+      cuerpo: `${c.ancla?.cita ? `<blockquote class="lc-cita" style="margin:0 0 14px">«${esc(c.ancla.cita.length > 400 ? c.ancla.cita.slice(0, 397) + '…' : c.ancla.cita)}»</blockquote>` : ''}
+        ${opcionesTutor && c.ancla ? `<div class="lc-tipos" role="radiogroup" aria-label="Tipo de nota">
+            <label><input type="radio" name="tipo" value="" ${!c.tipo ? 'checked' : ''}> Sin tipo</label>
+            ${Object.entries(TIPOS).map(([k, t]) => `<label class="t-${k}"><input type="radio" name="tipo" value="${k}" ${c.tipo === k ? 'checked' : ''}> ${t.nombre}</label>`).join('')}
+          </div>` : ''}
+        <div class="campo" style="margin-bottom:8px"><label for="lc-editar">Texto</label>
+          <textarea class="area" id="lc-editar">${esc(c.texto)}</textarea></div>
+        ${opcionesTutor ? `<label class="fila" style="gap:8px;font-size:14px;font-weight:600"><input type="checkbox" id="lc-editar-priv" ${c.privado ? 'checked' : ''}> Solo para el autor (el grupo no la ve)</label>` : ''}
+        <p class="tenue" style="font-size:13.5px;margin:10px 0 0">Quedará la marca «editado».</p>`,
+      ancho: 560,
+      acciones: [
+        { texto: 'Cancelar', clase: 'btn-fantasma', valor: null },
+        {
+          texto: 'Guardar cambios', clase: 'btn-primario', accion: async v => {
+            const texto = v.querySelector('#lc-editar').value.trim();
+            if (!texto) { aviso('El texto no puede quedar vacío. Si quiere quitarlo, bórrelo.', 'error'); return false; }
+            const cambios = { texto };
+            if (opcionesTutor) {
+              cambios.privado = !!v.querySelector('#lc-editar-priv')?.checked;
+              if (c.ancla) cambios.tipo = v.querySelector('[name=tipo]:checked')?.value || null;
+            }
+            try { silencio = Date.now() + 2500; await api.editarComentario(c.id, cambios); return true; }
+            catch (err) { errorAviso(err); return false; }
+          },
+        },
+      ],
+    });
+    if (r !== true) return;
+    const abierta = !sheet.hidden ? [...sheet.querySelectorAll('[data-nota]')].map(x => x.dataset.nota) : null;
+    await recargar();
+    if (abierta) abrirNotas(abierta);
+    aviso('Cambios guardados.', 'exito');
   }
 
   async function editarDevolucion(dv) {
