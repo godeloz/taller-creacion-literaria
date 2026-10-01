@@ -6,7 +6,7 @@ import { tarjetaEntrega, vacio, ICONO_DINAMICA, colorTexto } from '../nucleo/com
 import { miAsignacion, estadoDe } from '../nucleo/consignas.js';
 
 // Segundo nivel del muro: las respuestas a un mismo elemento de una dinámica.
-const TODOS = { reto: 'Todos los días', maraton: 'Todas las cartas', poema: 'Todos los poemas', cutup: 'Todos los juegos', s7: 'Todos los textos', forma: 'Todas las consignas', fallar: 'Todos los textos', consignas: 'Todas las consignas' };
+const TODOS = { reto: 'Todos los días', maraton: 'Todas las cartas', poema: 'Todos los poemas', cutup: 'Todos los juegos', s7: 'Todos los textos', forma: 'Todas las consignas', fallar: 'Todos los textos', pliegues: 'Todos los textos', consignas: 'Todas las consignas' };
 const PROPIOS = '_propios';
 // En estas dinámicas, las respuestas a un texto se abren cuando uno publica la suya.
 const A_CIEGAS = ['fallar', 'consignas'];
@@ -77,7 +77,7 @@ export default async function muro(cont, { query }) {
       const opciones = items.filter(c => !c.item_id.startsWith('_'))
         .filter(c => conteo[c.item_id] || aCiegas(c.item_id) || c.item_id === f.item_id)
         .map(c => ({ id: c.item_id, nombre: nombre(c) || c.item_id, n: conteo[c.item_id] || 0, candado: aCiegas(c.item_id) }));
-      if (f.dinamica === 'fallar') {
+      if (f.dinamica === 'fallar' || f.dinamica === 'pliegues') {
         const n = visibles.filter(e => e.item_id?.startsWith('propio-')).length;
         if (n || soloPropios) opciones.push({ id: PROPIOS, nombre: 'Textos propios', n });
       }
@@ -169,6 +169,12 @@ export default async function muro(cont, { query }) {
     let entregas = await estado.api.entregas({ ...f, incluirOcultas: esTutor() });
     entregas = entregas.filter(deGrupo);
     if (soloPropios) entregas = entregas.filter(e => e.item_id?.startsWith('propio-'));
+    // Pliegues: la tarjeta resalta lo que viene del texto de origen (va en datos, que la lista no trae).
+    if (entregas.some(e => e.dinamica === 'pliegues' && !e.datos)) {
+      const conDatos = await estado.api.entregas({ ...f, dinamica: 'pliegues', conVista: true, incluirOcultas: esTutor() }).catch(() => []);
+      const datos = new Map(conDatos.map(x => [x.id, x.datos]));
+      entregas.forEach(e => { if (datos.has(e.id)) e.datos = datos.get(e.id); });
+    }
     const reacciones = await estado.api.reacciones(entregas.map(e => e.id));
     lista.innerHTML = entregas.length
       ? `<div class="muro">${entregas.map(e => tarjetaEntrega(e, reacciones)).join('')}</div>`

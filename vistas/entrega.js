@@ -36,13 +36,18 @@ export default async function vistaEntrega(cont, { params }) {
           : e.dinamica === 'cutup' ? 'Juego de frases'
           : e.dinamica === 's7' ? 'Texto original'
           : e.dinamica === 'forma' ? 'Consigna'
-          : e.dinamica === 'fallar' ? 'Borrador revisado' : d?.nombre || '';
+          : e.dinamica === 'fallar' ? 'Borrador revisado'
+          : e.dinamica === 'pliegues' ? 'Texto de origen' : d?.nombre || '';
         consigna = `<div class="consigna-ref"><b>${esc(etiqueta)}</b>${esc(c.datos.titulo || c.datos.nombre || '')}${c.datos.autor ? `, de ${esc(c.datos.autor)}` : ''}${enlaceRespuestas(e)}</div>`;
       }
     } catch { /* la consigna es opcional */ }
   }
   if (!consigna && e.dinamica === 'fallar' && e.item_id?.startsWith('propio-')) {
     consigna = `<div class="consigna-ref"><b>Texto propio</b>${esc(e.datos?.base_titulo || 'Revisión de un texto de quien escribe')}</div>`;
+  }
+  if (!consigna && e.dinamica === 'pliegues' && e.item_id?.startsWith('propio-')) {
+    const o = e.datos?.origen || {};
+    consigna = `<div class="consigna-ref"><b>Texto de origen</b>${esc(o.titulo || (o.autor ? 'Un texto' : 'Un texto propio'))}${o.autor ? `, de ${esc(o.autor)}` : ''}</div>`;
   }
   const reacciones = await estado.api.reacciones([e.id]).catch(() => []);
   const mia = e.autor === estado.yo.id;
@@ -82,6 +87,20 @@ export default async function vistaEntrega(cont, { params }) {
     <div class="comentarios" id="comentarios"></div>
   </div>`;
 
+  // Pliegues: la entrega trae dos caras (texto final y pliegues); se elige cuál leer.
+  const vp = cont.querySelector('.lectura .v-pliegues');
+  if (vp) {
+    vp.closest('.lectura').insertAdjacentHTML('beforebegin', `<div class="conmutador v-pl-conmutador" role="tablist" aria-label="Versión">
+      <button type="button" role="tab" data-plv="final" class="on" aria-selected="true">Texto final</button>
+      <button type="button" role="tab" data-plv="pliegues" aria-selected="false">Pliegues</button></div>`);
+    cont.querySelector('.v-pl-conmutador').addEventListener('click', ev => {
+      const b = ev.target.closest('[data-plv]');
+      if (!b) return;
+      vp.classList.toggle('ver-pliegues', b.dataset.plv === 'pliegues');
+      b.parentElement.querySelectorAll('button').forEach(x => { x.classList.toggle('on', x === b); x.setAttribute('aria-selected', x === b); });
+    });
+  }
+
   activarReacciones(cont.querySelector('#reacciones'), reacciones);
   await montarComentarios(cont.querySelector('#comentarios'), e);
 
@@ -107,6 +126,6 @@ function enlaceRespuestas(e) {
   if (e.dinamica === 'consignas' && e.item_id) return `<a class="enlace-respuestas" href="#/consignas/${encodeURIComponent(e.item_id)}">Ver los textos de esta consigna</a>`;
   const href = e.dinamica === 'reto' && e.reto_fecha ? `#/muro?reto=${e.reto_fecha}`
     : e.item_id && !e.item_id.startsWith('propio-') ? `#/muro?dinamica=${encodeURIComponent(e.dinamica)}&item=${encodeURIComponent(e.item_id)}` : '';
-  const a = { reto: 'a este reto', maraton: 'a esta carta', poema: 'a este poema', s7: 'a este texto', fallar: 'a este texto' }[e.dinamica] || 'a esta consigna';
+  const a = { reto: 'a este reto', maraton: 'a esta carta', poema: 'a este poema', s7: 'a este texto', fallar: 'a este texto', pliegues: 'a este texto' }[e.dinamica] || 'a esta consigna';
   return href ? `<a class="enlace-respuestas" href="${href}">Ver todas las respuestas ${a}</a>` : '';
 }

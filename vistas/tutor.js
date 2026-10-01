@@ -18,8 +18,8 @@ const SECCIONES = [
   ['contenido', 'subir', 'Contenido'],
   ['dinamicas', 'ajustes', 'Dinámicas'],
 ];
-const CON_CONTENIDO = ['reto', 'maraton', 'poema', 'cutup', 's7', 'forma', 'fallar'];
-const CLAVE_PAQUETE = { reto: 'retos', maraton: 'cartas', poema: 'poemas', cutup: 'juegos', s7: 'textos', forma: 'consignas', fallar: 'textos' };
+const CON_CONTENIDO = ['reto', 'maraton', 'poema', 'cutup', 's7', 'forma', 'fallar', 'pliegues'];
+const CLAVE_PAQUETE = { reto: 'retos', maraton: 'cartas', poema: 'poemas', cutup: 'juegos', s7: 'textos', forma: 'consignas', fallar: 'textos', pliegues: 'textos' };
 
 export default async function tutor(cont, { params, query }) {
   if (!esTutor()) { cont.innerHTML = `<div class="contenedor">${vacio('Esta sección es solo para el tutor')}</div>`; return; }
