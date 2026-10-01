@@ -79,8 +79,16 @@ export function deCampo(v) {
 }
 
 // ---------- estado de una consigna para un grupo ----------
+// «oculta» la pone el tutor; los demás estados salen de las fechas.
+export function estadoPorFechas(a, ahora = new Date().toISOString()) {
+  if (!a) return 'sin';
+  if (a.apertura > ahora) return 'programada';
+  if (a.cierre <= ahora) return 'cerrada';
+  return 'abierta';
+}
 export function estadoDe(a, ahora = new Date().toISOString()) {
   if (!a) return 'sin';
+  if (a.oculta) return 'oculta';
   if (a.apertura > ahora) return 'programada';
   if (a.cierre <= ahora) return 'cerrada';
   return 'abierta';
@@ -88,7 +96,7 @@ export function estadoDe(a, ahora = new Date().toISOString()) {
 export function miAsignacion(c) {
   return (c.grupos || []).find(g => g.grupo_id === estado.yo.grupo_id) || null;
 }
-export const ETIQUETA_ESTADO = { abierta: 'Abierta', cerrada: 'Cerrada', programada: 'Programada', sin: 'Sin asignar' };
+export const ETIQUETA_ESTADO = { abierta: 'Abierta', cerrada: 'Cerrada', programada: 'Programada', oculta: 'Oculta', sin: 'Sin asignar' };
 
 // ---------- panel de la consigna (junto al editor y en la vista previa) ----------
 export function anexosConsigna(c) {

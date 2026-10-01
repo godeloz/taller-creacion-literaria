@@ -183,12 +183,12 @@ export function crearApiSupabase(CONFIG) {
     },
 
     // ---------- consignas de escritura ----------
-    // Cada consigna trae `grupos`: [{ grupo_id, apertura, cierre }] (el estudiante solo ve la de su grupo).
+    // Cada consigna trae `grupos`: [{ grupo_id, apertura, cierre, oculta }] (el estudiante solo ve la de su grupo).
     async consignas() {
-      return ok(await sb.from('consignas').select('*,grupos:consigna_grupos(grupo_id,apertura,cierre)').order('creado', { ascending: false }));
+      return ok(await sb.from('consignas').select('*,grupos:consigna_grupos(*)').order('creado', { ascending: false }));
     },
     async consigna(id) {
-      return ok(await sb.from('consignas').select('*,grupos:consigna_grupos(grupo_id,apertura,cierre)').eq('id', id).maybeSingle());
+      return ok(await sb.from('consignas').select('*,grupos:consigna_grupos(*)').eq('id', id).maybeSingle());
     },
     async guardarConsigna(c) {
       const fila = {
@@ -200,6 +200,14 @@ export function crearApiSupabase(CONFIG) {
     },
     async asignarConsigna(consigna_id, grupo_id, apertura, cierre) {
       ok(await sb.from('consigna_grupos').upsert({ consigna_id, grupo_id, apertura, cierre }));
+    },
+    // Oculta (o vuelve a mostrar) una consigna para un grupo, sin tocar sus fechas.
+    async ocultarConsigna(consigna_id, grupo_id, oculta) {
+      ok(await sb.from('consigna_grupos').update({ oculta: !!oculta }).eq('consigna_id', consigna_id).eq('grupo_id', grupo_id));
+    },
+    // Consignas que todavía no abren para mi grupo: solo título y fechas.
+    async consignasProgramadas() {
+      return ok(await sb.rpc('consignas_programadas'));
     },
     async quitarAsignacion(consigna_id, grupo_id) {
       ok(await sb.from('consigna_grupos').delete().eq('consigna_id', consigna_id).eq('grupo_id', grupo_id));

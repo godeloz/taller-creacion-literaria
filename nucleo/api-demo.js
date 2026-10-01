@@ -218,7 +218,7 @@ export async function crearApiDemo() {
   const aCiegas = e => e.dinamica === 'fallar' && !!e.item_id && !e.item_id.startsWith('propio-');
   // Consignas: los textos del grupo se abren al publicar el propio o cuando la consigna cierra para el grupo.
   const asignacion = (item, g) => db.consignaGrupos.find(x => x.consigna_id === item && x.grupo_id === g);
-  const consignaCerrada = item => { const a = asignacion(item, yo.grupo_id); return !!a && a.cierre <= ahora(); };
+  const consignaCerrada = item => { const a = asignacion(item, yo.grupo_id); return !!a && !a.oculta && a.cierre <= ahora(); };
   // Misma regla que la base de datos (puede_ver_autor).
   const puedeVer = a => {
     if (!yo) return false;
@@ -380,7 +380,7 @@ export async function crearApiDemo() {
         if (!c) throw new Error('Esta consigna no existe');
         if (!tutor()) {
           const a = asignacion(c.id, yo.grupo_id);
-          if (!a || a.apertura > ahora()) throw new Error('Esta consigna no está abierta para su grupo');
+          if (!a || a.oculta || a.apertura > ahora()) throw new Error('Esta consigna no está abierta para su grupo');
           if (a.cierre <= ahora()) throw new Error('La consigna ya cerró. Ya no se puede publicar.');
         }
         if (c.limite_palabras && fila.palabras > c.limite_palabras) throw new Error(`La consigna admite máximo ${c.limite_palabras} palabras (su texto tiene ${fila.palabras})`);
@@ -416,7 +416,7 @@ export async function crearApiDemo() {
 
     // ---------- consignas de escritura ----------
     async consignas() {
-      const g = x => tutor() || (x.grupo_id === yo.grupo_id && x.apertura <= ahora());
+      const g = x => tutor() || (x.grupo_id === yo.grupo_id && !x.oculta && x.apertura <= ahora());
       return db.consignas
         .filter(c => tutor() || db.consignaGrupos.some(x => x.consigna_id === c.id && g(x)))
         .sort((a, b) => b.creado.localeCompare(a.creado))
@@ -437,9 +437,21 @@ export async function crearApiDemo() {
     async asignarConsigna(consigna_id, grupo_id, apertura, cierre) {
       exigirTutor();
       if (!(cierre > apertura)) throw new Error('El cierre tiene que ser después de la apertura.');
+      const antes = asignacion(consigna_id, grupo_id);
       db.consignaGrupos = db.consignaGrupos.filter(x => !(x.consigna_id === consigna_id && x.grupo_id === grupo_id));
-      db.consignaGrupos.push({ consigna_id, grupo_id, apertura, cierre });
+      db.consignaGrupos.push({ consigna_id, grupo_id, apertura, cierre, oculta: !!antes?.oculta });
       guardar();
+    },
+    async ocultarConsigna(consigna_id, grupo_id, oculta) {
+      exigirTutor();
+      const a = asignacion(consigna_id, grupo_id);
+      if (a) { a.oculta = !!oculta; guardar(); }
+    },
+    async consignasProgramadas() {
+      return db.consignaGrupos
+        .filter(x => x.grupo_id === yo.grupo_id && !x.oculta && x.apertura > ahora())
+        .map(x => ({ id: x.consigna_id, titulo: db.consignas.find(c => c.id === x.consigna_id)?.titulo || '', apertura: x.apertura, cierre: x.cierre }))
+        .sort((a, b) => a.apertura.localeCompare(b.apertura));
     },
     async quitarAsignacion(consigna_id, grupo_id) {
       exigirTutor();
