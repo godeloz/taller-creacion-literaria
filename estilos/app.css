@@ -1198,3 +1198,34 @@ body.pl-sin-scroll { overflow: hidden; }
   .v-pl-conmutador { display: none; }
 }
 .v-pl-conmutador + .lectura .v-pl-final > .v-rotulo { display: none; }
+
+/* =====================================================================
+   Panel › Dinámicas: orden por arrastre · Tarjetas: dinámicas realizadas
+   ===================================================================== */
+.tabla-dinamicas .col-orden { width: 1%; white-space: nowrap; }
+.tabla-dinamicas .selector { min-width: 150px; }
+.asa {
+  display: inline-grid; place-items: center; width: 34px; height: 38px; margin: -8px 4px -8px -8px;
+  border: 0; border-radius: var(--r-sm); background: transparent; color: var(--tenue);
+  cursor: grab; touch-action: none; vertical-align: middle;
+}
+.asa:hover, .asa:focus-visible { background: var(--fondo-2); color: var(--tinta); }
+.asa:focus-visible { outline: 2px solid var(--tinta); outline-offset: 1px; }
+.orden-num, .orden-fijo { display: inline-block; min-width: 1.6em; font-family: var(--f-mono); font-variant-numeric: tabular-nums; vertical-align: middle; }
+.orden-fijo { padding-left: 38px; }
+#d-orden.ordenando, #d-orden.ordenando * { cursor: grabbing; user-select: none; -webkit-user-select: none; }
+#d-orden tr.arrastrando td { background: var(--papel); }
+#d-orden tr.arrastrando td:first-child { box-shadow: inset 4px 0 0 var(--tinta); }
+#d-orden tr.arrastrando .asa { background: var(--tinta); color: #fff; }
+.tabla-dinamicas tbody.d-fuera tr:first-child td { border-top: 2px solid var(--linea-2); }
+.tabla-dinamicas #d-orden tr:last-child td { border-bottom: 0; }
+
+.din-hecha {
+  position: absolute; top: 18px; right: 18px; display: inline-flex; align-items: center; gap: 5px;
+  padding: 5px 11px 5px 7px; border-radius: 999px;
+  font-family: var(--f-ui); font-size: 12.5px; font-weight: 800; line-height: 1; letter-spacing: .01em;
+}
+@media (max-width: 760px) {
+  .din-hecha { top: 12px; right: 12px; padding: 6px; }
+  .din-hecha-txt { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+}
