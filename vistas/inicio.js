@@ -4,7 +4,7 @@ import { esc, saludo, fechaLarga, hoyISO, enlazar } from '../nucleo/ui.js';
 import { icono, llama } from '../nucleo/iconos.js';
 import { avatar, tarjetaEntrega, vacio, revisarInsigniasNuevas } from '../nucleo/componentes.js';
 import { tileDinamica } from './dinamicas.js';
-import { franjaInicio } from './consignas.js';
+import { franjaInicio, activarFranja } from './consignas.js';
 
 const DIAS = ['L', 'M', 'M', 'J', 'V', 'S', 'D'];
 
@@ -142,5 +142,6 @@ export default async function inicio(cont) {
     </section>
   </div>`;
 
+  activarFranja(cont);
   revisarInsigniasNuevas();
 }

@@ -1,11 +1,11 @@
 // Panel del tutor · Consignas de escritura: banco, editor, grupos y fechas, seguimiento.
 import { estado, recargarBase, MODOS } from '../nucleo/estado.js';
-import { esc, aviso, errorAviso, confirmar, debounce, fechaHora, $, $$ } from '../nucleo/ui.js';
+import { esc, aviso, errorAviso, confirmar, debounce, fechaHora, modal, $, $$ } from '../nucleo/ui.js';
 import { icono } from '../nucleo/iconos.js';
 import { avatar, vacio } from '../nucleo/componentes.js';
 import { descargarTXT, imprimir } from '../nucleo/exportar.js';
 import {
-  panelConsigna, estadoDe, aCampo, deCampo, fechaCortaHora, ETIQUETA_ESTADO, ACENTO_CONSIGNA, cuandoCierra,
+  panelConsigna, estadoDe, estadoPorFechas, aCampo, deCampo, fechaCortaHora, ETIQUETA_ESTADO, ACENTO_CONSIGNA, cuandoCierra,
 } from '../nucleo/consignas.js';
 
 const nombreGrupo = id => estado.grupos.find(g => g.id === id)?.nombre || 'Grupo';
@@ -73,6 +73,75 @@ function bloqueEjemplo(e = {}) {
   </div>`;
 }
 
+// Campos de una consigna (los usa el editor del panel y el material que se edita desde la vista de la consigna).
+function camposConsigna(cons, { hayTextos = false } = {}) {
+  return `<div class="campo"><label for="k-titulo">Título</label><input class="entrada" id="k-titulo" maxlength="140" value="${esc(cons.titulo)}" placeholder="Por ejemplo: Un minuto que no se acaba"></div>
+        <div class="campo"><label for="k-instr">Instrucciones</label>
+          <textarea class="area" id="k-instr" style="min-height:190px" placeholder="Escriba la consigna en frases breves.&#10;&#10;1. Primer paso&#10;2. Segundo paso">${esc(cons.instrucciones)}</textarea>
+          <span class="nota-campo">Una línea en blanco separa párrafos. Pasos con «1.», «2.»; viñetas con «-». **negrita**, *cursiva*. Los enlaces se activan solos.</span></div>
+        <div class="campo"><label for="k-limite">Límite de palabras</label>
+          <input class="entrada" id="k-limite" type="number" min="10" max="20000" step="10" value="${cons.limite_palabras || ''}" placeholder="Sin límite" style="max-width:200px">
+          <span class="nota-campo">Nadie podrá publicar un texto más largo. Déjelo vacío si no hay límite.${hayTextos ? ' Los textos ya publicados no cambian.' : ''}</span></div>
+        <div class="campo"><label>Ejemplos y lecturas</label>
+          <div id="k-ejemplos">${(cons.ejemplos || []).map(bloqueEjemplo).join('')}</div>
+          <button type="button" class="btn btn-chico" id="k-mas">${icono('mas', 15)}Agregar ejemplo</button>
+          <span class="nota-campo">Cuentos, fragmentos o enlaces que inspiran la consigna. El grupo los abre junto al espacio de escritura.</span></div>
+        <div class="campo"><label for="k-ref">Referentes</label>
+          <textarea class="area" id="k-ref" style="min-height:90px" placeholder="Una referencia por línea">${esc(cons.referentes || '')}</textarea>
+          <span class="nota-campo">Una por línea. *Cursiva* para los títulos; los enlaces se activan solos.</span></div>`;
+}
+function leerCampos(raiz) {
+  return {
+    titulo: $('#k-titulo', raiz).value.trim(),
+    instrucciones: $('#k-instr', raiz).value.trim(),
+    limite_palabras: Number($('#k-limite', raiz).value) || null,
+    referentes: $('#k-ref', raiz).value.trim(),
+    ejemplos: $$('.ejemplo-editor', $('#k-ejemplos', raiz)).map(b => Object.fromEntries($$('[data-k]', b).map(x => [x.dataset.k, x.value.trim()])))
+      .filter(e => e.titulo || e.texto || e.enlace),
+  };
+}
+function validarCampos(d) {
+  if (!d.titulo) { aviso('Escriba un título para la consigna.', 'error'); return false; }
+  if (!d.instrucciones) { aviso('Escriba las instrucciones de la consigna.', 'error'); return false; }
+  if (d.limite_palabras && (d.limite_palabras < 10 || d.limite_palabras > 20000)) { aviso('El límite debe estar entre 10 y 20.000 palabras.', 'error'); return false; }
+  if (d.ejemplos.some(e => e.enlace && !/^https?:\/\//i.test(e.enlace))) { aviso('Los enlaces de los ejemplos deben empezar por http:// o https://', 'error'); return false; }
+  return true;
+}
+function activarEjemplos(raiz, alCambiar = () => {}) {
+  const ejemplos = $('#k-ejemplos', raiz);
+  $('#k-mas', raiz).onclick = () => { ejemplos.insertAdjacentHTML('beforeend', bloqueEjemplo()); ejemplos.lastElementChild.querySelector('input').focus(); };
+  ejemplos.addEventListener('click', ev => {
+    const b = ev.target.closest('[data-quitar]');
+    if (!b) return;
+    b.closest('.ejemplo-editor').remove();
+    alCambiar();
+  });
+}
+
+// Editar el material de una consigna (instrucciones, ejemplos, referentes, límite) en un panel flotante,
+// sin salir de la vista donde el tutor lee los textos. Devuelve true si guardó.
+export async function modalMaterial(cons) {
+  const r = await modal({
+    titulo: 'Material de la consigna', ancho: 760,
+    cuerpo: `<p class="tenue" style="margin-top:0">Corrija las instrucciones o agregue ejemplos y referentes. Los cambios se ven en todos los grupos que tienen esta consigna.</p>
+      <div class="material-consigna">${camposConsigna(cons)}</div>`,
+    alAbrir: velo => activarEjemplos(velo),
+    acciones: [
+      { texto: 'Cancelar', clase: 'btn-fantasma', valor: null },
+      {
+        texto: 'Guardar cambios', clase: 'btn-primario', accion: async v => {
+          const d = leerCampos(v);
+          if (!validarCampos(d)) return false;
+          try { await estado.api.guardarConsigna({ ...d, id: cons.id, archivada: !!cons.archivada }); return true; }
+          catch (e) { errorAviso(e); return false; }
+        },
+      },
+    ],
+  });
+  if (r === true) aviso('Material guardado.', 'exito');
+  return r === true;
+}
+
 async function editor(c, id) {
   await recargarBase();
   const cons = id ? await estado.api.consigna(id) : { titulo: '', instrucciones: '', ejemplos: [], referentes: '', limite_palabras: null, grupos: [] };
@@ -97,20 +166,7 @@ async function editor(c, id) {
     <div class="editor-consigna">
       <section class="bloque">
         <h3>${id ? 'Editar consigna' : 'Nueva consigna'}${cons.archivada ? ' <span class="estado-pill">Archivada</span>' : ''}</h3>
-        <div class="campo"><label for="k-titulo">Título</label><input class="entrada" id="k-titulo" maxlength="140" value="${esc(cons.titulo)}" placeholder="Por ejemplo: Un minuto que no se acaba"></div>
-        <div class="campo"><label for="k-instr">Instrucciones</label>
-          <textarea class="area" id="k-instr" style="min-height:190px" placeholder="Escriba la consigna en frases breves.&#10;&#10;1. Primer paso&#10;2. Segundo paso">${esc(cons.instrucciones)}</textarea>
-          <span class="nota-campo">Una línea en blanco separa párrafos. Pasos con «1.», «2.»; viñetas con «-». **negrita**, *cursiva*. Los enlaces se activan solos.</span></div>
-        <div class="campo"><label for="k-limite">Límite de palabras</label>
-          <input class="entrada" id="k-limite" type="number" min="10" max="20000" step="10" value="${cons.limite_palabras || ''}" placeholder="Sin límite" style="max-width:200px">
-          <span class="nota-campo">Nadie podrá publicar un texto más largo. Déjelo vacío si no hay límite.${textos.length ? ' Los textos ya publicados no cambian.' : ''}</span></div>
-        <div class="campo"><label>Ejemplos y lecturas</label>
-          <div id="k-ejemplos">${(cons.ejemplos || []).map(bloqueEjemplo).join('')}</div>
-          <button type="button" class="btn btn-chico" id="k-mas">${icono('mas', 15)}Agregar ejemplo</button>
-          <span class="nota-campo">Cuentos, fragmentos o enlaces que inspiran la consigna. El grupo los abre junto al espacio de escritura.</span></div>
-        <div class="campo"><label for="k-ref">Referentes</label>
-          <textarea class="area" id="k-ref" style="min-height:90px" placeholder="Una referencia por línea">${esc(cons.referentes || '')}</textarea>
-          <span class="nota-campo">Una por línea. *Cursiva* para los títulos; los enlaces se activan solos.</span></div>
+        ${camposConsigna(cons, { hayTextos: textos.length > 0 })}
         <div class="fila">
           <button class="btn btn-primario" id="k-guardar">${icono('check', 18)}${id ? 'Guardar cambios' : 'Crear consigna'}</button>
           <span class="espaciador"></span>
@@ -127,14 +183,17 @@ async function editor(c, id) {
 
     ${id ? `<section class="bloque" id="k-grupos">
       <h3>Grupos y fechas</h3>
-      <p class="tenue" style="margin-top:0">Cada grupo tiene su apertura y su cierre, en hora de Colombia. Al cerrar, los textos se abren para todo el grupo y ya no se puede publicar.</p>
+      <p class="tenue" style="margin-top:0">Cada grupo tiene su apertura y su cierre, en hora de Colombia. El estado sale de las fechas: programada, abierta o cerrada. Al cerrar, los textos se abren para todo el grupo y ya no se puede publicar. Con <b>Oculta</b>, ese grupo deja de ver la consigna hasta que usted la vuelva a mostrar; no se borra nada.</p>
       ${asignadas.length ? `<div class="tabla-envoltura"><table class="tabla">
         <thead><tr><th>Grupo</th><th>Abre</th><th>Cierra</th><th>Estado</th><th class="num">Textos</th><th></th></tr></thead>
         <tbody>${asignadas.map(a => `<tr data-grupo="${a.grupo_id}">
           <td><b>${esc(nombreGrupo(a.grupo_id))}</b></td>
           <td><input class="entrada" type="datetime-local" data-k="apertura" value="${aCampo(a.apertura)}" aria-label="Abre"></td>
           <td><input class="entrada" type="datetime-local" data-k="cierre" value="${aCampo(a.cierre)}" aria-label="Cierra"></td>
-          <td>${pillEstado(a, ahora)}${estadoDe(a, ahora) === 'abierta' ? `<br><span class="tenue" style="font-size:12.5px">${esc(cuandoCierra(a.cierre))}</span>` : ''}</td>
+          <td><select class="selector estado-grupo estado-${estadoDe(a, ahora)}" data-estado aria-label="Estado para ${esc(nombreGrupo(a.grupo_id))}">
+              <option value="auto" ${a.oculta ? '' : 'selected'}>${ETIQUETA_ESTADO[estadoPorFechas(a, ahora)]} (por fechas)</option>
+              <option value="oculta" ${a.oculta ? 'selected' : ''}>Oculta</option>
+            </select>${estadoDe(a, ahora) === 'abierta' ? `<br><span class="tenue" style="font-size:12.5px">${esc(cuandoCierra(a.cierre))}</span>` : a.oculta ? '<br><span class="tenue" style="font-size:12.5px">El grupo no la ve</span>' : ''}</td>
           <td class="num">${nTextos(a.grupo_id) || ''}</td>
           <td style="white-space:nowrap"><button class="btn btn-chico" data-fechas>${icono('check', 15)}Guardar fechas</button>
             ${nTextos(a.grupo_id) ? '' : `<button class="btn btn-chico btn-fantasma btn-icono" data-quitar-grupo title="Quitar este grupo" aria-label="Quitar este grupo">${icono('x', 15)}</button>`}</td>
@@ -147,17 +206,7 @@ async function editor(c, id) {
       </div>` : ''}
     </section>` : '<p class="tenue">Cuando cree la consigna podrá asignarla a uno o varios grupos, con sus fechas.</p>'}`;
 
-  const ejemplos = $('#k-ejemplos', c);
-  const leer = () => ({
-    id: id || undefined,
-    titulo: $('#k-titulo', c).value.trim(),
-    instrucciones: $('#k-instr', c).value.trim(),
-    limite_palabras: Number($('#k-limite', c).value) || null,
-    referentes: $('#k-ref', c).value.trim(),
-    archivada: !!cons.archivada,
-    ejemplos: $$('.ejemplo-editor', ejemplos).map(b => Object.fromEntries($$('[data-k]', b).map(x => [x.dataset.k, x.value.trim()])))
-      .filter(e => e.titulo || e.texto || e.enlace),
-  });
+  const leer = () => ({ id: id || undefined, archivada: !!cons.archivada, ...leerCampos(c) });
   const previa = $('#k-previa', c);
   const pintarPrevia = () => {
     const d = leer();
@@ -166,20 +215,11 @@ async function editor(c, id) {
   pintarPrevia();
   const alCambiar = debounce(pintarPrevia, 250);
   c.querySelector('.editor-consigna').addEventListener('input', alCambiar);
-  $('#k-mas', c).onclick = () => { ejemplos.insertAdjacentHTML('beforeend', bloqueEjemplo()); ejemplos.lastElementChild.querySelector('input').focus(); };
-  ejemplos.addEventListener('click', ev => {
-    const b = ev.target.closest('[data-quitar]');
-    if (!b) return;
-    b.closest('.ejemplo-editor').remove();
-    pintarPrevia();
-  });
+  activarEjemplos(c, pintarPrevia);
 
   $('#k-guardar', c).onclick = async () => {
     const d = leer();
-    if (!d.titulo) { aviso('Escriba un título para la consigna.', 'error'); return; }
-    if (!d.instrucciones) { aviso('Escriba las instrucciones de la consigna.', 'error'); return; }
-    if (d.limite_palabras && (d.limite_palabras < 10 || d.limite_palabras > 20000)) { aviso('El límite debe estar entre 10 y 20.000 palabras.', 'error'); return; }
-    if (d.ejemplos.some(e => e.enlace && !/^https?:\/\//i.test(e.enlace))) { aviso('Los enlaces de los ejemplos deben empezar por http:// o https://', 'error'); return; }
+    if (!validarCampos(d)) return;
     try {
       const r = await estado.api.guardarConsigna(d);
       if (!id) { aviso('Consigna creada. Ahora asígnela a un grupo.', 'exito', 4500); location.hash = `#/tutor/consignas?editar=${r.id}`; return; }
@@ -222,6 +262,17 @@ async function editor(c, id) {
       aviso('Consigna asignada.', 'exito');
       await editor(c, id);
     } catch (e) { errorAviso(e); }
+  });
+  $('#k-grupos', c)?.addEventListener('change', async ev => {
+    const sel = ev.target.closest('[data-estado]');
+    const fila = sel?.closest('tr[data-grupo]');
+    if (!fila) return;
+    const ocultar = sel.value === 'oculta';
+    try {
+      await estado.api.ocultarConsigna(id, fila.dataset.grupo, ocultar);
+      aviso(ocultar ? `${nombreGrupo(fila.dataset.grupo)} ya no ve esta consigna.` : `La consigna vuelve a verse en ${nombreGrupo(fila.dataset.grupo)}.`, 'exito', 4200);
+      await editor(c, id);
+    } catch (e) { errorAviso(e); await editor(c, id); }
   });
   $('#k-grupos', c)?.addEventListener('click', async ev => {
     const fila = ev.target.closest('tr[data-grupo]');
