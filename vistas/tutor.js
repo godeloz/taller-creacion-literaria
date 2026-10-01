@@ -6,10 +6,12 @@ import { avatar, etiquetaDinamica, vacio } from '../nucleo/componentes.js';
 import { MODULOS } from '../modulos/registro.js';
 import { descargarTXT, imprimir } from '../nucleo/exportar.js';
 import { seccionPersonas, pillModo } from './personas.js';
+import { seccionConsignas } from './tutor-consignas.js';
 
 const SECCIONES = [
   ['estudiantes', 'medalla', 'Seguimiento'],
   ['personas', 'usuarios', 'Personas y grupos'],
+  ['consignas', 'pagina', 'Consignas'],
   ['entregas', 'muro', 'Entregas'],
   ['clase', 'envivo', 'Clase en vivo'],
   ['retos', 'calendario', 'Calendario de retos'],
@@ -31,7 +33,7 @@ export default async function tutor(cont, { params, query }) {
     <div id="seccion"><div class="cargando">Cargando</div></div>
   </div>`;
   const cuerpo = $('#seccion', cont);
-  const f = { estudiantes, personas: seccionPersonas, entregas, clase, retos, contenido, dinamicas }[sec] || estudiantes;
+  const f = { estudiantes, personas: seccionPersonas, consignas: seccionConsignas, entregas, clase, retos, contenido, dinamicas }[sec] || estudiantes;
   await f(cuerpo, query);
 }
 
@@ -94,7 +96,7 @@ async function entregas(c, query) {
   if (f.autor && !creadores.some(p => p.id === f.autor)) f.autor = '';
   const lista = (await estado.api.entregas({ ...f, incluirOcultas: true, limite: 5000 }))
     .filter(e => !g || e.perfil?.rol === 'tutor' || (e.perfil?.grupo_id ?? e.grupo_id) === g);
-  const dinamicas = estado.dinamicas.filter(d => d.slug === 'reto' || d.en_menu);
+  const dinamicas = estado.dinamicas.filter(d => d.slug === 'reto' || d.slug === 'consignas' || d.en_menu);
   const hash = cambios => '#/tutor/entregas?' + new URLSearchParams(Object.entries({ ...f, ...cambios }).filter(([, v]) => v)).toString();
   c.innerHTML = `
     ${chipsGrupo('entregas', g, f)}
@@ -355,7 +357,7 @@ async function dinamicas(c) {
       <td><select class="selector" data-campo="estado" data-slug="${d.slug}" style="min-height:38px">${['abierta', 'proximamente', 'oculta'].map(e => `<option value="${e}" ${d.estado === e ? 'selected' : ''}>${{ abierta: 'Abierta', proximamente: 'Próximamente', oculta: 'Oculta' }[e]}</option>`).join('')}</select></td>
       <td><input class="entrada" type="date" data-campo="desbloqueo" data-slug="${d.slug}" value="${d.desbloqueo || ''}" style="min-height:38px"></td>
       <td><input class="entrada" type="number" data-campo="orden" data-slug="${d.slug}" value="${d.orden}" style="min-height:38px;width:80px"></td>
-      <td>${MODULOS[d.slug] || d.slug === 'reto' ? '<span class="estado-pill si">Instalado</span>' : '<span class="estado-pill">Pendiente</span>'}</td>
+      <td>${MODULOS[d.slug] || d.slug === 'reto' || d.slug === 'consignas' ? '<span class="estado-pill si">Instalado</span>' : '<span class="estado-pill">Pendiente</span>'}</td>
     </tr>`).join('')}</tbody></table></div>`;
   c.onchange = async ev => {
     const el = ev.target.closest('[data-campo]');
@@ -365,7 +367,7 @@ async function dinamicas(c) {
     if (campo === 'orden') valor = Number(valor) || 0;
     if (campo === 'desbloqueo') valor = valor || null;
     try {
-      if (campo === 'estado' && valor === 'abierta' && !MODULOS[el.dataset.slug] && el.dataset.slug !== 'reto') {
+      if (campo === 'estado' && valor === 'abierta' && !MODULOS[el.dataset.slug] && !['reto', 'consignas'].includes(el.dataset.slug)) {
         aviso('Ojo: esta dinámica aún no tiene módulo en la app. Los estudiantes la verán, pero no podrán usarla.', 'error', 6000);
       }
       await estado.api.actualizarDinamica(el.dataset.slug, { [campo]: valor });

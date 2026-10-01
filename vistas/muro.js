@@ -3,12 +3,13 @@ import { estado, esTutor, estaAbierta, miModo } from '../nucleo/estado.js';
 import { esc, hoyISO, fechaLarga } from '../nucleo/ui.js';
 import { icono } from '../nucleo/iconos.js';
 import { tarjetaEntrega, vacio, ICONO_DINAMICA, colorTexto } from '../nucleo/componentes.js';
+import { miAsignacion, estadoDe } from '../nucleo/consignas.js';
 
 // Segundo nivel del muro: las respuestas a un mismo elemento de una dinámica.
-const TODOS = { reto: 'Todos los días', maraton: 'Todas las cartas', poema: 'Todos los poemas', cutup: 'Todos los juegos', s7: 'Todos los textos', forma: 'Todas las consignas', fallar: 'Todos los textos' };
+const TODOS = { reto: 'Todos los días', maraton: 'Todas las cartas', poema: 'Todos los poemas', cutup: 'Todos los juegos', s7: 'Todos los textos', forma: 'Todas las consignas', fallar: 'Todos los textos', consignas: 'Todas las consignas' };
 const PROPIOS = '_propios';
 // En estas dinámicas, las respuestas a un texto se abren cuando uno publica la suya.
-const A_CIEGAS = ['fallar'];
+const A_CIEGAS = ['fallar', 'consignas'];
 
 export default async function muro(cont, { query }) {
   const f = {
@@ -29,7 +30,7 @@ export default async function muro(cont, { query }) {
     return '#/muro' + (qs ? '?' + qs : '');
   };
 
-  const dinamicas = estado.dinamicas.filter(d => d.slug === 'reto' || (d.en_menu && estaAbierta(d)));
+  const dinamicas = estado.dinamicas.filter(d => d.slug === 'reto' || (d.slug === 'consignas' && estaAbierta(d)) || (d.en_menu && estaAbierta(d)));
   const modo = miModo();
   const creadores = estado.perfiles.filter(p => p.rol !== 'tutor' && (!grupoF || p.grupo_id === grupoF)
     && (esTutor() || p.id === estado.yo.id || p.modo === 'participante'))
@@ -43,8 +44,15 @@ export default async function muro(cont, { query }) {
   // ---------- segundo nivel: elementos de la dinámica elegida ----------
   let segundo = '';
   if (f.dinamica) {
+    // Las consignas viven en su propia tabla; las demás dinámicas, en contenidos.
+    const cerradas = new Set();
     const [items, deLaDinamica] = await Promise.all([
-      estado.api.contenidos(f.dinamica).catch(() => []),
+      f.dinamica === 'consignas'
+        ? estado.api.consignas().then(cs => cs.map(c => {
+          if (estadoDe(miAsignacion(c)) === 'cerrada') cerradas.add(c.id);
+          return { item_id: c.id, datos: { titulo: c.titulo } };
+        })).catch(() => [])
+        : estado.api.contenidos(f.dinamica).catch(() => []),
       estado.api.entregas({ dinamica: f.dinamica, incluirOcultas: esTutor() }).catch(() => []),
     ]);
     const visibles = deLaDinamica.filter(deGrupo);
@@ -65,7 +73,7 @@ export default async function muro(cont, { query }) {
       const conteo = {};
       visibles.forEach(e => { if (e.item_id) conteo[e.item_id] = (conteo[e.item_id] || 0) + 1; });
       const mios = new Set(deLaDinamica.filter(e => e.autor === estado.yo.id).map(e => e.item_id));
-      const aCiegas = id => A_CIEGAS.includes(f.dinamica) && !esTutor() && miModo() === 'participante' && !mios.has(id);
+      const aCiegas = id => A_CIEGAS.includes(f.dinamica) && !esTutor() && miModo() === 'participante' && !mios.has(id) && !cerradas.has(id);
       const opciones = items.filter(c => !c.item_id.startsWith('_'))
         .filter(c => conteo[c.item_id] || aCiegas(c.item_id) || c.item_id === f.item_id)
         .map(c => ({ id: c.item_id, nombre: nombre(c) || c.item_id, n: conteo[c.item_id] || 0, candado: aCiegas(c.item_id) }));
@@ -95,8 +103,11 @@ export default async function muro(cont, { query }) {
           <div><div class="rotulo">${esc(din?.nombre || '')}</div><div class="display" style="font-size:28px">${esc(titulo)}</div></div>
         </div>`;
         if (!soloPropios && aCiegas(f.item_id)) {
-          cerrado = vacio('Las respuestas están cerradas por ahora', 'Publique su versión de este texto y se abrirán las del grupo.',
-            `<a class="btn btn-primario" href="#/d/${encodeURIComponent(f.dinamica)}/${encodeURIComponent(f.item_id)}">Revisar el texto</a>`);
+          cerrado = f.dinamica === 'consignas'
+            ? vacio('Los textos están cerrados por ahora', 'Publique el suyo y se abrirán los del grupo.',
+              `<a class="btn btn-primario" href="#/consignas/${encodeURIComponent(f.item_id)}">Ir a la consigna</a>`)
+            : vacio('Las respuestas están cerradas por ahora', 'Publique su versión de este texto y se abrirán las del grupo.',
+              `<a class="btn btn-primario" href="#/d/${encodeURIComponent(f.dinamica)}/${encodeURIComponent(f.item_id)}">Revisar el texto</a>`);
         }
       }
     }

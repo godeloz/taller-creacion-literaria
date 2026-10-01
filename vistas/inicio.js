@@ -4,6 +4,7 @@ import { esc, saludo, fechaLarga, hoyISO, enlazar } from '../nucleo/ui.js';
 import { icono, llama } from '../nucleo/iconos.js';
 import { avatar, tarjetaEntrega, vacio, revisarInsigniasNuevas } from '../nucleo/componentes.js';
 import { tileDinamica } from './dinamicas.js';
+import { franjaInicio } from './consignas.js';
 
 const DIAS = ['L', 'M', 'M', 'J', 'V', 'S', 'D'];
 
@@ -31,13 +32,14 @@ export function listaRanking(filas) {
 
 export default async function inicio(cont) {
   const api = estado.api;
-  const [reto, mio, conteo, racha, ranking, recientes] = await Promise.all([
+  const [reto, mio, conteo, racha, ranking, recientes, franjaConsigna] = await Promise.all([
     api.retoDelDia().catch(() => null),
     api.miRetoHoy().catch(() => null),
     api.conteoReto().catch(() => 0),
     api.racha(estado.yo.id).catch(() => null),
     api.ranking().catch(() => []),
     api.entregas({ limite: 6 }).catch(() => []),
+    franjaInicio().catch(e => { console.warn(e); return ''; }),
   ]);
   const reacciones = await api.reacciones(recientes.map(e => e.id)).catch(() => []);
   const nombre = estado.yo.nombre.split(' ')[0];
@@ -77,6 +79,7 @@ export default async function inicio(cont) {
   cont.innerHTML = `
   <div class="contenedor">
     <h1 class="saludo">${saludo()}, <em>${esc(nombre)}</em>.</h1>
+    ${franjaConsigna}
     <div class="rejilla-inicio">
       ${retoHTML}
       <div class="columna">
