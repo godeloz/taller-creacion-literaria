@@ -21,4 +21,5 @@ export const MODULOS = {
   s7: () => import('./s7.js'),
   forma: () => import('./forma.js'),
   fallar: () => import('./fallar.js'),
+  pliegues: () => import('./pliegues.js'),
 };
