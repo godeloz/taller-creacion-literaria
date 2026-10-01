@@ -53,6 +53,7 @@ const P = {
   llave: '<circle cx="8" cy="15" r="4"/><path d="M11 12l8-8M16 7l2 2M14 9l2 2"/>',
   medalla: '<circle cx="12" cy="15" r="5"/><path d="M8.5 11L6 3h4l2 5 2-5h4l-2.5 8"/>',
   // Fallar mejor: revisión con control de cambios
+  pliegue: '<path d="M3.5 6.5L9 4v15l-5.5 2.5z"/><path d="M9 4l6 2.5v15L9 19z"/><path d="M15 6.5L20.5 4v15L15 21.5z"/>',
   revision: '<path d="M4 7h7M4 17h9"/><path d="M3 12h12"/><path d="M14.5 17.5L20 7.5M18.2 6.5l2.6 1.4"/>',
   tachar: '<path d="M7 17c1 1.3 2.8 2 5 2 2.8 0 5-1.3 5-3.6 0-1.1-.5-2-1.4-2.6"/><path d="M16.5 7C15.6 5.8 14 5 12 5 9.3 5 7.3 6.3 7.3 8.4c0 1.3.7 2.2 1.9 2.8"/><path d="M4 12h16"/>',
   deshacer: '<path d="M9 4L4 9l5 5"/><path d="M4 9h10.5a5.5 5.5 0 0 1 0 11H11"/>',

@@ -13,7 +13,7 @@ export function colorTexto(hex) {
   return (L + 0.05) / 0.0588 >= 4.5 ? '#16141C' : '#FFFFFF';
 }
 
-export const ICONO_DINAMICA = { reto: 'chispa', maraton: 'cartas', poema: 'fichas', cutup: 'tijeras', s7: 'diccionario', forma: 'curva', fallar: 'revision', consignas: 'pagina' };
+export const ICONO_DINAMICA = { reto: 'chispa', maraton: 'cartas', poema: 'fichas', cutup: 'tijeras', s7: 'diccionario', forma: 'curva', fallar: 'revision', consignas: 'pagina', pliegues: 'pliegue' };
 
 export function avatar(p, tam = 40) {
   if (!p) return `<span class="avatar" style="width:${tam}px;height:${tam}px;background:var(--linea)"></span>`;
@@ -38,6 +38,19 @@ export function etiquetaSoloTutor(p) {
 }
 
 // ---------- tarjeta de entrega para el muro ----------
+// Pliegues: resalta en el extracto lo que viene del texto de origen.
+function extractoMarcado(t, marcas) {
+  let h = '';
+  let pos = 0;
+  for (const [a, b] of marcas) {
+    if (!(a >= pos && b > a) || a >= t.length) continue;
+    const f = Math.min(b, t.length);
+    h += esc(t.slice(pos, a)) + `<span class="marca-pliegue">${esc(t.slice(a, f))}</span>`;
+    pos = f;
+  }
+  return h + esc(t.slice(pos));
+}
+
 export function tarjetaEntrega(e, reacciones = []) {
   const mias = reacciones.filter(r => r.entrega_id === e.id);
   const conteo = t => mias.filter(r => r.tipo === t).length;
@@ -56,7 +69,7 @@ export function tarjetaEntrega(e, reacciones = []) {
     </div>
     ${etiquetaSoloTutor(e.perfil) ? `<div style="margin:-4px 0 8px">${etiquetaSoloTutor(e.perfil)}</div>` : ''}
     ${e.titulo ? `<div class="entrada-titulo">${esc(e.titulo)}</div>` : ''}
-    <div class="entrada-extracto">${esc(extracto)}</div>
+    <div class="entrada-extracto">${e.dinamica === 'pliegues' && Array.isArray(e.datos?.marcas) ? extractoMarcado(extracto, e.datos.marcas) : esc(extracto)}</div>
     <div class="entrada-pie">
       <span class="mini-reacciones">
         ${conteo('encanta') ? `<span title="Me encanta">${icono('encanta', 16)}${conteo('encanta')}</span>` : ''}

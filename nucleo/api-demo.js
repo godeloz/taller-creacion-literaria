@@ -15,6 +15,7 @@ const DINAMICAS = [
   { slug: 's7', nombre: 'S+7', descripcion: 'Reescriba un cuento con el diccionario, al modo oulipiano.', color: '#FF8A00', estado: 'abierta', orden: 4, en_menu: true, desbloqueo: null },
   { slug: 'forma', nombre: 'La forma de las historias', descripcion: 'Trace el arco emocional de una historia, al modo de Vonnegut.', color: '#8B6CFF', estado: 'abierta', orden: 5, en_menu: true, desbloqueo: null },
   { slug: 'fallar', nombre: 'Fallar mejor', descripcion: 'Revise un borrador con control de cambios y compárelo con la versión final.', color: '#5B3DF5', estado: 'abierta', orden: 6, en_menu: true, desbloqueo: null },
+  { slug: 'pliegues', nombre: 'Pliegues', descripcion: 'Pliegue un texto y reescríbalo a partir de las frases que emergen.', color: '#FFB547', estado: 'abierta', orden: 8, en_menu: true, desbloqueo: null },
   { slug: 'consignas', nombre: 'Consignas de escritura', descripcion: 'Un ejercicio por semana: se escribe, se publica y se lee en taller.', color: '#C6F24E', estado: 'abierta', orden: 7, en_menu: false, desbloqueo: null },
 ];
 
@@ -29,6 +30,7 @@ const INSIGNIAS = [
   ['lector-atento', 'Lector atento', 'Dejó 10 comentarios de al menos 20 palabras en textos de otros.', 'ojo', '#00A884', 'auto'],
   ['todas-las-dinamicas', 'Todoterreno', 'Publicó al menos una vez en cada dinámica abierta.', 'estrella', '#C6F24E', 'auto'],
   ['mencion-tutor', 'Mención del tutor', 'Reconocimiento especial otorgado por el tutor.', 'pluma', '#121212', 'manual'],
+  ['primer-pliegue', 'Primer pliegue', 'Publicó su primer Pliegue.', 'pliegue', '#FFB547', 'auto'],
 ].map(([slug, nombre, descripcion, icono, color, tipo], i) => ({ slug, nombre, descripcion, icono, color, tipo, orden: i + 1 }));
 
 const PERSONAS = [
@@ -58,6 +60,7 @@ async function completarDemo(db) {
   let cambio = false;
   if (!db.consignas) { sembrarConsignas(db); cambio = true; }
   if (!db.coincidencias) { sembrarLectura(db); cambio = true; }
+  for (const i of INSIGNIAS) if (!db.insignias.some(x => x.slug === i.slug)) { db.insignias.push({ ...i }); cambio = true; }
   if (!faltan.length) return cambio;
   const { MODULOS } = await import('../modulos/registro.js');
   for (const d of faltan) {
@@ -261,6 +264,7 @@ export async function crearApiDemo() {
     [3, 7, 14, 30].forEach(n => { if (r.mejor >= n) dar('racha-' + n); });
     if (mias.filter(e => e.dinamica === 'maraton').length >= 5) dar('maratonista');
     if (mias.filter(e => e.dinamica === 'poema').length >= 3) dar('desarmador');
+    if (mias.some(e => e.dinamica === 'pliegues')) dar('primer-pliegue');
     const largos = db.comentarios.filter(c => c.autor === u && contarPalabras(c.texto) >= 20 && db.entregas.find(e => e.id === c.entrega_id)?.autor !== u);
     if (largos.length >= 10) dar('lector-atento');
     const menu = db.dinamicas.filter(d => d.en_menu && abierta(d.slug));
