@@ -1068,3 +1068,133 @@ sup.lc-n { font-family: var(--f-mono); font-size: 10.5px; font-weight: 600; colo
   .lc-rejilla > div:first-child > :not(.lc-hoja) { order: 2; }
   .lc-rejilla { gap: 14px; }
 }
+
+/* =====================================================================
+   Pliegues: un texto que se dobla y se despliega (acento ámbar)
+   ===================================================================== */
+body.pl-sin-scroll { overflow: hidden; }
+.marca-pliegue, .v-pl-o { background: rgba(255, 181, 71, .36); border-radius: 3px; -webkit-box-decoration-break: clone; box-decoration-break: clone; }
+
+/* portada */
+.pl-intro { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 22px; align-items: start; background: #fff; border-radius: var(--r-lg); padding: clamp(22px, 4vw, 40px); border-top: 6px solid var(--acento); margin-bottom: 30px; }
+.pl-sello { width: 56px; height: 56px; border-radius: 16px; display: grid; place-items: center; background: var(--acento); color: var(--tinta); }
+.pl-intro .saludo { margin: 8px 0 14px; font-size: clamp(32px, 4.4vw, 50px); }
+.pl-intro-texto { font-family: var(--f-lectura); font-size: 17.5px; line-height: 1.7; color: var(--tinta-2); max-width: 68ch; }
+.pl-intro-texto p { margin: 0 0 .7em; }
+.pl-titulo-sec { margin: 0 0 14px; }
+.pl-rejilla { display: grid; grid-template-columns: repeat(auto-fill, minmax(290px, 1fr)); gap: 14px; margin-bottom: 30px; }
+.pl-tarjeta { background: #fff; border-radius: var(--r-md); border: 1.5px solid var(--linea); display: flex; flex-direction: column; text-decoration: none; overflow: hidden; color: inherit; }
+.pl-tarjeta:hover { border-color: var(--linea-2); box-shadow: var(--sombra); }
+.pl-tarjeta-enlace { display: flex; flex-direction: column; gap: 6px; padding: 18px 20px 12px; text-decoration: none; flex: 1; color: inherit; }
+.pl-tarjeta-titulo { font-family: var(--f-display); font-weight: 500; font-size: 24px; line-height: 1.1; color: var(--tinta); }
+.pl-tarjeta-extracto { font-family: var(--f-lectura); font-size: 15px; line-height: 1.55; color: var(--tenue); }
+.pl-tarjeta-pie { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; padding: 10px 14px 14px 20px; }
+.pl-tarjeta-pie .estado-pill { display: inline-flex; align-items: center; gap: 4px; }
+.pl-cuantas { font-size: 13px; }
+.pl-tarjeta-nueva { border-style: dashed; border-color: var(--linea-2); background: transparent; padding: 20px; gap: 8px; justify-content: center; min-height: 170px; }
+.pl-tarjeta-nueva:hover { border-color: var(--acento); background: #fff; }
+.pl-mas { width: 44px; height: 44px; border-radius: 50%; display: grid; place-items: center; background: var(--acento); color: var(--tinta); }
+
+/* texto nuevo */
+.pl-pegar { min-height: 260px; font-family: var(--f-lectura); font-size: 17px; line-height: 1.7; }
+.pl-revision.ok { color: #0B5A3F; font-weight: 600; }
+.pl-revision.falta { color: #9A5B00; }
+.pl-dos-campos { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+
+/* el plegado */
+.pl-ritual { position: fixed; inset: 0; z-index: 90; background: #16141C; color: #FBF9F4; display: grid; grid-template-rows: minmax(0, 1fr) auto; overflow: hidden; }
+.pl-dispersion { position: absolute; inset: 0; padding: 8vh 8vw; font-family: var(--f-lectura); font-size: 17px; line-height: 2; color: rgba(251, 249, 244, .13); overflow: hidden; pointer-events: none; }
+.pl-dispersion span { display: inline-block; transition: transform 26s cubic-bezier(.2, .6, .2, 1), opacity 26s, filter 26s; }
+.pl-dispersion.dispersa span { transform: translate(var(--dx, 0), var(--dy, 0)) rotate(var(--rot, 0)); opacity: .45; filter: blur(1.5px); }
+.pl-escena { position: relative; display: grid; place-items: center; padding: 6vh 8vw; perspective: 1200px; }
+.pl-ritual-frase { text-shadow: 0 0 26px #16141C, 0 0 10px #16141C; font-family: var(--f-display); font-weight: 400; font-size: clamp(32px, 5.6vw, 68px); line-height: 1.1; letter-spacing: -.015em; text-align: center; max-width: 17ch; margin: 0; transform-origin: 50% 100%; text-wrap: balance; }
+.pl-ritual-frase.emerge { animation: pl-desplegar 1.15s cubic-bezier(.2, .75, .25, 1) both; }
+.pl-ritual-frase.sale { animation: pl-plegar .6s ease-in both; }
+@keyframes pl-desplegar { from { opacity: 0; transform: translateY(48px) rotateX(80deg); } 55% { opacity: 1; } to { opacity: 1; transform: none; } }
+@keyframes pl-plegar { to { opacity: 0; transform: translateY(-34px) rotateX(-72deg); } }
+@keyframes pl-aparecer { from { opacity: 0; } to { opacity: 1; } }
+.pl-ritual-pie { position: relative; display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 18px 28px max(20px, env(safe-area-inset-bottom)); }
+.pl-ritual-pasos { display: flex; gap: 8px; }
+.pl-ritual-pasos i { width: 26px; height: 3px; border-radius: 3px; background: rgba(251, 249, 244, .18); transition: background .4s; }
+.pl-ritual-pasos i.on { background: var(--acento); }
+.pl-saltar { border: 0; background: transparent; color: rgba(251, 249, 244, .5); font-family: var(--f-ui); font-weight: 600; font-size: 13px; letter-spacing: .04em; padding: 8px 12px; border-radius: 8px; }
+.pl-saltar:hover, .pl-saltar:focus-visible { color: #fff; background: rgba(251, 249, 244, .08); }
+.pl-ritual-fin { text-align: center; max-width: 760px; transform-origin: 50% 100%; animation: pl-desplegar 1.15s cubic-bezier(.2, .75, .25, 1) both; }
+.pl-r-1 { font-family: var(--f-display); font-weight: 400; font-size: clamp(30px, 4.6vw, 54px); line-height: 1.1; letter-spacing: -.01em; margin: 0 0 18px; color: #fff; text-wrap: balance; }
+.pl-r-2 { font-family: var(--f-lectura); font-style: italic; font-size: clamp(18px, 2vw, 22px); line-height: 1.5; color: var(--acento); margin: 0 auto 32px; max-width: 40ch; }
+.pl-btn-acento { background: var(--acento); border-color: var(--acento); color: var(--tinta); }
+.pl-btn-acento:hover { background: #fff; border-color: #fff; color: var(--tinta); }
+
+/* la escritura */
+.pl-progreso { margin-top: 18px; }
+.pl-barra { position: relative; height: 6px; background: var(--fondo-2); border-radius: 6px; margin: 10px 0 8px; }
+.pl-barra span { display: block; height: 100%; width: 0; background: var(--acento); border-radius: 6px; transition: width .5s; }
+.pl-barra i { position: absolute; top: -4px; width: 2px; height: 14px; margin-left: -1px; background: var(--tinta); border-radius: 2px; }
+.pl-estado { font-size: 14px; color: var(--tenue); margin: 0; }
+.pl-rotulo-texto { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
+.pl-pasos { display: flex; flex-direction: column; padding-bottom: 22vh; }
+.pl-paso { perspective: 1200px; }
+.pl-frase { position: relative; font-family: var(--f-display); font-style: italic; font-weight: 400; font-size: clamp(23px, 2.5vw, 29px); line-height: 1.28; letter-spacing: -.008em; color: var(--tinta); margin: 26px 0 6px; padding-left: 18px; border-left: 4px solid var(--acento); transform-origin: 50% 100%; }
+.pl-paso:first-child .pl-frase { margin-top: 0; }
+.pl-num { font-family: var(--f-mono); font-style: normal; font-size: 11.5px; letter-spacing: .08em; color: var(--tenue); vertical-align: .55em; margin-right: 10px; }
+.pl-nuevo .pl-frase { animation: pl-desplegar 1.1s cubic-bezier(.2, .75, .25, 1) both; }
+.pl-nuevo .pl-escrito { animation: pl-aparecer .5s .7s both; }
+.pl-escrito { display: block; width: 100%; border: 0; background: transparent; resize: none; overflow: hidden; min-height: 64px; padding: 6px 4px 6px 22px; border-radius: 10px; font-family: var(--f-lectura); font-size: 18.5px; line-height: 1.75; color: var(--tinta-2); outline: none; caret-color: var(--violeta); }
+.pl-escrito:focus { background: rgba(255, 181, 71, .08); }
+.pl-escrito::placeholder { color: #B5AEA3; font-style: italic; }
+.pl-escrito.pasado { box-shadow: inset 3px 0 0 var(--rojo); }
+.pl-exceso { color: var(--rojo); font-size: 13px; margin: 2px 0 0 22px; }
+.pl-mesa .mesa-pie { flex-wrap: wrap; }
+.pl-pie-pliegue { display: none; }
+.pl-ritual-fin p { text-shadow: 0 0 26px #16141C, 0 0 10px #16141C; }
+@media (max-width: 960px) { .pl-pie-pliegue { display: inline; } }
+
+/* el despliegue */
+.pl-cierre { max-width: 980px; }
+.pl-cierre-cab { display: flex; flex-direction: column; gap: 6px; margin-bottom: 16px; }
+.pl-cierre-cab .conmutador { align-self: flex-start; margin-top: 4px; }
+.pl-titulo { margin-bottom: 4px; }
+.pl-hoja { min-height: 40vh; }
+.pl-nota-final { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 16px; font-size: 14.5px; color: var(--tenue); padding-bottom: 16px; margin-bottom: 22px; border-bottom: 1px solid var(--linea); }
+.pl-nota-final p { margin: 0; flex: 1 1 320px; }
+.pl-editor { position: relative; }
+.pl-fondo, .pl-final { font-family: var(--f-lectura); font-size: 19px; line-height: 1.85; letter-spacing: normal; white-space: pre-wrap; overflow-wrap: break-word; word-break: normal; padding: 0; margin: 0; border: 0; box-sizing: border-box; tab-size: 4; }
+.pl-fondo { position: absolute; inset: 0; color: transparent; pointer-events: none; }
+.pl-fondo mark { color: transparent; background: rgba(255, 181, 71, .36); border-radius: 3px; }
+.pl-final { position: relative; display: block; width: 100%; min-height: 30vh; background: transparent; color: var(--tinta); resize: none; overflow: hidden; outline: none; caret-color: var(--violeta); }
+.pl-final[readonly] { cursor: pointer; }
+.pl-sub { margin-bottom: 18px; }
+.pl-recorrido .pl-frase { margin-top: 24px; }
+.pl-recorrido .pl-frase:first-child { margin-top: 0; }
+.pl-recorrido-escrito { font-family: var(--f-lectura); font-size: 18.5px; line-height: 1.75; color: var(--tinta-2); padding-left: 22px; }
+.pl-recorrido-escrito p { margin: 0 0 .6em; }
+.pl-acciones { display: flex; align-items: center; gap: 14px; margin-top: 16px; padding: 12px 0; position: sticky; bottom: 0; background: var(--fondo); }
+
+/* entrega publicada */
+.v-pl-conmutador { margin: 0 0 22px; }
+.v-pliegues .v-pl-recorrido { display: none; }
+.v-pliegues.ver-pliegues .v-pl-final { display: none; }
+.v-pliegues.ver-pliegues .v-pl-recorrido { display: block; }
+.v-pl-leyenda { font-family: var(--f-ui); font-size: 13px; color: var(--tenue); margin-top: 18px !important; }
+.v-pl-frase { font-family: var(--f-display); font-style: italic; font-size: clamp(21px, 2.3vw, 26px); line-height: 1.3; color: var(--tinta); margin: 1.1em 0 .35em !important; padding-left: 14px; border-left: 4px solid #FFB547; }
+.v-pl-escrito { padding-left: 18px; }
+.v-pl-escrito p { margin: 0 0 .7em; }
+.proyeccion .marca-pliegue { background: rgba(255, 181, 71, .3); color: #fff; }
+
+@media (max-width: 760px) {
+  .pl-intro { grid-template-columns: 1fr; }
+  .pl-dos-campos { grid-template-columns: 1fr; gap: 0; }
+  .pl-panel h1 { display: none; }
+  .pl-panel .consigna-extra { display: none; }
+  .pl-frase { font-size: 22px; margin-top: 20px; padding-left: 14px; }
+  .pl-escrito { font-size: 17.5px; padding-left: 16px; }
+  .pl-fondo, .pl-final { font-size: 18px; }
+  .pl-ritual-pie { padding: 14px 18px max(16px, env(safe-area-inset-bottom)); }
+  .pl-mesa .mesa-pie .btn { padding-left: 14px; padding-right: 14px; }
+}
+@media print {
+  .v-pliegues .v-pl-recorrido { display: block !important; margin-top: 28px; }
+  .v-pliegues .v-pl-final { display: block !important; }
+  .v-pl-conmutador { display: none; }
+}
+.v-pl-conmutador + .lectura .v-pl-final > .v-rotulo { display: none; }
