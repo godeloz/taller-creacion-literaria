@@ -1,0 +1,16 @@
+{
+  "textos": [
+    {
+      "id": "la-casa-de-los-relojes",
+      "titulo": "La casa de los relojes",
+      "autor": "Texto de ejemplo",
+      "texto": "En la casa de mi abuela había once relojes y ninguno daba la misma hora. El de la cocina iba siempre diez minutos adelantado. El del pasillo se detenía cuando llovía. Mi abuela decía que así nadie podía decirle que llegaba tarde. Yo pasaba las tardes de vacaciones contando los segundos entre una campanada y otra. A veces sonaban tres seguidas, como si discutieran. Otras veces la casa quedaba en un silencio tan largo que parecía que el tiempo se había ido a dormir. Cuando ella murió, mi madre quiso venderlos todos. Yo me quedé con el del pasillo. Todavía se detiene cuando llueve, y yo todavía no sé qué hacer con esas horas que nadie cuenta."
+    },
+    {
+      "id": "el-ultimo-bus",
+      "titulo": "El último bus",
+      "autor": "Texto de ejemplo",
+      "texto": "El último bus sale a las once y cuarto de la plaza. Casi nunca lleva más de cuatro pasajeros. Esa noche subimos un hombre con un acordeón, una señora dormida y yo. El conductor puso la radio muy baja, apenas un murmullo de boleros. El hombre del acordeón no tocó, pero llevaba el ritmo con los dedos sobre la funda. Afuera la ciudad se apagaba por tramos, como una casa grande en la que alguien va cerrando las puertas. En la cuarta parada la señora se despertó y preguntó dónde estábamos. Nadie le supo responder. Ella sonrió, se acomodó la cartera en las piernas y volvió a dormirse. Yo me bajé dos paradas antes de la mía, solo para caminar."
+    }
+  ]
+}
