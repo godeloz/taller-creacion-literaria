@@ -155,6 +155,11 @@ export function crearApiSupabase(CONFIG) {
       q = q.limit(f.limite || 300);
       return ok(await q).map(normalizar);
     },
+    // Cuántos textos propios hay en cada dinámica: { slug: n } (marca «Realizada» en las tarjetas).
+    async realizadas() {
+      const filas = ok(await sb.from('entregas').select('dinamica').eq('autor', yo.id));
+      return filas.reduce((m, f) => { m[f.dinamica] = (m[f.dinamica] || 0) + 1; return m; }, {});
+    },
     async entrega(id) {
       return normalizar(ok(await sb.from('entregas').select(CAMPOS_LISTA + ',vista,datos,modulo_version').eq('id', id).maybeSingle()));
     },

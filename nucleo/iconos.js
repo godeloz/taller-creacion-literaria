@@ -46,6 +46,7 @@ const P = {
   alinCen: '<path d="M4 6h16M7 10h10M4 14h16M7 18h10"/>',
   alinDer: '<path d="M4 6h16M10 10h10M4 14h16M10 18h10"/>',
   ordenar: '<path d="M4 6h10M4 12h7M4 18h4"/><path d="M17 5v14M14 16l3 3 3-3"/>',
+  arrastrar: '<circle cx="9" cy="6" r=".9"/><circle cx="15" cy="6" r=".9"/><circle cx="9" cy="12" r=".9"/><circle cx="15" cy="12" r=".9"/><circle cx="9" cy="18" r=".9"/><circle cx="15" cy="18" r=".9"/>',
   reiniciar: '<path d="M4 12a8 8 0 1 0 2.4-5.7L4 8.5"/><path d="M4 4v4.5h4.5"/>',
   info: '<circle cx="12" cy="12" r="9"/><path d="M12 11v6M12 7.5v.5"/>',
   copiar: '<rect x="8" y="8" width="12" height="12" rx="2"/><path d="M16 8V6a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h2"/>',

@@ -357,6 +357,9 @@ export async function crearApiDemo() {
         .slice(0, f.limite || 300)
         .map(conExtras);
     },
+    async realizadas() {
+      return db.entregas.filter(e => e.autor === yo.id).reduce((m, e) => { m[e.dinamica] = (m[e.dinamica] || 0) + 1; return m; }, {});
+    },
     async entrega(id) { const e = db.entregas.find(x => x.id === id); return e && visible(e) ? conExtras(e) : null; },
     async publicar(e) {
       if (!abierta(e.dinamica) && !tutor()) throw new Error('Esta dinámica todavía no está abierta');
