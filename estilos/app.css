@@ -955,3 +955,116 @@ button.fm-ir:hover { color: var(--violeta); }
   .mesa-pie .btn { padding: 0 14px; }
   .solo-ancho { display: none; }
 }
+
+/* =====================================================================
+   Lectura crítica (textos de las consignas)
+   ===================================================================== */
+.lc { max-width: 1320px; }
+.lc-arriba { margin-bottom: 14px; gap: 10px; }
+.lc-avance { font-size: 14px; font-weight: 700; color: var(--tinta-2); margin: 0 6px 0 4px; }
+#lc-avance { display: inline-flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.lc-barra { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; margin-bottom: 16px; }
+.lc-barra .conmutador { background: #fff; border: 1.5px solid var(--linea-2); }
+.lc-ayuda { font-size: 14px; }
+.lc-cuenta { font-family: var(--f-mono); font-size: 11.5px; opacity: .75; }
+.lc-solo-tactil { display: none; }
+@media (pointer: coarse) { .lc-solo-tactil { display: inline-flex; } }
+.lc-rejilla { display: grid; grid-template-columns: minmax(0, 1fr) 360px; gap: 22px; align-items: start; }
+.lc-texto { position: relative; }
+.lc-texto.tocando { cursor: crosshair; -webkit-user-select: none; user-select: none; }
+.lc-texto.tocando::before { content: 'Toque la primera y la última palabra del fragmento'; display: block; font-family: var(--f-ui); font-size: 13px; font-weight: 700; color: var(--violeta); margin-bottom: 10px; }
+
+/* marcas sobre el texto */
+mark.lc-marca { background: rgba(255, 216, 77, .42); color: inherit; border-radius: 3px; padding: 1px 0; cursor: pointer; box-decoration-break: clone; -webkit-box-decoration-break: clone; transition: background .15s, box-shadow .15s; }
+mark.lc-marca.varias { background: rgba(255, 196, 0, .62); }
+mark.lc-marca.mia { background: rgba(198, 242, 78, .6); }
+mark.lc-marca.de-tutor { background: rgba(91, 61, 245, .13); box-shadow: inset 0 -2px 0 var(--violeta); }
+mark.lc-marca.t-acierto { box-shadow: inset 0 -2px 0 var(--verde); }
+mark.lc-marca.t-revisar { box-shadow: inset 0 -2px 0 var(--naranja); }
+mark.lc-marca.t-pregunta { box-shadow: inset 0 -2px 0 var(--azul); }
+mark.lc-marca.temporal { background: rgba(91, 61, 245, .25); }
+mark.lc-marca.activa, mark.lc-marca:hover { background: rgba(255, 184, 0, .75); }
+sup.lc-n { font-family: var(--f-mono); font-size: 10.5px; font-weight: 600; color: var(--violeta); margin-left: 1px; cursor: pointer; -webkit-user-select: none; user-select: none; }
+
+/* columna de notas */
+.lc-notas { position: sticky; top: 90px; max-height: calc(100vh - 110px); overflow: auto; display: flex; flex-direction: column; gap: 10px; padding-right: 4px; }
+.lc-notas-cab { padding: 2px 4px; }
+.lc-vacio { background: #fff; border-radius: var(--r-md); padding: 18px; color: var(--tenue); font-size: 14.5px; line-height: 1.55; }
+.lc-vacio p { margin: 4px 0 0; }
+.lc-vacio b { color: var(--tinta); }
+.lc-nota { background: #fff; border-radius: var(--r-md); padding: 12px 14px; border: 1.5px solid transparent; transition: border-color .2s, box-shadow .2s; }
+.lc-nota.mia { border-color: rgba(198, 242, 78, .9); }
+.lc-nota.de-tutor { background: #F4F1FF; border-color: #DCD3FF; }
+.lc-nota.privada { border-style: dashed; border-color: var(--ambar); }
+.lc-nota.resalta { box-shadow: 0 0 0 3px var(--amarillo); }
+.lc-nota-cab { display: flex; align-items: center; gap: 7px; flex-wrap: wrap; font-size: 14px; }
+.lc-nota-cab .sello-tutor, .lc-nota-cab .sello-privado, .lc-nota-cab .sello-autor { margin-left: 0; }
+.lc-num { font-family: var(--f-mono); font-size: 11.5px; font-weight: 600; background: var(--tinta); color: #fff; min-width: 22px; height: 22px; border-radius: 999px; display: grid; place-items: center; padding: 0 6px; }
+.sello-autor { font-family: var(--f-mono); font-size: 10.5px; letter-spacing: .08em; text-transform: uppercase; background: var(--lima); color: var(--tinta); padding: 2px 7px; border-radius: 6px; }
+.lc-cita { margin: 8px 0 6px; padding: 2px 0 2px 10px; border-left: 3px solid var(--amarillo); font-family: var(--f-lectura); font-style: italic; font-size: 14.5px; line-height: 1.5; color: var(--tinta-2); cursor: pointer; }
+.lc-nota.de-tutor .lc-cita { border-left-color: var(--violeta); }
+.lc-tipo { display: inline-flex; align-items: center; gap: 4px; font-size: 12px; font-weight: 700; padding: 2px 8px; border-radius: 999px; margin: 2px 0 4px; }
+.lc-tipo.t-acierto { background: #E5F7EF; color: #0B5A3F; }
+.lc-tipo.t-revisar { background: #FFF0DF; color: #8A4B00; }
+.lc-tipo.t-pregunta { background: #E6EDFF; color: #2440A8; }
+.lc-cuerpo { margin: 4px 0 6px; white-space: pre-line; line-height: 1.55; font-size: 15px; }
+.lc-pie { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+.lc-hace { font-size: 12.5px; }
+.lc-coincido, .lc-accion { display: inline-flex; align-items: center; gap: 5px; border: 1.5px solid var(--linea-2); background: #fff; border-radius: 999px; padding: 3px 10px; font-size: 12.5px; font-weight: 700; color: var(--tinta-2); min-height: 30px; }
+.lc-coincido:hover, .lc-accion:hover { border-color: var(--tinta); color: var(--tinta); }
+.lc-coincido.on { background: var(--lima); border-color: var(--lima); color: var(--tinta); }
+.lc-coincido-n { display: inline-flex; align-items: center; gap: 4px; font-size: 12.5px; font-weight: 700; color: var(--tinta-2); }
+.lc-respuestas { margin-top: 8px; padding-left: 12px; border-left: 2px solid var(--linea); display: flex; flex-direction: column; gap: 8px; }
+.lc-respuesta p { margin: 3px 0 0; white-space: pre-line; font-size: 14.5px; line-height: 1.5; }
+.lc-form-resp { margin-top: 8px; }
+.lc-form-resp .area { min-height: 64px; font-size: 14.5px; margin-bottom: 6px; }
+
+/* devolución y comentarios generales */
+.lc-devolucion { margin-top: 18px; background: var(--tinta); border-radius: var(--r-lg); padding: 18px; }
+.lc-devolucion > .rotulo { color: var(--lima); display: flex; gap: 6px; align-items: center; margin: 2px 4px 10px; }
+.lc-devolucion .lc-nota { background: #fff; border-color: transparent; }
+.lc-devolucion .lc-cuerpo { font-family: var(--f-lectura); font-size: 16.5px; line-height: 1.7; }
+.lc-btn-devol { margin-top: 16px; }
+.lc-generales .lc-nota { margin-bottom: 10px; }
+
+/* botón flotante y hoja inferior */
+.lc-comentar { position: fixed; z-index: 60; display: inline-flex; align-items: center; gap: 8px; border: 0; border-radius: 999px; background: var(--tinta); color: #fff; font-weight: 700; font-size: 14.5px; padding: 10px 18px; box-shadow: 0 10px 24px -10px rgba(0, 0, 0, .5); }
+.lc-comentar:hover { background: var(--violeta); }
+.lc-comentar.abajo { left: 50%; transform: translateX(-50%); bottom: max(18px, env(safe-area-inset-bottom)); top: auto; font-size: 16px; padding: 14px 24px; }
+.lc-hoja-inf { position: fixed; z-index: 70; left: 0; right: 0; bottom: 0; max-height: 62vh; overflow: auto; background: var(--fondo); border-radius: 22px 22px 0 0; padding: 12px 14px 22px; box-shadow: 0 -16px 40px -12px rgba(0, 0, 0, .35); transform: translateY(100%); transition: transform .18s; display: flex; flex-direction: column; gap: 10px; }
+.lc-hoja-inf.ver { transform: none; }
+.lc-sheet-cab { display: flex; align-items: center; position: sticky; top: -12px; background: var(--fondo); padding: 4px 0; z-index: 1; }
+.lc-tipos { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 14px; }
+.lc-tipos label { display: inline-flex; align-items: center; gap: 6px; font-size: 14px; font-weight: 700; background: #fff; border: 1.5px solid var(--linea-2); border-radius: 999px; padding: 6px 12px; cursor: pointer; }
+.lc-tipos label:has(input:checked) { border-color: var(--tinta); background: var(--tinta); color: #fff; }
+
+/* avisos y marcas en listas */
+.novedades { background: #fff; border-radius: var(--r-lg); padding: 18px 22px; margin-bottom: 20px; border-left: 6px solid var(--coral); }
+.novedades .rotulo { display: inline-flex; align-items: center; gap: 6px; color: var(--tinta); }
+.novedades-lista { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
+.novedad { display: inline-flex; align-items: center; gap: 10px; text-decoration: none; background: var(--fondo); border-radius: 999px; padding: 8px 10px 8px 16px; font-size: 14.5px; }
+.novedad:hover { background: var(--fondo-2); }
+.novedad span { color: var(--tenue); font-size: 13.5px; }
+.ya-comente { display: inline-flex; align-items: center; gap: 4px; font-size: 12px; font-weight: 700; color: #0B5A3F; background: #E5F7EF; border-radius: 999px; padding: 2px 8px; }
+
+@media (max-width: 960px) {
+  .lc-rejilla { grid-template-columns: minmax(0, 1fr); }
+  .lc-notas { position: static; max-height: none; overflow: visible; padding-right: 0; }
+}
+@media (max-width: 760px) {
+  .lc-barra .conmutador { width: 100%; overflow-x: auto; }
+  .lc-barra .conmutador button { flex: 1; justify-content: center; padding: 6px 8px; }
+  .lc-hoja { padding: 22px 18px; }
+  .lc-arriba .btn-chico { padding: 0 11px; }
+}
+.lc-comentar[hidden], .lc-hoja-inf[hidden] { display: none; }
+.lc-barra .conmutador button { white-space: nowrap; }
+.lc-pie .btn-icono { width: 30px; min-height: 30px; }
+@media (max-width: 960px) {
+  /* en pantallas angostas, las notas van justo debajo del texto */
+  .lc-rejilla > div:first-child { display: contents; }
+  .lc-rejilla .lc-hoja { order: 0; }
+  .lc-rejilla .lc-notas { order: 1; }
+  .lc-rejilla > div:first-child > :not(.lc-hoja) { order: 2; }
+  .lc-rejilla { gap: 14px; }
+}
