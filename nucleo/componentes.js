@@ -13,7 +13,7 @@ export function colorTexto(hex) {
   return (L + 0.05) / 0.0588 >= 4.5 ? '#16141C' : '#FFFFFF';
 }
 
-export const ICONO_DINAMICA = { reto: 'chispa', maraton: 'cartas', poema: 'fichas', cutup: 'tijeras', s7: 'diccionario', forma: 'curva', fallar: 'revision' };
+export const ICONO_DINAMICA = { reto: 'chispa', maraton: 'cartas', poema: 'fichas', cutup: 'tijeras', s7: 'diccionario', forma: 'curva', fallar: 'revision', consignas: 'pagina' };
 
 export function avatar(p, tam = 40) {
   if (!p) return `<span class="avatar" style="width:${tam}px;height:${tam}px;background:var(--linea)"></span>`;

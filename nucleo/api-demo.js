@@ -15,6 +15,7 @@ const DINAMICAS = [
   { slug: 's7', nombre: 'S+7', descripcion: 'Reescriba un cuento con el diccionario, al modo oulipiano.', color: '#FF8A00', estado: 'abierta', orden: 4, en_menu: true, desbloqueo: null },
   { slug: 'forma', nombre: 'La forma de las historias', descripcion: 'Trace el arco emocional de una historia, al modo de Vonnegut.', color: '#8B6CFF', estado: 'abierta', orden: 5, en_menu: true, desbloqueo: null },
   { slug: 'fallar', nombre: 'Fallar mejor', descripcion: 'Revise un borrador con control de cambios y compárelo con la versión final.', color: '#5B3DF5', estado: 'abierta', orden: 6, en_menu: true, desbloqueo: null },
+  { slug: 'consignas', nombre: 'Consignas de escritura', descripcion: 'Un ejercicio por semana: se escribe, se publica y se lee en taller.', color: '#C6F24E', estado: 'abierta', orden: 7, en_menu: false, desbloqueo: null },
 ];
 
 const INSIGNIAS = [
@@ -54,13 +55,61 @@ async function contenidoDePlantilla(din, m) {
 // Una demo guardada antes de que existiera una dinámica la recibe con su contenido de ejemplo.
 async function completarDemo(db) {
   const faltan = DINAMICAS.filter(d => !db.dinamicas.some(x => x.slug === d.slug));
-  if (!faltan.length) return false;
+  let cambio = false;
+  if (!db.consignas) { sembrarConsignas(db); cambio = true; }
+  if (!faltan.length) return cambio;
   const { MODULOS } = await import('../modulos/registro.js');
   for (const d of faltan) {
     db.dinamicas.push({ ...d });
+    if (d.slug === 'consignas') continue;
     if (MODULOS[d.slug]) db.contenidos.push(...await contenidoDePlantilla(d.slug, (await MODULOS[d.slug]()).default));
   }
   return true;
+}
+
+// Consignas de ejemplo: una abierta (con otra fecha para el grupo de invitados), una cerrada y una programada.
+function sembrarConsignas(db) {
+  const dia = 864e5;
+  const iso = ms => new Date(Date.now() + ms).toISOString();
+  const finDeDia = dias => { const d = new Date(Date.now() + dias * dia); return new Date(`${hoyISO(d)}T23:59:00-05:00`).toISOString(); };
+  const inicioDeDia = dias => { const d = new Date(Date.now() + dias * dia); return new Date(`${hoyISO(d)}T00:00:00-05:00`).toISOString(); };
+  const C1 = 'consigna-demo-1', C2 = 'consigna-demo-2', C3 = 'consigna-demo-3';
+  db.consignas = [
+    {
+      id: C1, titulo: 'Un minuto que no se acaba',
+      instrucciones: 'Escriba una escena que dure **un minuto** en el mundo de la historia y que, sin embargo, ocupe todo el texto.\n\n1. Elija un minuto cualquiera: lo que tarda una puerta en cerrarse o un ascensor en llegar.\n2. Dilate el tiempo: lo que pasa por dentro y por fuera, sin saltar hacia adelante.\n3. Nada de recuerdos de más de dos frases.\n\nLea antes el ejemplo de abajo.',
+      ejemplos: [
+        { titulo: 'Texto de ejemplo', autor: 'Modo demostración', enlace: '', texto: '(Aquí iría un cuento o un fragmento que inspire la consigna. El tutor lo pega al crear la consigna y los estudiantes lo leen junto al espacio de escritura.)\n\nUn segundo párrafo, para ver cómo se lee un texto largo dentro del panel.' },
+        { titulo: 'Tiempo narrativo', autor: '', enlace: 'https://es.wikipedia.org/wiki/Tiempo_narrativo', texto: '' },
+      ],
+      referentes: 'Gérard Genette, *Figuras III* (1972), el capítulo sobre la duración.\nNicholson Baker, *The Mezzanine* (1988).',
+      limite_palabras: 600, archivada: false, creado: iso(-3 * dia), actualizado: iso(-3 * dia),
+    },
+    {
+      id: C2, titulo: 'Usted, que lee esto',
+      instrucciones: 'Escriba un texto en **segunda persona**: el personaje es «usted» de principio a fin.\n\n1. No revele quién narra.\n2. Use al menos una vez el futuro: «usted abrirá…».',
+      ejemplos: [], referentes: '', limite_palabras: 400, archivada: false, creado: iso(-14 * dia), actualizado: iso(-14 * dia),
+    },
+    {
+      id: C3, titulo: 'Lipograma',
+      instrucciones: 'Escriba un texto sin la letra **a**.\n\n1. Ni una sola vez, tampoco en el título.\n2. Cuente una escena con dos personajes.',
+      ejemplos: [], referentes: 'Georges Perec, *La disparition* (1969).', limite_palabras: 300, archivada: false, creado: iso(-1 * dia), actualizado: iso(-1 * dia),
+    },
+  ];
+  db.consignaGrupos = [
+    { consigna_id: C1, grupo_id: GRUPO, apertura: inicioDeDia(-2), cierre: finDeDia(5) },
+    { consigna_id: C1, grupo_id: GRUPO2, apertura: inicioDeDia(7), cierre: finDeDia(14) },
+    { consigna_id: C2, grupo_id: GRUPO, apertura: inicioDeDia(-12), cierre: finDeDia(-5) },
+    { consigna_id: C3, grupo_id: GRUPO, apertura: inicioDeDia(7), cierre: finDeDia(14) },
+  ];
+  const texto = (autor, item, dias, titulo, cuerpo) => db.entregas.push({
+    id: crypto.randomUUID(), autor, grupo_id: PERSONAS.find(x => x[0] === autor)[5], dinamica: 'consignas', item_id: item, titulo, texto: cuerpo,
+    vista: cuerpo.split(/\n{2,}/).map(p => `<p>${p}</p>`).join(''), datos: {}, palabras: contarPalabras(cuerpo), modulo_version: '1.0',
+    reto_fecha: null, sesion_id: null, estado: 'publicada', editada: false, creado: iso(-dias * dia), actualizado: iso(-dias * dia),
+  });
+  texto('c4', C1, 1, 'La puerta', '(Texto de ejemplo del modo demostración.)\n\nUna puerta que tarda un minuto en cerrarse.');
+  texto('c2', C2, 7, 'Usted llega tarde', '(Texto de ejemplo del modo demostración.)\n\nUsted llega tarde y nadie lo nota.');
+  texto('c3', C2, 6, null, '(Texto de ejemplo del modo demostración.)\n\nUsted abrirá la carta mañana.');
 }
 
 async function sembrar() {
@@ -110,6 +159,7 @@ async function sembrar() {
   ejemplo('p1', 1, 'maraton', carta, 'Carta del invitado privado', '(Texto de ejemplo.)\n\nLo escribió un invitado privado: solo lo ven él y el tutor.');
   ejemplo('g1', 1, 'reto', reto, null, '(Texto de ejemplo.)\n\nUn reto del grupo de invitados: solo lo ve ese grupo y el tutor.');
   ejemplo('c3', 1, 'maraton', contenidos.find(c => c.dinamica === 'maraton').item_id, 'Primera carta', '(Texto de ejemplo del modo demostración.)\n\nUna carta del Maratón ya publicada.');
+  sembrarConsignas(db);
   return db;
 }
 
@@ -134,6 +184,9 @@ export async function crearApiDemo() {
   // Fallar mejor: las revisiones de un texto de la app (y su versión final) se abren al publicar la propia.
   const hizoItem = (din, item) => db.entregas.some(e => e.autor === yo.id && e.dinamica === din && e.item_id === item);
   const aCiegas = e => e.dinamica === 'fallar' && !!e.item_id && !e.item_id.startsWith('propio-');
+  // Consignas: los textos del grupo se abren al publicar el propio o cuando la consigna cierra para el grupo.
+  const asignacion = (item, g) => db.consignaGrupos.find(x => x.consigna_id === item && x.grupo_id === g);
+  const consignaCerrada = item => { const a = asignacion(item, yo.grupo_id); return !!a && a.cierre <= ahora(); };
   // Misma regla que la base de datos (puede_ver_autor).
   const puedeVer = a => {
     if (!yo) return false;
@@ -145,7 +198,8 @@ export async function crearApiDemo() {
   };
   const visible = e => tutor() || e.autor === yo.id ||
     (e.estado === 'publicada' && puedeVer(e.autor) && (!e.reto_fecha || e.reto_fecha < hoyISO() || hizoReto(e.reto_fecha) || yo.modo === 'observador')
-      && (!aCiegas(e) || hizoItem(e.dinamica, e.item_id) || yo.modo === 'observador'));
+      && (!aCiegas(e) || hizoItem(e.dinamica, e.item_id) || yo.modo === 'observador')
+      && (e.dinamica !== 'consignas' || hizoItem(e.dinamica, e.item_id) || yo.modo === 'observador' || consignaCerrada(e.item_id)));
   const comentarioVisible = c => {
     const e = db.entregas.find(x => x.id === c.entrega_id);
     return e && visible(e) && puedeVer(c.autor) && (!c.privado || c.autor === yo.id || tutor() || e.autor === yo.id);
@@ -285,8 +339,19 @@ export async function crearApiDemo() {
         if (fila.palabras > lim) throw new Error(`El reto admite máximo ${lim} palabras (su texto tiene ${fila.palabras})`);
         if (hizoReto(fila.reto_fecha)) throw new Error('Ya publicó el reto de hoy. Puede editarlo.');
       }
+      if (e.dinamica === 'consignas') {
+        const c = db.consignas.find(x => x.id === e.item_id);
+        if (!c) throw new Error('Esta consigna no existe');
+        if (!tutor()) {
+          const a = asignacion(c.id, yo.grupo_id);
+          if (!a || a.apertura > ahora()) throw new Error('Esta consigna no está abierta para su grupo');
+          if (a.cierre <= ahora()) throw new Error('La consigna ya cerró. Ya no se puede publicar.');
+        }
+        if (c.limite_palabras && fila.palabras > c.limite_palabras) throw new Error(`La consigna admite máximo ${c.limite_palabras} palabras (su texto tiene ${fila.palabras})`);
+        if (hizoItem('consignas', c.id)) throw new Error('Ya publicó su texto para esta consigna');
+      }
       const s = db.sesiones[yo.grupo_id];
-      if (e.sesion_id && s && s.activa && s.id === e.sesion_id) fila.sesion_id = e.sesion_id;
+      if (e.sesion_id && s && s.activa && s.id === e.sesion_id && e.dinamica !== 'consignas') fila.sesion_id = e.sesion_id;
       db.entregas.push(fila);
       evaluarInsignias(yo.id);
       emitir('entregas', 'INSERT', fila);
@@ -295,6 +360,7 @@ export async function crearApiDemo() {
     async editarEntrega(id, c) {
       const e = db.entregas.find(x => x.id === id);
       if (!e || e.autor !== yo.id) throw new Error('Solo puede editar sus propias entregas');
+      if (e.dinamica === 'consignas') throw new Error('Su texto ya está publicado y no se puede cambiar.');
       if (aCiegas(e) && 'datos' in c && JSON.stringify(c.datos?.runs) !== JSON.stringify(e.datos?.runs)) throw new Error('Su versión ya está publicada y no se puede cambiar. Solo puede completar sus explicaciones.');
       for (const k of ['titulo', 'texto', 'vista', 'datos']) if (k in c) e[k] = c[k];
       e.palabras = contarPalabras(e.texto); e.editada = true; e.actualizado = ahora();
@@ -307,6 +373,47 @@ export async function crearApiDemo() {
       db.comentarios = db.comentarios.filter(c => c.entrega_id !== id);
       db.reacciones = db.reacciones.filter(r => r.entrega_id !== id);
       emitir('entregas', 'DELETE', {});
+    },
+
+    // ---------- consignas de escritura ----------
+    async consignas() {
+      const g = x => tutor() || (x.grupo_id === yo.grupo_id && x.apertura <= ahora());
+      return db.consignas
+        .filter(c => tutor() || db.consignaGrupos.some(x => x.consigna_id === c.id && g(x)))
+        .sort((a, b) => b.creado.localeCompare(a.creado))
+        .map(c => ({ ...structuredClone(c), grupos: db.consignaGrupos.filter(x => x.consigna_id === c.id && g(x)).map(x => ({ ...x })) }));
+    },
+    async consigna(id) { return (await this.consignas()).find(c => c.id === id) || null; },
+    async guardarConsigna(c) {
+      exigirTutor();
+      if (!String(c.titulo || '').trim()) throw new Error('La consigna necesita un título.');
+      let f = c.id && db.consignas.find(x => x.id === c.id);
+      if (!f) { f = { id: crypto.randomUUID(), creado: ahora() }; db.consignas.push(f); }
+      Object.assign(f, {
+        titulo: c.titulo, instrucciones: c.instrucciones || '', ejemplos: c.ejemplos || [], referentes: c.referentes || '',
+        limite_palabras: c.limite_palabras || null, archivada: !!c.archivada, actualizado: ahora(),
+      });
+      guardar(); return structuredClone(f);
+    },
+    async asignarConsigna(consigna_id, grupo_id, apertura, cierre) {
+      exigirTutor();
+      if (!(cierre > apertura)) throw new Error('El cierre tiene que ser después de la apertura.');
+      db.consignaGrupos = db.consignaGrupos.filter(x => !(x.consigna_id === consigna_id && x.grupo_id === grupo_id));
+      db.consignaGrupos.push({ consigna_id, grupo_id, apertura, cierre });
+      guardar();
+    },
+    async quitarAsignacion(consigna_id, grupo_id) {
+      exigirTutor();
+      if (db.entregas.some(e => e.dinamica === 'consignas' && e.item_id === consigna_id && e.grupo_id === grupo_id)) {
+        throw new Error('Este grupo ya tiene textos en esta consigna: no se puede quitar. Puede cambiar sus fechas.');
+      }
+      db.consignaGrupos = db.consignaGrupos.filter(x => !(x.consigna_id === consigna_id && x.grupo_id === grupo_id));
+      guardar();
+    },
+    async conteoConsigna(id, grupo) {
+      const g = tutor() && grupo ? grupo : yo.grupo_id;
+      return db.entregas.filter(e => e.dinamica === 'consignas' && e.item_id === id && e.estado === 'publicada'
+        && (() => { const p = db.perfiles.find(x => x.id === e.autor); return p && p.rol !== 'tutor' && p.grupo_id === g && p.modo === 'participante'; })()).length;
     },
 
     async reacciones(ids) { const s = new Set(ids); return db.reacciones.filter(r => s.has(r.entrega_id) && puedeVer(r.usuario)); },

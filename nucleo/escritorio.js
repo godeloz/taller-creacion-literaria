@@ -1,17 +1,18 @@
 // Escritorio: espacio de escritura compartido por las dinámicas de texto.
 // La consigna queda siempre visible junto al editor.
 import { estado, avisoPublicar as avisoGeneral } from './estado.js';
-import { esc, contarPalabras, sanitizar, local, debounce, confirmar, errorAviso, hace } from './ui.js';
+import { esc, contarPalabras, sanitizar, local, debounce, confirmar, errorAviso, hace, aviso } from './ui.js';
 import { icono } from './iconos.js';
 
 export function montarEscritorio(cont, op) {
   const {
     acento = 'var(--coral)', panelHTML = '', clave, limite = null, cronometroMin = null,
     pedirTitulo = true, titulo = '', html = '', placeholder = 'Escriba aquí…',
-    textoBoton = 'Publicar', editando = false, alPublicar, avisoPublicar,
+    textoBoton = 'Publicar', editando = false, alPublicar, avisoPublicar, botonGuardar = false,
   } = op;
 
   const claveLocal = `borrador:${estado.yo.id}:${clave}`;
+  let publicado = false;
   cont.innerHTML = `
   <div class="contenedor" style="max-width:1400px">
     <div class="escritorio" style="--acento:${acento}">
@@ -33,6 +34,7 @@ export function montarEscritorio(cont, op) {
         <div class="mesa-pie">
           <span class="contador" id="contador">0 palabras</span>
           <span class="espaciador"></span>
+          ${botonGuardar && !editando ? `<button type="button" class="btn btn-fantasma" id="guardar-borrador">${icono('check', 18)}Guardar<span class="solo-ancho">&nbsp;borrador</span></button>` : ''}
           <button type="button" class="btn btn-primario" id="publicar" disabled>${icono(editando ? 'check' : 'enviar', 18)}${esc(textoBoton)}</button>
         </div>
       </section>
@@ -106,6 +108,12 @@ export function montarEscritorio(cont, op) {
   ed.addEventListener('keydown', ev => {
     if ((ev.metaKey || ev.ctrlKey) && ev.key.toLowerCase() === 's') { ev.preventDefault(); guardarNube.ahora?.(); }
   });
+  cont.querySelector('#guardar-borrador')?.addEventListener('click', async () => {
+    const { titulo: t, html: h } = leer();
+    local(claveLocal, { titulo: t, html: h, _actualizado: new Date().toISOString() });
+    await guardarNube.ahora();
+    aviso(guardado.textContent === 'Guardado' ? 'Borrador guardado. Puede volver cuando quiera.' : 'Borrador guardado en este dispositivo.', 'exito');
+  });
 
   // ---------- formato ----------
   const estadoFormato = () => cont.querySelectorAll('[data-cmd]').forEach(b => {
@@ -157,12 +165,14 @@ export function montarEscritorio(cont, op) {
     }
     botonPublicar.disabled = true;
     try {
+      publicado = true;
       await alPublicar(datos);
       guardarNube.cancelar();
       local(claveLocal, null);
       if (!editando) estado.api.borrarBorrador(clave).catch(() => {});
     } catch (e) {
       errorAviso(e);
+      publicado = false;
       botonPublicar.disabled = false;
     }
   });
@@ -172,7 +182,7 @@ export function montarEscritorio(cont, op) {
   return {
     destruir() {
       clearInterval(tic);
-      if (!editando && ed.innerText.trim()) guardarNube.ahora?.();
+      if (!editando && !publicado && ed.innerText.trim()) guardarNube.ahora?.();
       document.body.classList.remove('enfoque');
     },
   };

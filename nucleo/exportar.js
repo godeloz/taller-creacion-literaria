@@ -5,6 +5,9 @@ import { esc, sanitizar, parrafos, fechaHora, descargarArchivo, abrirImprimible,
 async function consignaDe(e, cache = {}) {
   if (!e.item_id) return '';
   const k = e.dinamica + ':' + e.item_id;
+  if (!(k in cache) && e.dinamica === 'consignas') {
+    try { cache[k] = (await estado.api.consigna(e.item_id))?.titulo || ''; } catch { cache[k] = ''; }
+  }
   if (!(k in cache)) {
     try {
       const c = await estado.api.contenido(e.dinamica, e.item_id);

@@ -2,7 +2,7 @@
 import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm';
 import { hoyISO } from './ui.js';
 
-const CAMPOS_LISTA = 'id,autor,dinamica,item_id,titulo,texto,palabras,reto_fecha,sesion_id,estado,editada,creado,actualizado,perfil:perfiles!entregas_autor_fkey(id,nombre,avatar,foto_url,rol,modo,grupo_id),comentarios(count)';
+const CAMPOS_LISTA = 'id,autor,grupo_id,dinamica,item_id,titulo,texto,palabras,reto_fecha,sesion_id,estado,editada,creado,actualizado,perfil:perfiles!entregas_autor_fkey(id,nombre,avatar,foto_url,rol,modo,grupo_id),comentarios(count)';
 
 function traducir(error) {
   const m = error?.message || String(error);
@@ -175,6 +175,32 @@ export function crearApiSupabase(CONFIG) {
     },
     async borrarEntrega(id) {
       ok(await sb.from('entregas').delete().eq('id', id));
+    },
+
+    // ---------- consignas de escritura ----------
+    // Cada consigna trae `grupos`: [{ grupo_id, apertura, cierre }] (el estudiante solo ve la de su grupo).
+    async consignas() {
+      return ok(await sb.from('consignas').select('*,grupos:consigna_grupos(grupo_id,apertura,cierre)').order('creado', { ascending: false }));
+    },
+    async consigna(id) {
+      return ok(await sb.from('consignas').select('*,grupos:consigna_grupos(grupo_id,apertura,cierre)').eq('id', id).maybeSingle());
+    },
+    async guardarConsigna(c) {
+      const fila = {
+        titulo: c.titulo, instrucciones: c.instrucciones || '', ejemplos: c.ejemplos || [], referentes: c.referentes || '',
+        limite_palabras: c.limite_palabras || null, archivada: !!c.archivada,
+      };
+      if (c.id) return ok(await sb.from('consignas').update(fila).eq('id', c.id).select().single());
+      return ok(await sb.from('consignas').insert(fila).select().single());
+    },
+    async asignarConsigna(consigna_id, grupo_id, apertura, cierre) {
+      ok(await sb.from('consigna_grupos').upsert({ consigna_id, grupo_id, apertura, cierre }));
+    },
+    async quitarAsignacion(consigna_id, grupo_id) {
+      ok(await sb.from('consigna_grupos').delete().eq('consigna_id', consigna_id).eq('grupo_id', grupo_id));
+    },
+    async conteoConsigna(id, grupo) {
+      return ok(await sb.rpc('conteo_consigna', grupo ? { item: id, p_grupo: grupo } : { item: id }));
     },
 
     // ---------- reacciones y comentarios ----------

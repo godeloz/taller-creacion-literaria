@@ -265,3 +265,16 @@ export function textoDeHTML(html) {
   t.innerHTML = limpio;
   return t.value.replace(/\n{3,}/g, '\n\n').trim();
 }
+
+// Copia un texto al portapapeles (con alternativa para navegadores sin permiso).
+export async function copiar(texto) {
+  try {
+    await navigator.clipboard.writeText(texto);
+  } catch {
+    const t = document.createElement('textarea');
+    t.value = texto; t.style.position = 'fixed'; t.style.opacity = '0';
+    document.body.appendChild(t); t.select();
+    try { document.execCommand('copy'); } finally { t.remove(); }
+  }
+  aviso('Texto copiado.', 'exito');
+}

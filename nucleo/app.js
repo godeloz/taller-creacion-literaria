@@ -65,6 +65,7 @@ function pintarMarco() {
   const yo = estado.yo;
   const nav = [
     ['', 'inicio', 'Inicio'],
+    ['consignas', 'pagina', 'Consignas'],
     ['dinamicas', 'dinamicas', 'Dinámicas'],
     ['muro', 'muro', 'Muro'],
     ['cuaderno', 'cuaderno', 'Cuaderno'],
@@ -168,6 +169,7 @@ async function enrutar() {
     switch (partes[0]) {
       case '': cargar = () => import('../vistas/inicio.js'); break;
       case 'dinamicas': cargar = () => import('../vistas/dinamicas.js'); break;
+      case 'consignas': cargar = () => import('../vistas/consignas.js'); break;
       case 'muro': cargar = () => import('../vistas/muro.js'); break;
       case 'entrega': cargar = () => import('../vistas/entrega.js'); break;
       case 'perfil': cargar = () => import('../vistas/perfil.js'); break;
@@ -217,6 +219,12 @@ async function abrirEdicion(vista, id) {
     const e = await estado.api.entrega(id);
     if (!e) throw new Error('No se encontró el texto.');
     if (e.autor !== estado.yo.id) throw new Error('Solo puede editar sus propios textos.');
+    if (e.dinamica === 'consignas') {
+      const { aviso } = await import('./ui.js');
+      aviso('Los textos de las consignas quedan fijos al publicar.');
+      location.replace(`#/entrega/${e.id}`);
+      return;
+    }
     const modulo = await cargarModulo(e.dinamica);
     vista.innerHTML = '';
     limpiarVista = await modulo.abrir(vista, { entrega: e, item_id: e.item_id });
