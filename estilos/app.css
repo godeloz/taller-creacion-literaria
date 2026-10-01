@@ -1229,3 +1229,31 @@ body.pl-sin-scroll { overflow: hidden; }
   .din-hecha { top: 12px; right: 12px; padding: 6px; }
   .din-hecha-txt { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
 }
+
+/* =====================================================================
+   Consignas: panel flotante, estado «Oculta» y zonas de la lista
+   ===================================================================== */
+.cf-clic { cursor: pointer; }
+.consigna-franja.cf-clic { transition: transform .15s, box-shadow .15s; }
+.consigna-franja.cf-clic:hover { transform: translateY(-2px); box-shadow: 0 18px 36px -22px rgba(22, 20, 28, .6); }
+.consigna-franja.cf-clic:hover .btn-lima { background: #fff; border-color: #fff; }
+.cf-clic:focus-visible { outline: 3px solid var(--lima); outline-offset: 3px; }
+.consigna-flotante { position: static; max-height: none; overflow: visible; padding: 22px 24px; }
+.consigna-flotante h1 { font-size: clamp(28px, 4vw, 38px); }
+.consigna-flotante .consigna-extra .pill-consigna { flex-shrink: 0; }
+.pill-consigna.estado-oculta { background: var(--tinta); color: #fff; }
+.selector.estado-grupo { min-height: 38px; padding: 6px 10px; font-size: 14px; font-weight: 700; min-width: 190px; }
+.selector.estado-grupo.estado-abierta { border-color: #9BC72B; background: #F4FBDD; }
+.selector.estado-grupo.estado-programada { border-color: #C9BEFF; background: #F4F1FF; }
+.selector.estado-grupo.estado-oculta { border-color: var(--tinta); background: var(--tinta); color: #fff; }
+.consigna-fila.programada { background: transparent; border: 1.5px dashed var(--linea-2); }
+.consigna-fila.programada:hover { box-shadow: none; }
+.material-consigna .area, .material-consigna .entrada { background: #fff; }
+@media (max-width: 760px) {
+  .consigna-flotante { padding: 18px; }
+  .dialogo:has(.consigna-flotante), .dialogo:has(.material-consigna) { padding: 18px; }
+}
+.consigna-tarjeta { min-width: 0; }
+.consigna-tarjeta .fila { flex-wrap: wrap; }
+.consigna-tarjeta .pill-consigna { white-space: normal; }
+@media (max-width: 760px) { .consignas-abiertas { grid-template-columns: minmax(0, 1fr); } }
