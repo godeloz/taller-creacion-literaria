@@ -1,5 +1,6 @@
 // Pantalla de ingreso: correo y contraseña (o elección de usuario en la demostración).
 import { CONFIG } from '../config.js';
+import { marcaVisible } from '../version.js';
 import { estado } from '../nucleo/estado.js';
 import { esc, $, errorAviso } from '../nucleo/ui.js';
 import { icono, avatarSVG } from '../nucleo/iconos.js';
@@ -31,6 +32,7 @@ export default async function ingreso(cont, { alEntrar }) {
             <button class="btn btn-primario" type="submit" style="width:100%;margin-top:8px">Entrar</button>
             <p class="tenue" style="font-size:13.5px;margin-top:18px">¿Olvidó su contraseña? Escríbale al tutor para que se la restablezca.</p>
           </form>`}
+        <p class="pie-app pie-ingreso">Actualización ${esc(marcaVisible())}</p>
       </div>
     </section>
   </div>`;
