@@ -1257,3 +1257,23 @@ body.pl-sin-scroll { overflow: hidden; }
 .consigna-tarjeta .fila { flex-wrap: wrap; }
 .consigna-tarjeta .pill-consigna { white-space: normal; }
 @media (max-width: 760px) { .consignas-abiertas { grid-template-columns: minmax(0, 1fr); } }
+
+/* =====================================================================
+   Marca de actualización (pie) y aviso de SQL pendientes (solo tutor)
+   ===================================================================== */
+.pie-app {
+  text-align: center; font-family: var(--f-mono); font-size: 10.5px; letter-spacing: .08em;
+  color: #A49EAA; padding: 0 16px 22px; margin: -58px 0 0; -webkit-user-select: text; user-select: text;
+}
+.pie-ingreso { margin: 26px 0 0; padding: 0; }
+body.enfoque .pie-app { display: none; }
+.aviso-sql { background: var(--amarillo); color: var(--tinta); }
+.aviso-sql-in { max-width: var(--ancho); margin: 0 auto; padding: 10px 32px; display: flex; align-items: center; gap: 12px; flex-wrap: wrap; font-size: 14.5px; line-height: 1.45; }
+.aviso-sql-in > .ico { flex-shrink: 0; }
+.aviso-sql-in > span:not(.espaciador) { flex: 1 1 320px; }
+.aviso-sql-in > .espaciador { display: none; }
+.aviso-sql code { font-family: var(--f-mono); font-size: 12.5px; background: rgba(22, 20, 28, .1); padding: 1px 6px; border-radius: 6px; white-space: nowrap; }
+.aviso-sql .tenue { color: var(--tinta-2); }
+body.enfoque .aviso-sql { display: none; }
+@media (max-width: 760px) { .aviso-sql-in { padding: 10px 16px; } }
+@media print { .pie-app, .aviso-sql { display: none !important; } }
