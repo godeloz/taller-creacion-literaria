@@ -2,6 +2,7 @@
 // guardados solo en este navegador. Sirve para probar la app sin conexión.
 import { hoyISO, sumarDias, local, contarPalabras } from './ui.js';
 import { calcularRacha } from './racha.js';
+import { VERSION } from '../version.js';
 
 const CLAVE = 'taller-demo-v2';
 const GRUPO = 'grupo-demo';
@@ -645,6 +646,9 @@ export async function crearApiDemo() {
       if ((password || '').length < 8) throw new Error('La contraseña debe tener al menos 8 caracteres.');
       return { ok: true };
     },
+
+    // En la demostración no hay base de datos: se dan por corridos todos los SQL.
+    async sqlCorridos() { return tutor() ? [...VERSION.sql] : []; },
 
     suscribir(tabla, cb) {
       const o = { tabla, cb };

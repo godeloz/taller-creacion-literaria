@@ -375,6 +375,12 @@ export function crearApiSupabase(CONFIG) {
       return llamarFuncion({ accion: 'clave', usuario, password });
     },
 
+    // ---------- actualizaciones ----------
+    // Archivos SQL que ya se corrieron en la base (solo responde al tutor).
+    async sqlCorridos() {
+      return [...new Set(ok(await sb.rpc('sql_estado')).map(r => r.archivo))];
+    },
+
     // ---------- tiempo real ----------
     suscribir(tabla, cb) {
       const canal = sb.channel(`t-${tabla}-${Math.random().toString(36).slice(2)}`)

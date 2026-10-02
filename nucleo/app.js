@@ -1,5 +1,6 @@
 // Arranque, cabecera, franja de clase en vivo y enrutador.
 import { CONFIG } from '../config.js';
+import { VERSION, marcaVisible } from '../version.js';
 import { crearApi } from './api.js';
 import { estado, esTutor, recargarBase, claseActiva, dinamica, ROLES } from './estado.js';
 import { $, esc, errorAviso, confirmar } from './ui.js';
@@ -88,7 +89,9 @@ function pintarMarco() {
       </div>
     </header>
     <div id="franja"></div>
+    <div id="aviso-sql"></div>
     <main id="vista"></main>
+    <footer class="pie-app" ${esTutor() ? `title="${esc(VERSION.nombre)}"` : ''}>Actualización ${esc(marcaVisible())}</footer>
     ${estado.api.modo === 'demo' ? `<div class="bandera-demo">Modo demostración · <button id="reiniciar-demo" style="background:none;border:0;color:inherit;text-decoration:underline;padding:0">reiniciar</button> · <button id="salir-demo" style="background:none;border:0;color:inherit;text-decoration:underline;padding:0">cambiar de usuario</button></div>` : ''}
   `;
   $('#reiniciar-demo')?.addEventListener('click', async () => {
@@ -96,6 +99,34 @@ function pintarMarco() {
   });
   $('#salir-demo')?.addEventListener('click', async () => { await estado.api.cerrarSesion(); location.hash = '#/'; location.reload(); });
   pintarFranja();
+  revisarSQL();
+}
+
+// Solo para el tutor: avisa si en Supabase falta correr algún SQL de los que esta versión necesita.
+async function revisarSQL() {
+  const cont = $('#aviso-sql');
+  if (!cont || !esTutor()) return;
+  let faltan;
+  try {
+    const corridos = await estado.api.sqlCorridos();
+    faltan = VERSION.sql.filter(a => !corridos.includes(a));
+  } catch (e) {
+    // Si la base aún no tiene el registro, lo que falta es el SQL que lo crea. Otros errores (red, sesión) no dicen nada.
+    if (!/sql_estado|sql_corridos|schema cache|does not exist|PGRST20\d|42883|42P01/i.test(e?.message || '')) return;
+    faltan = ['10-actualizaciones'];
+  }
+  if (!faltan.length) { cont.innerHTML = ''; return; }
+  const soloRegistro = faltan.length === 1 && faltan[0] === '10-actualizaciones';
+  cont.innerHTML = `<div class="aviso-sql"><div class="aviso-sql-in">
+    ${icono('info', 18)}
+    <span><b>${faltan.length === 1 ? 'Falta correr un archivo en Supabase' : `Faltan ${faltan.length} archivos por correr en Supabase`}:</b>
+      ${faltan.map(a => `<code>supabase/${esc(a)}.sql</code>`).join(', ')}.
+      ${soloRegistro ? 'Cuando lo corra, la app podrá decirle si falta algún otro.' : 'Córralos en ese orden: SQL Editor › New query › pegar el archivo completo › Run.'}
+      <span class="tenue">Este aviso solo lo ve usted.</span></span>
+    <span class="espaciador"></span>
+    <button class="btn btn-chico" id="revisar-sql">${icono('reiniciar', 15)}Volver a revisar</button>
+  </div></div>`;
+  $('#revisar-sql').onclick = async ev => { ev.currentTarget.disabled = true; await revisarSQL(); };
 }
 
 export function refrescarAvatarCabecera() {
