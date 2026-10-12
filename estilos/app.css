@@ -1277,3 +1277,28 @@ body.enfoque .pie-app { display: none; }
 body.enfoque .aviso-sql { display: none; }
 @media (max-width: 760px) { .aviso-sql-in { padding: 10px 16px; } }
 @media print { .pie-app, .aviso-sql { display: none !important; } }
+
+/* =====================================================================
+   Reto del día: instrucciones en acordeón (entrega, muro por día, reto publicado)
+   ===================================================================== */
+.reto-acordeon > summary {
+  cursor: pointer; list-style: none; display: inline-flex; align-items: center; gap: 10px;
+  max-width: 100%; border-radius: 8px;
+}
+.reto-acordeon > summary::-webkit-details-marker { display: none; }
+.reto-acordeon > summary > :first-child { margin: 0; min-width: 0; }
+.reto-acordeon > summary:focus-visible { outline: 2px solid var(--violeta); outline-offset: 4px; }
+.reto-acordeon-nombre { font-weight: 700; color: var(--tinta); }
+.reto-acordeon > summary:hover .reto-acordeon-nombre { text-decoration: underline; text-underline-offset: 3px; }
+.reto-acordeon-flecha {
+  flex-shrink: 0; width: 28px; height: 28px; border-radius: 50%; display: grid; place-items: center;
+  background: rgba(22, 20, 28, .07); color: var(--tinta); transition: transform .2s ease, background .15s ease;
+}
+.reto-acordeon > summary:hover .reto-acordeon-flecha { background: rgba(22, 20, 28, .14); }
+.reto-acordeon[open] > summary .reto-acordeon-flecha { transform: rotate(180deg); }
+.reto-acordeon-cuerpo { padding-top: 14px; max-width: 70ch; animation: reto-desplegar .22s ease-out; }
+.reto-acordeon-cuerpo .consigna-texto { font-size: 15.5px; }
+.reto-acordeon-meta { display: flex; flex-wrap: wrap; gap: 6px 18px; font-size: 13.5px; color: var(--tenue); margin-top: 4px; }
+.reto-acordeon-meta .linea-ico { display: inline-flex; gap: 6px; align-items: center; }
+.reto-acordeon details.entrena { margin-top: 12px; font-size: 14.5px; }
+@keyframes reto-desplegar { from { opacity: 0; transform: translateY(-6px); } to { opacity: 1; transform: none; } }
