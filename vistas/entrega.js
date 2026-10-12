@@ -2,7 +2,7 @@
 import { estado, esTutor, dinamica } from '../nucleo/estado.js';
 import { esc, sanitizar, parrafos, fechaHora, fechaLarga, errorAviso, confirmar, aviso, copiar } from '../nucleo/ui.js';
 import { icono } from '../nucleo/iconos.js';
-import { avatar, etiquetaDinamica, barraReacciones, activarReacciones, montarComentarios, vacio, etiquetaSoloTutor } from '../nucleo/componentes.js';
+import { avatar, etiquetaDinamica, barraReacciones, activarReacciones, montarComentarios, vacio, etiquetaSoloTutor, acordeonReto } from '../nucleo/componentes.js';
 import { descargarTXT, imprimir } from '../nucleo/exportar.js';
 
 export default async function vistaEntrega(cont, { params }) {
@@ -38,7 +38,10 @@ export default async function vistaEntrega(cont, { params }) {
           : e.dinamica === 'forma' ? 'Consigna'
           : e.dinamica === 'fallar' ? 'Borrador revisado'
           : e.dinamica === 'pliegues' ? 'Texto de origen' : d?.nombre || '';
-        consigna = `<div class="consigna-ref"><b>${esc(etiqueta)}</b>${esc(c.datos.titulo || c.datos.nombre || '')}${c.datos.autor ? `, de ${esc(c.datos.autor)}` : ''}${enlaceRespuestas(e)}</div>`;
+        // Reto del día: el nombre abre y cierra sus instrucciones.
+        consigna = e.dinamica === 'reto'
+          ? `<div class="consigna-ref"><b>${esc(etiqueta)}</b>${acordeonReto(c.datos)}${enlaceRespuestas(e)}</div>`
+          : `<div class="consigna-ref"><b>${esc(etiqueta)}</b>${esc(c.datos.titulo || c.datos.nombre || '')}${c.datos.autor ? `, de ${esc(c.datos.autor)}` : ''}${enlaceRespuestas(e)}</div>`;
       }
     } catch { /* la consigna es opcional */ }
   }

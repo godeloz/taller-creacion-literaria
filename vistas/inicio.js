@@ -2,7 +2,7 @@
 import { estado, esTutor, estaAbierta, claseActiva, miModo } from '../nucleo/estado.js';
 import { esc, saludo, fechaLarga, hoyISO, enlazar } from '../nucleo/ui.js';
 import { icono, llama } from '../nucleo/iconos.js';
-import { avatar, tarjetaEntrega, vacio, revisarInsigniasNuevas } from '../nucleo/componentes.js';
+import { avatar, tarjetaEntrega, vacio, revisarInsigniasNuevas, acordeonReto } from '../nucleo/componentes.js';
 import { tileDinamica } from './dinamicas.js';
 import { franjaInicio, activarFranja } from './consignas.js';
 
@@ -71,7 +71,7 @@ export default async function inicio(cont) {
   } else if (mio) {
     retoHTML = `<section class="reto-tarjeta reto-hecho">
       <span class="rotulo">${icono('check', 14)} Reto del día · publicado</span>
-      <h2>${esc(reto.datos.titulo)}</h2>
+      ${acordeonReto(reto.datos, { titulo: `<h2>${esc(reto.datos.titulo)}</h2>` })}
       <p>Ya publicó su texto de hoy. ${modo === 'privado' ? 'Lo leerá el tutor.'
         : modo === 'observador' ? (conteo ? `${conteo === 1 ? 'Hay una respuesta' : `Hay ${conteo} respuestas`} del grupo para leer.` : 'Todavía nadie del grupo lo ha publicado.')
         : conteo > 1 ? `Ya puede leer lo que escribieron sus ${conteo - 1} compañeros.` : 'Todavía nadie más lo ha publicado.'}</p>

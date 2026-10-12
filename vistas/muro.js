@@ -2,7 +2,7 @@
 import { estado, esTutor, estaAbierta, miModo } from '../nucleo/estado.js';
 import { esc, hoyISO, fechaLarga } from '../nucleo/ui.js';
 import { icono } from '../nucleo/iconos.js';
-import { tarjetaEntrega, vacio, ICONO_DINAMICA, colorTexto } from '../nucleo/componentes.js';
+import { tarjetaEntrega, vacio, ICONO_DINAMICA, colorTexto, acordeonReto } from '../nucleo/componentes.js';
 import { miAsignacion, estadoDe } from '../nucleo/consignas.js';
 
 // Segundo nivel del muro: las respuestas a un mismo elemento de una dinámica.
@@ -43,6 +43,7 @@ export default async function muro(cont, { query }) {
 
   // ---------- segundo nivel: elementos de la dinámica elegida ----------
   let segundo = '';
+  let itemDelDia = null; // reto del día elegido en el filtro (para mostrar sus instrucciones)
   if (f.dinamica) {
     // Las consignas viven en su propia tabla; las demás dinámicas, en contenidos.
     const cerradas = new Set();
@@ -62,9 +63,10 @@ export default async function muro(cont, { query }) {
       const fechas = [...new Map(visibles.filter(e => e.reto_fecha).map(e => [e.reto_fecha, e.item_id])).entries()]
         .sort((a, b) => b[0].localeCompare(a[0]));
       if (f.reto_fecha && !fechas.some(x => x[0] === f.reto_fecha)) fechas.unshift([f.reto_fecha, null]);
+      itemDelDia = fechas.find(x => x[0] === f.reto_fecha)?.[1] || null;
       if (fechas.length) {
         segundo = `<div class="filtros filtros-2"><label class="sr" for="filtro-item">Día del reto</label>
-          <select class="selector" id="filtro-item" style="width:auto;min-height:38px;border-radius:999px">
+          <select class="selector" id="filtro-item" style="width:auto;max-width:100%;min-height:38px;border-radius:999px">
             <option value="">${TODOS.reto}</option>
             ${fechas.map(([fe, it]) => `<option value="${fe}" ${fe === f.reto_fecha ? 'selected' : ''}>${esc(fechaLarga(fe))}${titulos[it] ? ` · ${esc(titulos[it])}` : ''}</option>`).join('')}
           </select></div>`;
@@ -114,15 +116,20 @@ export default async function muro(cont, { query }) {
   }
   if (f.reto_fecha) {
     const hoy = f.reto_fecha === hoyISO();
-    let titulo = '';
+    let datosReto = null;
     if (hoy) {
       const [reto, mio] = await Promise.all([estado.api.retoDelDia(), estado.api.miRetoHoy()]);
-      titulo = reto?.datos?.titulo || '';
+      datosReto = reto?.datos || null;
       bloqueado = !mio && !esTutor() && modo === 'participante';
+    } else if (itemDelDia) {
+      datosReto = (await estado.api.contenido('reto', itemDelDia).catch(() => null))?.datos || null;
     }
-    encabezado = `<div class="tarjeta" style="margin-bottom:18px;display:flex;gap:16px;align-items:center;flex-wrap:wrap">
-      <span class="din-sello" style="background:var(--coral);width:48px;height:48px;border-radius:14px;display:grid;place-items:center">${icono('chispa', 24)}</span>
-      <div><div class="rotulo">Reto del ${esc(fechaLarga(f.reto_fecha))}</div><div class="display" style="font-size:28px">${esc(titulo || 'Respuestas del grupo')}</div></div>
+    // El nombre del reto abre y cierra sus instrucciones.
+    encabezado = `<div class="tarjeta" style="margin-bottom:18px;display:flex;gap:16px;align-items:${datosReto ? 'flex-start' : 'center'};flex-wrap:wrap">
+      <span class="din-sello" style="background:var(--coral);width:48px;height:48px;border-radius:14px;display:grid;place-items:center;flex-shrink:0">${icono('chispa', 24)}</span>
+      <div style="flex:1;min-width:0"><div class="rotulo">Reto del ${esc(fechaLarga(f.reto_fecha))}</div>
+        ${datosReto ? acordeonReto(datosReto, { titulo: `<span class="display" style="font-size:28px">${esc(datosReto.titulo || 'Reto del día')}</span>` })
+          : '<div class="display" style="font-size:28px">Respuestas del grupo</div>'}</div>
     </div>`;
   }
 
