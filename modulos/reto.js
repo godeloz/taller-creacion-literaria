@@ -4,7 +4,7 @@ import { esc, enlazar, fechaLarga, hoyISO } from '../nucleo/ui.js';
 import { icono } from '../nucleo/iconos.js';
 import { montarEscritorio } from '../nucleo/escritorio.js';
 import { publicarEntrega } from '../nucleo/publicar.js';
-import { vacio } from '../nucleo/componentes.js';
+import { vacio, acordeonReto } from '../nucleo/componentes.js';
 
 function panel(reto, fecha, { conteo = 0, editando = false } = {}) {
   const d = reto.datos;
@@ -59,7 +59,7 @@ export default {
       cont.innerHTML = `<div class="contenedor contenedor-estrecho">
         <div class="reto-tarjeta reto-hecho">
           <span class="rotulo">${icono('check', 14)} Reto del día · publicado</span>
-          <h2>${esc(reto.datos.titulo)}</h2>
+          ${acordeonReto(reto.datos, { titulo: `<h2>${esc(reto.datos.titulo)}</h2>` })}
           <p>Ya publicó su texto de hoy. Mañana habrá un reto nuevo.</p>
           <div class="fila">
             <a class="btn btn-primario" href="#/muro?reto=${hoy}">Leer las respuestas del grupo</a>
