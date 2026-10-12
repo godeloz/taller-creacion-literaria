@@ -219,4 +219,26 @@ export function vacio(titulo, texto = '', accion = '') {
   return `<div class="vacio-estado"><div class="display">${esc(titulo)}</div>${texto ? `<p>${esc(texto)}</p>` : ''}${accion}</div>`;
 }
 
+// ---------- reto del día: instrucciones en acordeón ----------
+// El nombre del reto (o la flecha) abre y cierra las instrucciones, tal como las vio quien escribió.
+export function pasosReto(d = {}) {
+  return d.pasos?.length ? d.pasos : d.consigna ? [d.consigna] : [];
+}
+
+export function acordeonReto(d = {}, { titulo = '' } = {}) {
+  const pasos = pasosReto(d);
+  const nombre = titulo || `<span class="reto-acordeon-nombre">${esc(d.titulo || 'Reto del día')}</span>`;
+  return `<details class="reto-acordeon">
+    <summary title="Ver u ocultar las instrucciones">${nombre}<span class="reto-acordeon-flecha">${icono('abajo', 16)}</span><span class="sr">Instrucciones del reto</span></summary>
+    <div class="reto-acordeon-cuerpo">
+      ${pasos.length ? `<div class="consigna-texto">${pasos.length > 1 ? `<ol>${pasos.map(p => `<li>${enlazar(p)}</li>`).join('')}</ol>` : `<p>${enlazar(pasos[0])}</p>`}</div>` : ''}
+      <div class="reto-acordeon-meta">
+        <span class="linea-ico">${icono('pagina', 15)}Máximo ${d.limite_palabras || 500} palabras</span>
+        ${d.cronometro_min ? `<span class="linea-ico">${icono('reloj', 15)}Cronómetro de ${d.cronometro_min} minutos</span>` : ''}
+      </div>
+      ${d.entrena ? `<details class="entrena"><summary>${icono('info', 16)}¿Qué entrena este reto?</summary><p>${esc(d.entrena)}</p></details>` : ''}
+    </div>
+  </details>`;
+}
+
 export { fechaHora };

@@ -1,6 +1,7 @@
 // Descarga de entregas: texto plano (.txt) y documento imprimible (PDF desde el navegador).
 import { estado, dinamica } from './estado.js';
 import { esc, sanitizar, parrafos, fechaHora, descargarArchivo, abrirImprimible, nombreArchivo } from './ui.js';
+import { pasosReto } from './componentes.js';
 
 async function consignaDe(e, cache = {}) {
   if (!e.item_id) return '';
@@ -12,9 +13,29 @@ async function consignaDe(e, cache = {}) {
     try {
       const c = await estado.api.contenido(e.dinamica, e.item_id);
       cache[k] = c ? (c.datos.titulo || c.datos.nombre || '') + (c.datos.autor ? `, de ${c.datos.autor}` : '') : '';
+      cache['datos:' + k] = c?.datos || null;
     } catch { cache[k] = ''; }
   }
   return cache[k];
+}
+
+// Reto del día: sus instrucciones acompañan el texto en los exportes (después de consignaDe, que las trae).
+function instruccionesReto(e, cache) {
+  if (e.dinamica !== 'reto' || !e.item_id) return null;
+  const d = cache['datos:' + e.dinamica + ':' + e.item_id];
+  return d && pasosReto(d).length ? d : null;
+}
+
+function instruccionesTXT(d) {
+  const pasos = pasosReto(d);
+  return ['Instrucciones del reto:', ...pasos.map((p, i) => (pasos.length > 1 ? `${i + 1}. ${p}` : p)), `Máximo ${d.limite_palabras || 500} palabras.`].join('\n');
+}
+
+function instruccionesHTML(d) {
+  const pasos = pasosReto(d);
+  return `<div class="consigna" style="margin:12px 0 0"><b style="font-style:normal">Instrucciones del reto</b>
+    ${pasos.length > 1 ? `<ol style="margin:4px 0;padding-left:1.3em">${pasos.map(p => `<li>${esc(p)}</li>`).join('')}</ol>` : `<p style="margin:4px 0">${esc(pasos[0])}</p>`}
+    Máximo ${d.limite_palabras || 500} palabras.</div>`;
 }
 
 function autor(e) {
@@ -37,9 +58,11 @@ export async function descargarTXT(entregas, nombre) {
   for (const e of entregas) {
     const d = dinamica(e.dinamica);
     const c = await consignaDe(e, cache);
+    const r = instruccionesReto(e, cache);
     partes.push([
       (e.titulo || c || d?.nombre || 'Texto').toUpperCase(),
       `${autor(e)} · ${d?.nombre || e.dinamica}${c ? ' · ' + c : ''} · ${fechaHora(e.creado)}${e.editada ? ' · editado' : ''}`,
+      ...(r ? ['', instruccionesTXT(r), '', '———'] : []),
       '',
       e.texto || '',
     ].join('\n'));
@@ -54,10 +77,12 @@ export async function imprimir(entregas, titulo, subtitulo = '') {
   for (const e of entregas) {
     const d = dinamica(e.dinamica);
     const c = await consignaDe(e, cache);
+    const r = instruccionesReto(e, cache);
     cuerpo += `<section class="pieza">
       <div class="meta">${esc(d?.nombre || e.dinamica)}${c ? ' · ' + esc(c) : ''}</div>
       <h2>${esc(e.titulo || c || 'Sin título')}</h2>
       <div class="meta">${esc(autor(e))} · ${esc(fechaHora(e.creado))}${e.editada ? ' · editado' : ''}</div>
+      ${r ? instruccionesHTML(r) : ''}
       <div style="margin-top:16px">${e.vista ? sanitizar(e.vista) : parrafos(e.texto)}</div>
     </section>`;
   }
