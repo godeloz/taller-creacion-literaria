@@ -63,8 +63,8 @@ export default {
           <p>Ya publicó su texto de hoy. Mañana habrá un reto nuevo.</p>
           <div class="fila">
             <a class="btn btn-primario" href="#/muro?reto=${hoy}">Leer las respuestas del grupo</a>
-            <a class="btn" href="#/entrega/${mio.id}">Ver el mío</a>
-            <a class="btn btn-fantasma" href="#/editar/${mio.id}">${icono('lapiz', 16)}Editar</a>
+            ${mio.id ? `<a class="btn" href="#/entrega/${mio.id}">${mio.archivada_en ? 'Ver el mío (en su archivo)' : 'Ver el mío'}</a>` : ''}
+            ${mio.id && !mio.archivada_en ? `<a class="btn btn-fantasma" href="#/editar/${mio.id}">${icono('lapiz', 16)}Editar</a>` : ''}
           </div>
         </div></div>`;
       return;
@@ -74,7 +74,7 @@ export default {
       limite: reto.datos.limite_palabras || 500, cronometroMin: reto.datos.cronometro_min,
       placeholder: 'Empiece aquí. El texto se guarda solo mientras escribe.',
       textoBoton: 'Publicar reto',
-      avisoPublicar: soyVisible() ? 'Al publicar, el grupo podrá leer su reto y usted podrá leer el de los demás. Después podrá editarlo, pero no borrarlo.' : avisoPublicar('su reto'),
+      avisoPublicar: soyVisible() ? 'Al publicar, el grupo podrá leer su reto y usted podrá leer el de los demás. Después podrá editarlo o borrarlo.' : avisoPublicar('su reto'),
       alPublicar: d => publicarEntrega({ dinamica: 'reto', item_id: reto.item_id, titulo: d.titulo, texto: d.texto, vista: d.html, datos: {}, modulo_version: '1.0' }, { irA: `#/muro?reto=${hoy}` }),
     });
     return () => esc_.destruir();
