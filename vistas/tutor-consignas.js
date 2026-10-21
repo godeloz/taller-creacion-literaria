@@ -23,7 +23,7 @@ export async function seccionConsignas(c, query) {
 async function banco(c, query) {
   const [todas, textos] = await Promise.all([
     estado.api.consignas(),
-    estado.api.entregas({ dinamica: 'consignas', incluirOcultas: true, limite: 5000 }).catch(() => []),
+    estado.api.entregas({ dinamica: 'consignas', incluirOcultas: true, archivo: 'incluir', limite: 5000 }).catch(() => []),
   ]);
   const ahora = new Date().toISOString();
   const archivadas = query.archivadas !== undefined;
@@ -146,7 +146,7 @@ async function editor(c, id) {
   await recargarBase();
   const cons = id ? await estado.api.consigna(id) : { titulo: '', instrucciones: '', ejemplos: [], referentes: '', limite_palabras: null, grupos: [] };
   if (!cons) { c.innerHTML = vacio('No se encontró la consigna', '', '<a class="btn" href="#/tutor/consignas">Volver</a>'); return; }
-  const textos = id ? await estado.api.entregas({ dinamica: 'consignas', item_id: id, incluirOcultas: true, limite: 5000 }).catch(() => []) : [];
+  const textos = id ? await estado.api.entregas({ dinamica: 'consignas', item_id: id, incluirOcultas: true, archivo: 'incluir', limite: 5000 }).catch(() => []) : [];
   const ahora = new Date().toISOString();
   const asignadas = cons.grupos || [];
   const libres = estado.grupos.filter(g => g.activo !== false && !asignadas.some(a => a.grupo_id === g.id));
@@ -304,11 +304,12 @@ async function seguimiento(c, id, query) {
   }
   const g = asignadas.some(a => a.grupo_id === query.grupo) ? query.grupo : asignadas[0].grupo_id;
   const a = asignadas.find(x => x.grupo_id === g);
-  const textos = (await estado.api.entregas({ dinamica: 'consignas', item_id: id, incluirOcultas: true, limite: 5000 }))
+  const todosLosTextos = (await estado.api.entregas({ dinamica: 'consignas', item_id: id, incluirOcultas: true, archivo: 'incluir', limite: 5000 }))
     .filter(e => e.grupo_id === g || (e.grupo_id === undefined && e.perfil?.grupo_id === g));
+  const textos = todosLosTextos.filter(e => !e.archivada_en);
   const personas = estado.perfiles.filter(p => p.rol !== 'tutor' && p.grupo_id === g).sort((x, y) => x.nombre.localeCompare(y.nombre));
-  const revisados = new Set((await estado.api.revisiones(textos.map(e => e.id)).catch(() => [])).map(r => r.entrega_id));
-  const deQuien = p => textos.find(e => e.autor === p.id);
+  const revisados = new Set((await estado.api.revisiones(todosLosTextos.map(e => e.id)).catch(() => [])).map(r => r.entrega_id));
+  const deQuien = p => todosLosTextos.find(e => e.autor === p.id);
   const publicaron = personas.filter(deQuien).length;
   c.innerHTML = `
     <div class="fila" style="margin-bottom:14px">
@@ -333,7 +334,7 @@ async function seguimiento(c, id, query) {
         return `<tr>
           <td><span style="display:flex;align-items:center;gap:10px;font-weight:700">${avatar(p, 30)}${esc(p.nombre)}</span></td>
           <td><span class="tenue" style="font-size:13.5px">${esc(MODOS[p.modo || 'participante']?.nombre || '')}</span></td>
-          <td>${e ? `<span class="estado-pill si">Publicado</span> <span class="tenue" style="font-size:13px">${esc(fechaHora(e.creado))}</span>${e.estado === 'oculta' ? ' <span class="estado-pill no">Oculto</span>' : ''}` : '<span class="estado-pill">Pendiente</span>'}</td>
+          <td>${e ? `<span class="estado-pill si">Publicado</span> <span class="tenue" style="font-size:13px">${esc(fechaHora(e.creado))}</span>${e.estado === 'oculta' ? ' <span class="estado-pill no">Oculto</span>' : ''}${e.borrada_en ? ' <span class="estado-pill no">Borrado por su autor</span>' : e.archivada_en ? ' <span class="estado-pill no">En el archivo</span>' : ''}` : '<span class="estado-pill">Pendiente</span>'}</td>
           <td class="num">${e ? e.palabras : ''}</td>
           <td class="num">${e?.n_comentarios || ''}</td>
           <td>${e ? (revisados.has(e.id) ? '<span class="estado-pill si">Revisado</span>' : '<span class="estado-pill">Por revisar</span>') : ''}</td>

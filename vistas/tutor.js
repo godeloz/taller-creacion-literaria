@@ -1,4 +1,4 @@
-// Panel del tutor: estudiantes, entregas, clase en vivo, retos, contenido y dinámicas.
+// Panel del tutor: estudiantes, entregas, archivo, clase en vivo, retos, contenido y dinámicas.
 import { estado, esTutor, dinamica, estaAbierta, claseActiva, recargarBase, MODOS, ROLES } from '../nucleo/estado.js';
 import { esc, hoyISO, sumarDias, fechaCorta, fechaHora, fechaLarga, aviso, errorAviso, confirmar, descargarArchivo, $ } from '../nucleo/ui.js';
 import { icono, llama } from '../nucleo/iconos.js';
@@ -7,12 +7,14 @@ import { MODULOS } from '../modulos/registro.js';
 import { descargarTXT, imprimir } from '../nucleo/exportar.js';
 import { seccionPersonas, pillModo } from './personas.js';
 import { seccionConsignas } from './tutor-consignas.js';
+import { accionesArchivo, activarArchivo, irA } from '../nucleo/archivo.js';
 
 const SECCIONES = [
   ['estudiantes', 'medalla', 'Seguimiento'],
   ['personas', 'usuarios', 'Personas y grupos'],
   ['consignas', 'pagina', 'Consignas'],
   ['entregas', 'muro', 'Entregas'],
+  ['archivo', 'archivo', 'Archivo'],
   ['clase', 'envivo', 'Clase en vivo'],
   ['retos', 'calendario', 'Calendario de retos'],
   ['contenido', 'subir', 'Contenido'],
@@ -33,7 +35,7 @@ export default async function tutor(cont, { params, query }) {
     <div id="seccion"><div class="cargando">Cargando</div></div>
   </div>`;
   const cuerpo = $('#seccion', cont);
-  const f = { estudiantes, personas: seccionPersonas, consignas: seccionConsignas, entregas, clase, retos, contenido, dinamicas }[sec] || estudiantes;
+  const f = { estudiantes, personas: seccionPersonas, consignas: seccionConsignas, entregas, archivo, clase, retos, contenido, dinamicas }[sec] || estudiantes;
   await f(cuerpo, query);
 }
 
@@ -59,7 +61,7 @@ async function estudiantes(c, query) {
   await recargarBase();
   const g = grupoDe(query);
   const creadores = personasDe(g).sort((a, b) => (a.rol === b.rol ? a.nombre.localeCompare(b.nombre) : a.rol === 'creador' ? -1 : 1));
-  const todas = await estado.api.entregas({ incluirOcultas: true, limite: 5000 });
+  const todas = await estado.api.entregas({ incluirOcultas: true, archivo: 'incluir', limite: 5000 });
   const rachas = await Promise.all(creadores.map(p => estado.api.racha(p.id).catch(() => ({ actual: 0, mejor: 0 }))));
   const hoy = hoyISO();
   const nEst = creadores.filter(p => p.rol === 'creador').length, nInv = creadores.length - nEst;
@@ -133,6 +135,57 @@ async function entregas(c, query) {
       await entregas(c, query);
     } catch (e) { errorAviso(e); }
   };
+}
+
+// ---------------------------------------------------------------------
+// Archivo: los textos que sus autores borraron (o que el tutor envió al archivo).
+// Desde aquí se leen, se devuelven al archivo de su autor o se borran para siempre.
+async function archivo(c, query) {
+  const g = grupoDe(query);
+  const f = { dinamica: query.dinamica || '', autor: query.autor || '', ver: ['archivo', 'borrados'].includes(query.ver) ? query.ver : '' };
+  const creadores = personasDe(g);
+  if (f.autor && !creadores.some(p => p.id === f.autor)) f.autor = '';
+  const todo = (await estado.api.entregas({ dinamica: f.dinamica, autor: f.autor, archivo: 'todo', incluirOcultas: true, limite: 5000 }))
+    .filter(e => !g || e.perfil?.rol === 'tutor' || (e.perfil?.grupo_id ?? e.grupo_id) === g);
+  const lista = todo.filter(e => !f.ver || (f.ver === 'borrados' ? !!e.borrada_en : !e.borrada_en))
+    .sort((a, b) => (b.borrada_en || b.archivada_en || '').localeCompare(a.borrada_en || a.archivada_en || ''));
+  const nBorrados = todo.filter(e => e.borrada_en).length;
+  const dinamicas = estado.dinamicas.filter(d => d.slug === 'reto' || d.slug === 'consignas' || d.en_menu);
+  const hash = cambios => '#/tutor/archivo?' + new URLSearchParams(Object.entries({ ...f, grupo: query.grupo || '', ...cambios }).filter(([, v]) => v)).toString();
+  const yo = estado.yo.id;
+  const pill = e => e.borrada_en ? '<span class="estado-pill no">Borrado por su autor</span>'
+    : e.archivada_por === yo && e.autor !== yo ? '<span class="estado-pill">Archivado por usted</span>'
+    : '<span class="estado-pill">En su archivo</span>';
+  c.innerHTML = `
+    ${chipsGrupo('archivo', g, f)}
+    <p class="tenue" style="margin:0 0 6px;max-width:75ch">Los textos que sus autores borraron. Los que siguen en su archivo, su autor los puede volver a publicar. Los que borró de su archivo solo los ve usted: puede devolverlos a su archivo o borrarlos para siempre.</p>
+    <div class="filtros">
+      <a class="chip ${!f.ver ? 'activo' : ''}" href="${hash({ ver: '' })}">Todos <span class="chip-n">${todo.length}</span></a>
+      <a class="chip ${f.ver === 'archivo' ? 'activo' : ''}" href="${hash({ ver: 'archivo' })}">En el archivo de su autor <span class="chip-n">${todo.length - nBorrados}</span></a>
+      <a class="chip ${f.ver === 'borrados' ? 'activo' : ''}" href="${hash({ ver: 'borrados' })}">Borrados por su autor <span class="chip-n">${nBorrados}</span></a>
+      <span class="espaciador"></span>
+      <select class="selector" id="a-din" style="width:auto;min-height:40px"><option value="">Todas las dinámicas</option>${dinamicas.map(d => `<option value="${d.slug}" ${d.slug === f.dinamica ? 'selected' : ''}>${esc(d.nombre)}</option>`).join('')}</select>
+      <select class="selector" id="a-aut" style="width:auto;min-height:40px"><option value="">Todas las personas</option>${creadores.map(p => `<option value="${p.id}" ${p.id === f.autor ? 'selected' : ''}>${esc(p.nombre)}</option>`).join('')}</select>
+      ${lista.length ? `<button class="btn btn-chico" id="a-pdf">${icono('imprimir', 16)}PDF</button><button class="btn btn-chico btn-fantasma" id="a-txt">${icono('descargar', 16)}.txt</button>` : ''}
+    </div>
+    ${lista.length ? `<div class="tabla-envoltura"><table class="tabla">
+      <thead><tr><th>Al archivo</th><th>Autor</th><th>Dinámica</th><th>Título</th><th class="num">Palabras</th><th>Estado</th><th></th></tr></thead>
+      <tbody>${lista.map(e => `<tr>
+        <td class="tenue" style="white-space:nowrap">${fechaHora(e.archivada_en)}${e.borrada_en ? `<br><span style="font-size:12.5px">Borrado ${fechaHora(e.borrada_en)}</span>` : ''}</td>
+        <td>${esc(e.perfil?.nombre || '')}</td>
+        <td>${etiquetaDinamica(e.dinamica)}</td>
+        <td>${esc(e.titulo || '—')}</td>
+        <td class="num">${e.palabras}</td>
+        <td style="white-space:nowrap">${pill(e)}</td>
+        <td><span class="fila" style="gap:6px;flex-wrap:nowrap">${accionesArchivo(e, { leer: true })}</span></td>
+      </tr>`).join('')}</tbody></table></div>`
+      : vacio(todo.length ? 'No hay textos con estos filtros' : 'El archivo está vacío', todo.length ? '' : 'Cuando alguien borre un texto, aparecerá aquí.')}`;
+  $('#a-din', c).onchange = ev => { location.hash = hash({ dinamica: ev.target.value }); };
+  $('#a-aut', c).onchange = ev => { location.hash = hash({ autor: ev.target.value }); };
+  const titulo = ['Archivo', dinamica(f.dinamica)?.nombre, estado.perfiles.find(p => p.id === f.autor)?.nombre].filter(Boolean).join(' · ');
+  $('#a-pdf', c)?.addEventListener('click', () => imprimir([...lista].reverse(), titulo, 'Taller de Creación Literaria'));
+  $('#a-txt', c)?.addEventListener('click', () => descargarTXT([...lista].reverse(), titulo));
+  activarArchivo(c, id => lista.find(e => e.id === id), () => irA(location.hash));
 }
 
 // ---------------------------------------------------------------------

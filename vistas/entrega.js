@@ -4,6 +4,7 @@ import { esc, sanitizar, parrafos, fechaHora, fechaLarga, errorAviso, confirmar,
 import { icono } from '../nucleo/iconos.js';
 import { avatar, etiquetaDinamica, barraReacciones, activarReacciones, montarComentarios, vacio, etiquetaSoloTutor, acordeonReto } from '../nucleo/componentes.js';
 import { descargarTXT, imprimir } from '../nucleo/exportar.js';
+import { botonBorrar, franjaArchivo, activarArchivo, irA } from '../nucleo/archivo.js';
 
 export default async function vistaEntrega(cont, { params }) {
   const id = params[0];
@@ -59,17 +60,19 @@ export default async function vistaEntrega(cont, { params }) {
   cont.innerHTML = `
   <div class="contenedor contenedor-estrecho">
     <div class="fila" style="margin-bottom:16px">
-      ${e.dinamica === 'consignas' && e.item_id ? `<a class="btn btn-fantasma btn-chico" href="#/consignas/${encodeURIComponent(e.item_id)}">${icono('izquierda', 16)}Consigna</a>`
+      ${e.archivada_en ? `<a class="btn btn-fantasma btn-chico" href="${mia ? '#/archivo' : '#/tutor/archivo'}">${icono('izquierda', 16)}${mia ? 'Mi archivo' : 'Archivo'}</a>`
+        : e.dinamica === 'consignas' && e.item_id ? `<a class="btn btn-fantasma btn-chico" href="#/consignas/${encodeURIComponent(e.item_id)}">${icono('izquierda', 16)}Consigna</a>`
         : `<a class="btn btn-fantasma btn-chico" href="#/muro">${icono('izquierda', 16)}Muro</a>`}
       <span class="espaciador"></span>
-      ${mia && e.dinamica === 'fallar' && conFinal ? `<a class="btn btn-chico btn-fantasma" href="#/d/fallar/${encodeURIComponent(e.item_id)}?autora">${icono('libro', 16)}Versión final</a>` : ''}
-      ${mia && e.dinamica !== 'consignas' ? `<a class="btn btn-chico" href="#/editar/${e.id}">${icono('lapiz', 16)}${e.dinamica === 'fallar' && !e.item_id?.startsWith('propio-') ? 'Explicaciones' : 'Editar'}</a>` : ''}
+      ${mia && !e.archivada_en && e.dinamica === 'fallar' && conFinal ? `<a class="btn btn-chico btn-fantasma" href="#/d/fallar/${encodeURIComponent(e.item_id)}?autora">${icono('libro', 16)}Versión final</a>` : ''}
+      ${mia && !e.archivada_en && e.dinamica !== 'consignas' ? `<a class="btn btn-chico" href="#/editar/${e.id}">${icono('lapiz', 16)}${e.dinamica === 'fallar' && !e.item_id?.startsWith('propio-') ? 'Explicaciones' : 'Editar'}</a>` : ''}
       ${puedeDescargar ? `<button class="btn btn-chico btn-fantasma" id="b-copiar">${icono('copiar', 16)}Copiar</button>
         <button class="btn btn-chico btn-fantasma" id="b-txt">${icono('descargar', 16)}.txt</button>
         <button class="btn btn-chico btn-fantasma" id="b-pdf">${icono('imprimir', 16)}PDF</button>` : ''}
-      ${esTutor() ? `<button class="btn btn-chico" id="b-ocultar">${icono(e.estado === 'oculta' ? 'ojo' : 'ojoNo', 16)}${e.estado === 'oculta' ? 'Mostrar' : 'Ocultar'}</button>
-        <button class="btn btn-chico btn-peligro" id="b-borrar">${icono('basura', 16)}Borrar</button>` : ''}
+      ${esTutor() && !e.archivada_en ? `<button class="btn btn-chico" id="b-ocultar">${icono(e.estado === 'oculta' ? 'ojo' : 'ojoNo', 16)}${e.estado === 'oculta' ? 'Mostrar' : 'Ocultar'}</button>` : ''}
+      ${botonBorrar(e)}
     </div>
+    ${franjaArchivo(e)}
     <article class="hoja">
       <div class="hoja-cab">
         <a href="#/perfil/${e.autor}" style="display:flex;gap:12px;align-items:center;text-decoration:none">
@@ -118,9 +121,11 @@ export default async function vistaEntrega(cont, { params }) {
       location.reload();
     } catch (err) { errorAviso(err); }
   });
-  cont.querySelector('#b-borrar')?.addEventListener('click', async () => {
-    if (!(await confirmar('¿Borrar este texto de forma definitiva? No se puede recuperar.', { si: 'Borrar', peligro: true }))) return;
-    try { await estado.api.borrarEntrega(e.id); aviso('Texto borrado.'); location.hash = '#/muro'; } catch (err) { errorAviso(err); }
+  // Borrar (al archivo), volver a publicar, borrar definitivamente; y, para el tutor, devolver o borrar para siempre.
+  activarArchivo(cont.firstElementChild, async () => e, accion => {
+    if (accion === 'definitivo') location.hash = '#/archivo';
+    else if (accion === 'eliminar') location.hash = '#/tutor/archivo';
+    else irA(location.hash);
   });
 }
 

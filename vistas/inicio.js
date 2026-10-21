@@ -77,7 +77,7 @@ export default async function inicio(cont) {
         : conteo > 1 ? `Ya puede leer lo que escribieron sus ${conteo - 1} compañeros.` : 'Todavía nadie más lo ha publicado.'}</p>
       <div class="fila">
         ${modo === 'privado' ? '' : `<a class="btn btn-primario" href="#/muro?reto=${hoyISO()}">Leer las respuestas del grupo</a>`}
-        <a class="btn btn-fantasma" href="#/entrega/${mio.id}">Ver el mío</a>
+        ${mio.id ? `<a class="btn btn-fantasma" href="#/entrega/${mio.id}">${mio.archivada_en ? 'Ver el mío (en su archivo)' : 'Ver el mío'}</a>` : ''}
       </div>
     </section>`;
   } else {

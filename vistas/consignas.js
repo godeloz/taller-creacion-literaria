@@ -9,8 +9,9 @@ import { publicarEntrega } from '../nucleo/publicar.js';
 import { descargarTXT, imprimir } from '../nucleo/exportar.js';
 import {
   panelConsigna, anexosConsigna, miAsignacion, estadoDe, cuandoCierra, fechaHoraLarga, fechaCortaHora,
-  formato, textoPlano, ACENTO_CONSIGNA, ETIQUETA_ESTADO,
+  formato, textoPlano, ACENTO_CONSIGNA, ETIQUETA_ESTADO, motivoTextoFijo,
 } from '../nucleo/consignas.js';
+import { accionesArchivo, activarArchivo, irA } from '../nucleo/archivo.js';
 
 export default async function consignas(cont, { params, query }) {
   if (params[0]) return detalle(cont, params[0], query);
@@ -33,23 +34,26 @@ async function borradorDe(id) {
 // Consignas de mi grupo: abiertas y cerradas (con mi texto, borrador y conteo) y programadas
 // (solo título y fechas). Las que el tutor oculta no llegan. De la más reciente a la más antigua.
 async function misConsignas({ detalles = true } = {}) {
-  const [todas, mias, programadas] = await Promise.all([
+  const [todas, mias, programadas, borradas] = await Promise.all([
     estado.api.consignas(),
-    estado.api.entregas({ dinamica: 'consignas', autor: estado.yo.id, incluirOcultas: true }).catch(() => []),
+    estado.api.entregas({ dinamica: 'consignas', autor: estado.yo.id, incluirOcultas: true, archivo: 'incluir' }).catch(() => []),
     estado.api.consignasProgramadas().catch(() => []),
+    estado.api.misBorradas().catch(() => []),
   ]);
   const ahora = new Date().toISOString();
   const filas = todas.map(c => ({ c, a: miAsignacion(c) })).filter(x => x.a && ['abierta', 'cerrada'].includes(estadoDe(x.a, ahora)));
   for (const x of filas) {
     x.estado = estadoDe(x.a, ahora);
     x.mia = mias.find(e => e.item_id === x.c.id) || null;
+    // Si lo borró de su archivo, ya lo escribió: no se le ofrece escribir otro.
+    x.borrada = !x.mia && borradas.some(b => b.dinamica === 'consignas' && b.item_id === x.c.id);
   }
   const abiertas = filas.filter(x => x.estado === 'abierta').sort((p, q) => q.a.apertura.localeCompare(p.a.apertura));
   const cerradas = filas.filter(x => x.estado === 'cerrada').sort((p, q) => q.a.cierre.localeCompare(p.a.cierre));
   if (detalles) {
     await Promise.all(abiertas.map(async x => {
       x.conteo = await estado.api.conteoConsigna(x.c.id).catch(() => 0);
-      x.borrador = x.mia ? null : await borradorDe(x.c.id);
+      x.borrador = x.mia || x.borrada ? null : await borradorDe(x.c.id);
     }));
   }
   // Las programadas, de la que abre primero a la que abre después.
@@ -58,13 +62,15 @@ async function misConsignas({ detalles = true } = {}) {
 }
 
 function conteoTexto(n, mia) {
-  const otros = mia && miModo() === 'participante' ? n - 1 : n;
+  const otros = mia && !mia.archivada_en && miModo() === 'participante' ? n - 1 : n;
   if (otros <= 0) return mia ? 'Todavía nadie más ha publicado' : 'Nadie ha publicado todavía';
   return `${otros} ${otros === 1 ? 'compañero ya publicó' : 'compañeros ya publicaron'}`;
 }
 
 function pillMio(x) {
+  if (x.mia?.archivada_en) return `<span class="pill-consigna">${icono('archivo', 14)}En su archivo</span>`;
   if (x.mia) return `<span class="pill-consigna hecha">${icono('check', 14)}Publicado</span>`;
+  if (x.borrada) return '<span class="pill-consigna">Lo borró</span>';
   if (x.borrador) return `<span class="pill-consigna borrador">${icono('lapiz', 14)}Borrador guardado</span>`;
   if (x.estado === 'cerrada') return '<span class="pill-consigna">No lo publicó</span>';
   return '<span class="pill-consigna">Sin empezar</span>';
@@ -91,7 +97,7 @@ const enFranja = new Map();
 
 function accionDe(x) {
   const modo = miModo();
-  return x.mia ? (modo === 'privado' ? 'Ver su texto' : 'Leer los textos del grupo')
+  return x.mia || x.borrada ? (modo === 'privado' ? 'Ver su texto' : 'Leer los textos del grupo')
     : x.borrador ? 'Seguir escribiendo' : 'Escribir el texto';
 }
 
@@ -169,7 +175,7 @@ async function panelFlotante(x) {
   let cuerpo, acciones;
   if (x.tutor) {
     const ahora = new Date().toISOString();
-    const mia = (await estado.api.entregas({ dinamica: 'consignas', item_id: c.id, autor: estado.yo.id, incluirOcultas: true }).catch(() => []))[0];
+    const mia = (await estado.api.entregas({ dinamica: 'consignas', item_id: c.id, autor: estado.yo.id, incluirOcultas: true, archivo: 'incluir' }).catch(() => []))[0];
     const grupos = (c.grupos || []).map(a => `<span class="pill-consigna estado-${estadoDe(a, ahora)}">${esc(estado.grupos.find(g => g.id === a.grupo_id)?.nombre || 'Grupo')} · ${ETIQUETA_ESTADO[estadoDe(a, ahora)]}</span>`).join(' ');
     cuerpo = `<div class="consigna-panel consigna-flotante" style="--acento:${ACENTO_CONSIGNA}">
       ${panelConsigna(c, { extra: grupos ? `<span class="fila" style="gap:6px">${grupos}</span>` : '' })}</div>`;
@@ -182,7 +188,7 @@ async function panelFlotante(x) {
     const modo = miModo();
     const extra = [
       `<span class="linea-ico">${pillMio(x)}<span>${esc(modo === 'privado' ? 'Su texto solo lo lee el tutor.' : conteoTexto(x.conteo || 0, x.mia) + '.')}</span></span>`,
-      x.mia ? '' : modo === 'participante' ? `<span class="linea-ico">${icono('candado', 16)}Los textos del grupo se abren cuando publique el suyo o cuando la consigna cierre.</span>` : '',
+      x.mia || x.borrada ? '' : modo === 'participante' ? `<span class="linea-ico">${icono('candado', 16)}Los textos del grupo se abren cuando publique el suyo o cuando la consigna cierre.</span>` : '',
     ].join('');
     cuerpo = `<div class="consigna-panel consigna-flotante" style="--acento:${ACENTO_CONSIGNA}">${panelConsigna(c, { asignacion: x.a, extra })}</div>`;
     acciones = [
@@ -304,15 +310,17 @@ async function detalle(cont, id, query) {
     cont.innerHTML = `<div class="contenedor contenedor-estrecho">${vacio('Esta consigna no está disponible', 'Puede que todavía no haya abierto para su grupo.', '<a class="btn" href="#/consignas">Ver las consignas</a>')}</div>`;
     return;
   }
-  const mia = (await estado.api.entregas({ dinamica: 'consignas', item_id: id, autor: estado.yo.id, incluirOcultas: true }))[0] || null;
+  const mia = (await estado.api.entregas({ dinamica: 'consignas', item_id: id, autor: estado.yo.id, incluirOcultas: true, archivo: 'incluir' }))[0] || null;
   if (esTutor()) {
     if (query.escribir !== undefined && !mia) return escribir(cont, c, null);
     return lecturaTutor(cont, c, query, mia);
   }
+  // Si lo borró de su archivo, ya lo escribió: no se le ofrece escribir otro.
+  const borrada = !mia && (await estado.api.misBorradas().catch(() => [])).some(b => b.dinamica === 'consignas' && b.item_id === id);
   const a = miAsignacion(c);
   const est = estadoDe(a);
-  if (est === 'abierta' && !mia && query.leer === undefined) return escribir(cont, c, a);
-  return lectura(cont, c, a, est, mia, query);
+  if (est === 'abierta' && !mia && !borrada && query.leer === undefined) return escribir(cont, c, a);
+  return lectura(cont, c, a, est, mia, query, borrada);
 }
 
 async function escribir(cont, c, a) {
@@ -320,12 +328,12 @@ async function escribir(cont, c, a) {
   const modo = miModo();
   const extra = esTutor() ? [
     `<span class="linea-ico">${icono('usuarios', 16)}Su texto lo verán los grupos que tienen esta consigna: cada persona, cuando publique el suyo o cuando cierre.</span>`,
-    `<span class="linea-ico">${icono('lapiz', 16)}Al publicar, su texto queda fijo: ya no se puede editar.</span>`,
+    `<span class="linea-ico">${icono('lapiz', 16)}Podrá editar su texto cuando quiera.</span>`,
   ].join('') : [
     modo === 'privado' ? `<span class="linea-ico">${icono('candado', 16)}Participa en modo privado: su texto solo lo lee el tutor.</span>`
       : modo === 'observador' ? `<span class="linea-ico">${icono('ojo', 16)}<span>Como observador puede <a href="#/consignas/${esc(c.id)}?leer">leer los textos del grupo</a> cuando quiera. Su texto solo lo ve el tutor.</span></span>`
       : `<span class="linea-ico">${icono('candado', 16)}Los textos del grupo se abren cuando publique el suyo.${conteo ? ` Ya hay ${conteo}.` : ''}</span>`,
-    `<span class="linea-ico">${icono('lapiz', 16)}Al publicar, su texto queda fijo: ya no se puede editar.</span>`,
+    `<span class="linea-ico">${icono('lapiz', 16)}Podrá editarlo mientras la consigna esté abierta y nadie lo haya comentado.</span>`,
   ].join('');
   const esc_ = montarEscritorio(cont, {
     acento: ACENTO_CONSIGNA, panelHTML: panelConsigna(c, { asignacion: a, extra }), clave: `consigna:${c.id}`,
@@ -333,13 +341,39 @@ async function escribir(cont, c, a) {
     placeholder: 'Empiece aquí. El borrador se guarda solo mientras escribe.',
     textoBoton: 'Publicar',
     avisoPublicar: esTutor()
-      ? 'Al publicar, su texto queda fijo: ya no podrá editarlo. Lo leerán los grupos que tienen esta consigna, con la misma regla que los demás textos.'
+      ? 'Al publicar, lo leerán los grupos que tienen esta consigna, con la misma regla que los demás textos.'
       : soyVisible()
-      ? 'Al publicar, su texto queda fijo: ya no podrá editarlo ni borrarlo. Su grupo podrá leerlo y usted podrá leer los de sus compañeros.'
-      : 'Al publicar, su texto queda fijo: ya no podrá editarlo ni borrarlo. Solo el tutor podrá leerlo.',
+      ? 'Al publicar, su grupo podrá leerlo y usted podrá leer los de sus compañeros. Podrá editarlo mientras la consigna esté abierta y nadie lo haya comentado.'
+      : 'Al publicar, solo el tutor podrá leerlo. Podrá editarlo mientras la consigna esté abierta y nadie lo haya comentado.',
     alPublicar: d => publicarEntrega(
       { dinamica: 'consignas', item_id: c.id, titulo: d.titulo, texto: d.texto, vista: d.html, datos: {}, modulo_version: '1.0' },
       { irA: `#/consignas/${encodeURIComponent(c.id)}?publicado` }),
+  });
+  return () => esc_.destruir();
+}
+
+// Editar un texto ya publicado (#/editar/:id): mientras la consigna esté abierta para su
+// grupo y nadie más lo haya comentado ni revisado (la base de datos aplica la misma regla).
+export async function editarTexto(cont, e) {
+  const c = await estado.api.consigna(e.item_id).catch(() => null);
+  if (!c) {
+    cont.innerHTML = `<div class="contenedor contenedor-estrecho">${vacio('Esta consigna no está disponible', '', `<a class="btn" href="#/entrega/${esc(e.id)}">Volver al texto</a>`)}</div>`;
+    return;
+  }
+  const motivo = await motivoTextoFijo(e, c);
+  if (motivo) {
+    cont.innerHTML = `<div class="contenedor contenedor-estrecho">${vacio('Este texto ya no se puede editar', motivo, `<a class="btn" href="#/entrega/${esc(e.id)}">Volver al texto</a>`)}</div>`;
+    return;
+  }
+  document.querySelectorAll('.nav a').forEach(x => x.classList.toggle('activo', x.dataset.ruta === 'consignas'));
+  const a = esTutor() ? null : (c.grupos || []).find(g => g.grupo_id === e.grupo_id) || null;
+  const extra = `<span class="linea-ico">${icono('lapiz', 16)}Está editando su texto publicado. Podrá hacerlo mientras la consigna esté abierta y nadie lo haya comentado.</span>`;
+  const esc_ = montarEscritorio(cont, {
+    acento: ACENTO_CONSIGNA, panelHTML: panelConsigna(c, { asignacion: a, extra }), clave: `consigna-editar:${e.id}`,
+    limite: c.limite_palabras || null, titulo: e.titulo || '', html: e.vista || '', editando: true, textoBoton: 'Guardar cambios',
+    alPublicar: d => publicarEntrega(
+      { dinamica: 'consignas', item_id: c.id, titulo: d.titulo, texto: d.texto, vista: d.html, datos: {} },
+      { entregaExistente: e }),
   });
   return () => esc_.destruir();
 }
@@ -360,24 +394,38 @@ function cabecera(c, a, est, { abierta = false } = {}) {
   </section>`;
 }
 
-async function lectura(cont, c, a, est, mia, query) {
+async function lectura(cont, c, a, est, mia, query, borrada = false) {
   const modo = miModo();
-  const puedeLeer = !!mia || est === 'cerrada' || modo === 'observador';
+  const puedeLeer = !!mia || borrada || est === 'cerrada' || modo === 'observador';
   let textos = [];
   if (puedeLeer && modo !== 'privado') textos = await estado.api.entregas({ dinamica: 'consignas', item_id: c.id }).catch(() => []);
   const otros = textos.filter(e => e.autor !== estado.yo.id);
   const reacciones = await estado.api.reacciones(otros.map(e => e.id)).catch(() => []);
   const comentadas = await estado.api.comentadas(otros.map(e => e.id)).catch(() => []);
-  const borrador = !mia ? await borradorDe(c.id) : null;
+  const borrador = !mia && !borrada ? await borradorDe(c.id) : null;
+  const motivoFijo = mia && !mia.archivada_en ? await motivoTextoFijo(mia, c) : 'no';
 
   let suyo;
-  if (mia) {
+  if (mia?.archivada_en) {
+    suyo = `<section class="tarjeta su-texto">
+      <div class="rotulo">${icono('archivo', 14)} Su texto · en su archivo</div>
+      <h3>${esc(mia.titulo || 'Sin título')}</h3>
+      <p class="tenue" style="margin:0 0 14px">Nadie más lo ve en el taller.</p>
+      <div class="fila">${accionesArchivo(mia, { leer: true })}</div>
+    </section>`;
+  } else if (borrada) {
+    suyo = `<section class="tarjeta su-texto">
+      <div class="rotulo">Su texto</div>
+      <p style="margin:0">Usted borró su texto de esta consigna.</p>
+    </section>`;
+  } else if (mia) {
     suyo = `<section class="tarjeta su-texto">
       <div class="rotulo">${icono('check', 14)} Su texto · publicado ${esc(fechaCortaHora(mia.creado))}</div>
       <h3>${esc(mia.titulo || 'Sin título')}</h3>
       <p class="tenue" style="margin:0 0 14px">${mia.palabras} palabras${mia.n_comentarios ? ` · ${mia.n_comentarios} ${mia.n_comentarios === 1 ? 'comentario' : 'comentarios'}` : ''}${modo !== 'participante' ? ' · Solo lo lee el tutor' : ''}</p>
       <div class="fila">
         <a class="btn btn-primario btn-chico" href="#/entrega/${mia.id}">${icono('libro', 16)}Leer</a>
+        ${!motivoFijo ? `<a class="btn btn-chico" href="#/editar/${mia.id}">${icono('lapiz', 16)}Editar</a>` : ''}
         <button class="btn btn-chico" id="s-copiar">${icono('copiar', 16)}Copiar</button>
         <button class="btn btn-chico btn-fantasma" id="s-txt">${icono('descargar', 16)}.txt</button>
         <button class="btn btn-chico btn-fantasma" id="s-pdf">${icono('imprimir', 16)}PDF</button>
@@ -425,7 +473,12 @@ async function lectura(cont, c, a, est, mia, query) {
   </div>`;
   marcarTarjetas(cont, comentadas, `<span class="ya-comente">${icono('check', 13)}Ya comentó</span>`);
 
-  if (mia) {
+  if (mia?.archivada_en) {
+    activarArchivo(cont.firstElementChild, async () => mia, (accion, e) => {
+      if (accion === 'publicar') location.hash = `#/entrega/${encodeURIComponent(e.id)}`;
+      else irA(location.hash);
+    });
+  } else if (mia) {
     const completa = async () => (await estado.api.entrega(mia.id)) || mia;
     $('#s-copiar', cont).onclick = async () => { const e = await completa(); copiar([e.titulo, e.texto].filter(Boolean).join('\n\n')); };
     $('#s-txt', cont).onclick = async () => descargarTXT([await completa()], `${c.titulo} ${mia.titulo || ''}`);

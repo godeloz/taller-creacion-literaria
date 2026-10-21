@@ -2,7 +2,8 @@
 // Notas numeradas al margen, modos de lectura (Limpio, Mis notas, Todas, Tutor),
 // «Coincido», respuestas a un nivel (con marca Autor/a), notas del tutor con tipo
 // y visibilidad, devolución general, «Revisado» y PDF con comentarios.
-// Nadie puede editar el texto: solo comentarlo.
+// Aquí el texto no se edita: su autor lo edita aparte (#/editar) mientras la consigna esté
+// abierta y nadie más lo haya comentado.
 import { estado, esTutor, soloTutor, soyVisible } from '../nucleo/estado.js';
 import {
   esc, enlazar, sanitizar, parrafos, hace, fechaHora, aviso, errorAviso, confirmar, modal, local, copiar,
@@ -11,6 +12,8 @@ import {
 import { icono } from '../nucleo/iconos.js';
 import { avatar, barraReacciones, activarReacciones, etiquetaSoloTutor, revisarInsigniasNuevas } from '../nucleo/componentes.js';
 import { descargarTXT, imprimir } from '../nucleo/exportar.js';
+import { botonBorrar, franjaArchivo, activarArchivo, irA } from '../nucleo/archivo.js';
+import { motivoTextoFijo } from '../nucleo/consignas.js';
 
 export const TIPOS = {
   acierto: { nombre: 'Acierto', ico: 'check' },
@@ -109,6 +112,8 @@ export default async function lecturaCritica(cont, e) {
     api.reacciones([e.id]).catch(() => []),
   ]);
   let revisado = mia || tutorYo ? (await api.revisiones([e.id]).catch(() => []))[0] || null : null;
+  // ¿Su autor todavía puede editarlo? ('' = sí)
+  const motivoFijo = mia ? await motivoTextoFijo(e, consigna) : 'no';
 
   // Textos de la misma consigna: avance («ha comentado X de N») y siguiente texto.
   let recorrido = [], hechos = new Set();
@@ -139,16 +144,19 @@ export default async function lecturaCritica(cont, e) {
   cont.innerHTML = `
   <div class="contenedor lc">
     <div class="fila lc-arriba">
-      <a class="btn btn-fantasma btn-chico" href="#/consignas/${encodeURIComponent(e.item_id)}">${icono('izquierda', 16)}Consigna</a>
+      ${e.archivada_en ? `<a class="btn btn-fantasma btn-chico" href="${mia ? '#/archivo' : '#/tutor/archivo'}">${icono('izquierda', 16)}${mia ? 'Mi archivo' : 'Archivo'}</a>`
+        : `<a class="btn btn-fantasma btn-chico" href="#/consignas/${encodeURIComponent(e.item_id)}">${icono('izquierda', 16)}Consigna</a>`}
       <span id="lc-avance"></span>
       <span class="espaciador"></span>
+      ${!motivoFijo ? `<a class="btn btn-chico" href="#/editar/${e.id}">${icono('lapiz', 16)}Editar</a>` : ''}
       ${puedeDescargar ? `<button class="btn btn-chico btn-fantasma" id="b-copiar">${icono('copiar', 16)}Copiar</button>
         <button class="btn btn-chico btn-fantasma" id="b-txt">${icono('descargar', 16)}.txt</button>
         <button class="btn btn-chico btn-fantasma" id="b-pdf">${icono('imprimir', 16)}PDF</button>
         <button class="btn btn-chico" id="b-pdf-notas">${icono('imprimir', 16)}PDF con comentarios</button>` : ''}
-      ${tutorYo ? `<button class="btn btn-chico" id="b-ocultar">${icono(e.estado === 'oculta' ? 'ojo' : 'ojoNo', 16)}${e.estado === 'oculta' ? 'Mostrar' : 'Ocultar'}</button>
-        <button class="btn btn-chico btn-peligro" id="b-borrar">${icono('basura', 16)}Borrar</button>` : ''}
+      ${tutorYo && !e.archivada_en ? `<button class="btn btn-chico" id="b-ocultar">${icono(e.estado === 'oculta' ? 'ojo' : 'ojoNo', 16)}${e.estado === 'oculta' ? 'Mostrar' : 'Ocultar'}</button>` : ''}
+      ${botonBorrar(e)}
     </div>
+    ${franjaArchivo(e)}
     <div class="lc-barra">
       <div class="conmutador" role="group" aria-label="Modo de lectura" id="lc-modos"></div>
       <span class="lc-ayuda tenue" id="lc-ayuda"></span>
@@ -173,7 +181,7 @@ export default async function lecturaCritica(cont, e) {
           ${e.titulo ? `<h1>${esc(e.titulo)}</h1>` : ''}
           ${consigna ? `<div class="consigna-ref"><b>Consigna</b>${esc(consigna.titulo)}<a class="enlace-respuestas" href="#/consignas/${encodeURIComponent(e.item_id)}">Ver los textos de esta consigna</a></div>` : ''}
           <div class="lectura lc-texto" id="lc-texto"></div>
-          <div class="tenue" style="font-size:13px;margin-top:22px">${e.palabras} palabras · el texto no se puede editar, solo comentar</div>
+          <div class="tenue" style="font-size:13px;margin-top:22px">${e.palabras} palabras${!mia ? ' · el texto no se puede editar, solo comentar' : e.archivada_en ? '' : motivoFijo ? ` · ${esc(motivoFijo)}` : ' · puede editarlo mientras la consigna esté abierta y nadie lo haya comentado'}</div>
         </article>
         <section id="lc-devolucion"></section>
         <div style="margin-top:18px" id="reacciones">${barraReacciones(e.id, reacciones)}</div>
@@ -691,9 +699,10 @@ export default async function lecturaCritica(cont, e) {
       location.reload();
     } catch (err) { errorAviso(err); }
   });
-  $('#b-borrar', cont)?.addEventListener('click', async () => {
-    if (!(await confirmar('¿Borrar este texto de forma definitiva? No se puede recuperar.', { si: 'Borrar', peligro: true }))) return;
-    try { await api.borrarEntrega(e.id); aviso('Texto borrado.'); location.hash = `#/consignas/${encodeURIComponent(e.item_id)}`; } catch (err) { errorAviso(err); }
+  activarArchivo(cont.firstElementChild, async () => e, accion => {
+    if (accion === 'definitivo') location.hash = '#/archivo';
+    else if (accion === 'eliminar') location.hash = '#/tutor/archivo';
+    else irA(location.hash);
   });
 
   // ---------- descargas ----------

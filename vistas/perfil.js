@@ -12,11 +12,12 @@ export default async function vistaPerfil(cont, { params }) {
   const p = id === estado.yo.id ? estado.yo : estado.perfiles.find(x => x.id === id);
   if (!p) { cont.innerHTML = `<div class="contenedor">${vacio('No encontramos este perfil')}</div>`; return; }
   const propio = id === estado.yo.id;
-  const [racha, todas, mias, entregas] = await Promise.all([
+  const [racha, todas, mias, entregas, archivo] = await Promise.all([
     estado.api.racha(id).catch(() => null),
     estado.api.insignias(),
     estado.api.otorgadas(id),
     estado.api.entregas({ autor: id, incluirOcultas: propio || esTutor() }),
+    propio ? estado.api.entregas({ autor: id, archivo: 'mio', incluirOcultas: true, limite: 1000 }).catch(() => []) : [],
   ]);
   const reacciones = await estado.api.reacciones(entregas.map(e => e.id)).catch(() => []);
   const ganadas = new Map(mias.map(m => [m.insignia, m]));
@@ -63,7 +64,11 @@ export default async function vistaPerfil(cont, { params }) {
       }).join('')}
     </div>
 
-    <h2 class="titulo-seccion" style="margin:40px 0 16px">${propio ? 'Mis textos' : 'Textos publicados'}</h2>
+    <div class="fila" style="margin:40px 0 16px;align-items:baseline">
+      <h2 class="titulo-seccion">${propio ? 'Mis textos' : 'Textos publicados'}</h2>
+      <span class="espaciador"></span>
+      ${propio ? `<a class="btn btn-chico btn-fantasma" href="#/archivo">${icono('archivo', 16)}Mi archivo${archivo.length ? ` (${archivo.length})` : ''}</a>` : ''}
+    </div>
     ${entregas.length ? `<div class="muro">${entregas.map(e => tarjetaEntrega(e, reacciones)).join('')}</div>` : vacio('Todavía no hay textos publicados')}
   </div>`;
 
