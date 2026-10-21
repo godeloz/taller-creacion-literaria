@@ -21,6 +21,7 @@ const P = {
   izquierda: '<path d="M15 5l-7 7 7 7"/>',
   derecha: '<path d="M9 5l7 7-7 7"/>',
   abajo: '<path d="M5 9l7 7 7-7"/>',
+  archivo: '<rect x="3" y="4" width="18" height="5" rx="1.5"/><path d="M5 9v9a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V9"/><path d="M10 13h4"/>',
   barajar: '<path d="M4 7h3.5c2 0 3 1 4.5 3.5S14.5 17 16.5 17H20"/><path d="M4 17h3.5c1.3 0 2.2-.5 3-1.4"/><path d="M13.5 8.4c.8-.9 1.7-1.4 3-1.4H20"/><path d="M17.5 4.5L20 7l-2.5 2.5"/><path d="M17.5 14.5L20 17l-2.5 2.5"/>',
   enviar: '<path d="M4 12l16-8-6 16-2.5-6.5z"/><path d="M11.5 13.5L20 4"/>',
   cartas: '<rect x="7" y="3" width="12" height="16" rx="2"/><path d="M4 6.5V19a2 2 0 0 0 2 2h9"/>',

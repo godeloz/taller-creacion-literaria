@@ -205,6 +205,7 @@ async function enrutar() {
       case 'entrega': cargar = () => import('../vistas/entrega.js'); break;
       case 'perfil': cargar = () => import('../vistas/perfil.js'); break;
       case 'cuaderno': cargar = () => import('../vistas/cuaderno.js'); break;
+      case 'archivo': cargar = () => import('../vistas/archivo.js'); break;
       case 'tutor': cargar = () => import('../vistas/tutor.js'); break;
       case 'proyectar': cargar = () => import('../vistas/proyeccion.js'); break;
       case 'reto': return abrirModulo(vista, 'reto', { ...ctx });
@@ -250,10 +251,17 @@ async function abrirEdicion(vista, id) {
     const e = await estado.api.entrega(id);
     if (!e) throw new Error('No se encontró el texto.');
     if (e.autor !== estado.yo.id) throw new Error('Solo puede editar sus propios textos.');
-    if (e.dinamica === 'consignas') {
+    if (e.archivada_en) {
       const { aviso } = await import('./ui.js');
-      aviso('Los textos de las consignas quedan fijos al publicar.');
+      aviso('Este texto está en su archivo. Vuelva a publicarlo para editarlo.');
       location.replace(`#/entrega/${e.id}`);
+      return;
+    }
+    // Consignas: se editan mientras la consigna esté abierta y nadie más haya comentado el texto.
+    if (e.dinamica === 'consignas') {
+      const { editarTexto } = await import('../vistas/consignas.js');
+      vista.innerHTML = '';
+      limpiarVista = await editarTexto(vista, e);
       return;
     }
     const modulo = await cargarModulo(e.dinamica);

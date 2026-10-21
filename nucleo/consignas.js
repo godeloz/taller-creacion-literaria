@@ -1,6 +1,6 @@
 // Consignas de escritura: utilidades compartidas por la sección, el inicio,
 // el muro y el panel del tutor.
-import { estado } from './estado.js';
+import { estado, esTutor } from './estado.js';
 import { esc, hoyISO, sumarDias } from './ui.js';
 import { icono } from './iconos.js';
 
@@ -127,4 +127,22 @@ export function panelConsigna(c, { asignacion = null, extra = '' } = {}) {
       ${extra}
     </div>
     ${anexosConsigna(c)}`;
+}
+
+// ¿Puede quien escribió este texto de consigna editarlo todavía? '' si puede; si no, el motivo.
+// Se edita mientras la consigna esté abierta para su grupo y nadie más lo haya comentado ni
+// revisado (la base de datos aplica la misma regla).
+export async function motivoTextoFijo(e, c = null) {
+  if (e.archivada_en) return 'Su texto está en su archivo. Vuelva a publicarlo para editarlo.';
+  if (esTutor()) return '';
+  c = c || await estado.api.consigna(e.item_id).catch(() => null);
+  const a = (c?.grupos || []).find(g => g.grupo_id === e.grupo_id) || null;
+  if (estadoDe(a) !== 'abierta') return 'La consigna ya cerró: su texto quedó fijo.';
+  const [coms, revs] = await Promise.all([
+    estado.api.comentarios(e.id).catch(() => []),
+    estado.api.revisiones([e.id]).catch(() => []),
+  ]);
+  if (coms.some(x => x.autor !== e.autor)) return 'Su texto ya recibió comentarios: quedó fijo.';
+  if (revs.length) return 'El tutor ya revisó su texto: quedó fijo.';
+  return '';
 }

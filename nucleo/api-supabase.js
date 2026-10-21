@@ -2,7 +2,7 @@
 import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm';
 import { hoyISO } from './ui.js';
 
-const CAMPOS_LISTA = 'id,autor,grupo_id,dinamica,item_id,titulo,texto,palabras,reto_fecha,sesion_id,estado,editada,creado,actualizado,perfil:perfiles!entregas_autor_fkey(id,nombre,avatar,foto_url,rol,modo,grupo_id),comentarios(count)';
+const CAMPOS_LISTA = 'id,autor,grupo_id,dinamica,item_id,titulo,texto,palabras,reto_fecha,sesion_id,estado,editada,creado,actualizado,archivada_en,archivada_por,borrada_en,perfil:perfiles!entregas_autor_fkey(id,nombre,avatar,foto_url,rol,modo,grupo_id),comentarios(count)';
 
 function traducir(error) {
   const m = error?.message || String(error);
@@ -119,8 +119,12 @@ export function crearApiSupabase(CONFIG) {
     async conteoReto(fecha = hoyISO()) {
       return ok(await sb.rpc('conteo_reto', { f: fecha }));
     },
+    // Mi reto de hoy, aunque esté en mi archivo. Si lo borré de mi archivo: { id: null, borrada: true }.
     async miRetoHoy() {
-      return ok(await sb.from('entregas').select('id,titulo,creado').eq('autor', yo.id).eq('reto_fecha', hoyISO()).maybeSingle());
+      const r = ok(await sb.from('entregas').select('id,titulo,creado,archivada_en').eq('autor', yo.id).eq('reto_fecha', hoyISO()).maybeSingle());
+      if (r) return r;
+      const borradas = await this.misBorradas().catch(() => []);
+      return borradas.some(b => b.reto_fecha === hoyISO()) ? { id: null, borrada: true } : null;
     },
     async racha(usuario) {
       return ok(await sb.rpc('racha_de', { u: usuario }));
@@ -152,12 +156,19 @@ export function crearApiSupabase(CONFIG) {
       if (f.sesion_id) q = q.eq('sesion_id', f.sesion_id);
       if (f.grupo_id) q = q.eq('grupo_id', f.grupo_id);
       if (!f.incluirOcultas) q = q.eq('estado', 'publicada');
+      // Archivo. Por defecto, solo lo que no está archivado. 'incluir': también lo archivado
+      // (y, para el tutor, lo borrado); 'mio': mi archivo; 'todo': todo el archivo (tutor).
+      const ar = f.archivo || 'no';
+      if (ar === 'no') q = q.is('archivada_en', null);
+      else if (ar === 'mio') q = q.eq('autor', yo.id).not('archivada_en', 'is', null).is('borrada_en', null);
+      else if (ar === 'todo') q = q.not('archivada_en', 'is', null);
       q = q.limit(f.limite || 300);
       return ok(await q).map(normalizar);
     },
     // Cuántos textos propios hay en cada dinámica: { slug: n } (marca «Realizada» en las tarjetas).
     async realizadas() {
       const filas = ok(await sb.from('entregas').select('dinamica').eq('autor', yo.id));
+      filas.push(...await this.misBorradas().catch(() => []));
       return filas.reduce((m, f) => { m[f.dinamica] = (m[f.dinamica] || 0) + 1; return m; }, {});
     },
     async entrega(id) {
@@ -178,8 +189,31 @@ export function crearApiSupabase(CONFIG) {
     async cambiarEstadoEntrega(id, estadoNuevo) {
       ok(await sb.from('entregas').update({ estado: estadoNuevo }).eq('id', id));
     },
+    // Borrado real: solo el tutor, desde su Archivo.
     async borrarEntrega(id) {
       ok(await sb.from('entregas').delete().eq('id', id));
+    },
+
+    // ---------- archivo ----------
+    // «Borrar» un texto: pasa al archivo de su autor (lo puede hacer el autor o el tutor).
+    async archivarEntrega(id) {
+      ok(await sb.from('entregas').update({ archivada_en: new Date().toISOString() }).eq('id', id));
+    },
+    // Volver a publicar: el autor, o el tutor si fue él quien lo archivó.
+    async recuperarEntrega(id) {
+      ok(await sb.from('entregas').update({ archivada_en: null }).eq('id', id));
+    },
+    // El autor lo borra de su archivo; el tutor lo sigue viendo.
+    async borrarDeMiArchivo(id) {
+      ok(await sb.rpc('borrar_de_mi_archivo', { p_id: id }));
+    },
+    // Tutor: devuelve al archivo de su autor un texto que este borró.
+    async devolverAlArchivo(id) {
+      ok(await sb.from('entregas').update({ borrada_en: null }).eq('id', id));
+    },
+    // Lo que borré de mi archivo (solo dinámica, elemento y día).
+    async misBorradas() {
+      return ok(await sb.rpc('mis_borradas'));
     },
 
     // ---------- consignas de escritura ----------

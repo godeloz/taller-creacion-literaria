@@ -229,8 +229,9 @@ export async function crearApiDemo() {
     if (el.rol === 'tutor') return true;
     return ['participante', 'observador'].includes(yo.modo) && el.modo === 'participante' && !!yo.grupo_id && yo.grupo_id === el.grupo_id;
   };
-  const visible = e => tutor() || e.autor === yo.id ||
-    (e.estado === 'publicada' && puedeVer(e.autor) && (!e.reto_fecha || e.reto_fecha < hoyISO() || hizoReto(e.reto_fecha) || yo.modo === 'observador')
+  // Archivo: lo archivado solo lo ven su autor y el tutor; lo borrado del archivo, solo el tutor.
+  const visible = e => tutor() || (e.autor === yo.id && !e.borrada_en) ||
+    (!e.archivada_en && e.estado === 'publicada' && puedeVer(e.autor) && (!e.reto_fecha || e.reto_fecha < hoyISO() || hizoReto(e.reto_fecha) || yo.modo === 'observador')
       && (!aCiegas(e) || hizoItem(e.dinamica, e.item_id) || yo.modo === 'observador')
       && (e.dinamica !== 'consignas' || hizoItem(e.dinamica, e.item_id) || yo.modo === 'observador' || consignaCerrada(e.item_id)));
   const comentarioVisible = c => {
@@ -327,9 +328,13 @@ export async function crearApiDemo() {
       return c ? { item_id: id, datos: structuredClone(c.datos), fecha: hoyISO() } : null;
     },
     async conteoReto(f = hoyISO()) {
-      return db.entregas.filter(e => e.reto_fecha === f && e.estado === 'publicada' && (() => { const p = db.perfiles.find(x => x.id === e.autor); return p && p.grupo_id === yo.grupo_id && p.modo === 'participante'; })()).length;
+      return db.entregas.filter(e => e.reto_fecha === f && e.estado === 'publicada' && !e.archivada_en && (() => { const p = db.perfiles.find(x => x.id === e.autor); return p && p.grupo_id === yo.grupo_id && p.modo === 'participante'; })()).length;
     },
-    async miRetoHoy() { return db.entregas.find(e => e.autor === yo.id && e.reto_fecha === hoyISO()) || null; },
+    async miRetoHoy() {
+      const e = db.entregas.find(x => x.autor === yo.id && x.reto_fecha === hoyISO());
+      if (!e) return null;
+      return e.borrada_en ? { id: null, borrada: true } : e;
+    },
     async racha(u) { if (!puedeVer(u)) return null; return calcularRacha(db.entregas.filter(e => e.autor === u && e.reto_fecha).map(e => e.reto_fecha), hoyISO()); },
     async ranking(grupo) {
       const out = [];
@@ -354,6 +359,13 @@ export async function crearApiDemo() {
         .filter(e => (!f.dinamica || e.dinamica === f.dinamica) && (!f.autor || e.autor === f.autor) &&
           (!f.item_id || e.item_id === f.item_id) && (!f.reto_fecha || e.reto_fecha === f.reto_fecha) &&
           (!f.sesion_id || e.sesion_id === f.sesion_id) && (!f.grupo_id || e.grupo_id === f.grupo_id) && (f.incluirOcultas || e.estado === 'publicada'))
+        .filter(e => {
+          const ar = f.archivo || 'no';
+          if (ar === 'no') return !e.archivada_en;
+          if (ar === 'mio') return e.autor === yo.id && !!e.archivada_en && !e.borrada_en;
+          if (ar === 'todo') return !!e.archivada_en;
+          return true;
+        })
         .sort((a, b) => b.creado.localeCompare(a.creado))
         .slice(0, f.limite || 300)
         .map(conExtras);
@@ -369,6 +381,10 @@ export async function crearApiDemo() {
         titulo: e.titulo || null, texto: e.texto || '', vista: e.vista || null, datos: e.datos || {}, modulo_version: e.modulo_version,
         palabras: contarPalabras(e.texto), reto_fecha: null, sesion_id: null, estado: 'publicada', editada: false, creado: ahora(), actualizado: ahora(),
       };
+      const previa = e.dinamica === 'reto' ? db.entregas.find(x => x.autor === yo.id && x.reto_fecha === hoyISO())
+        : e.dinamica === 'consignas' ? db.entregas.find(x => x.autor === yo.id && x.dinamica === 'consignas' && x.item_id === e.item_id) : null;
+      if (previa?.borrada_en) throw new Error(e.dinamica === 'reto' ? 'Hoy ya escribió su reto y lo borró. Mañana habrá uno nuevo.' : 'Ya escribió su texto para esta consigna y lo borró.');
+      if (previa?.archivada_en) throw new Error(e.dinamica === 'reto' ? 'Su reto de hoy está en su archivo. Puede volver a publicarlo desde allí.' : 'Su texto para esta consigna está en su archivo. Puede volver a publicarlo desde allí.');
       if (e.dinamica === 'reto') {
         fila.reto_fecha = hoyISO();
         fila.item_id = retoDelDiaId();
@@ -397,11 +413,52 @@ export async function crearApiDemo() {
     async editarEntrega(id, c) {
       const e = db.entregas.find(x => x.id === id);
       if (!e || e.autor !== yo.id) throw new Error('Solo puede editar sus propias entregas');
-      if (e.dinamica === 'consignas') throw new Error('Su texto ya está publicado y no se puede cambiar.');
+      if (e.dinamica === 'consignas' && ['titulo', 'texto', 'vista', 'datos'].some(k => k in c)) {
+        // Se edita mientras la consigna esté abierta para el grupo y nadie más lo haya comentado ni revisado.
+        if (!tutor()) {
+          const a = asignacion(e.item_id, e.grupo_id);
+          if (!a || a.oculta || a.apertura > ahora() || a.cierre <= ahora()) throw new Error('La consigna ya cerró: su texto quedó fijo.');
+          if (db.comentarios.some(x => x.entrega_id === e.id && x.autor !== e.autor)) throw new Error('Su texto ya recibió comentarios: quedó fijo.');
+          if (db.revisiones.some(r => r.entrega_id === e.id)) throw new Error('El tutor ya revisó su texto: quedó fijo.');
+        }
+        const lim = db.consignas.find(x => x.id === e.item_id)?.limite_palabras;
+        const n = contarPalabras('texto' in c ? c.texto : e.texto);
+        if (lim && n > lim) throw new Error(`La consigna admite máximo ${lim} palabras (su texto tiene ${n})`);
+      }
       if (aCiegas(e) && 'datos' in c && JSON.stringify(c.datos?.runs) !== JSON.stringify(e.datos?.runs)) throw new Error('Su versión ya está publicada y no se puede cambiar. Solo puede completar sus explicaciones.');
       for (const k of ['titulo', 'texto', 'vista', 'datos']) if (k in c) e[k] = c[k];
       e.palabras = contarPalabras(e.texto); e.editada = true; e.actualizado = ahora();
       emitir('entregas', 'UPDATE', e);
+    },
+    // ---------- archivo (mismas reglas que 11-archivo.sql) ----------
+    async archivarEntrega(id) {
+      const e = db.entregas.find(x => x.id === id);
+      if (!e || !(e.autor === yo.id || tutor()) || !visible(e)) throw new Error('No tiene permiso para hacer esto.');
+      if (e.archivada_en) return;
+      e.archivada_en = ahora(); e.archivada_por = yo.id; e.borrada_en = null;
+      emitir('entregas', 'UPDATE', e);
+    },
+    async recuperarEntrega(id) {
+      const e = db.entregas.find(x => x.id === id);
+      if (!e || !visible(e) || !e.archivada_en) throw new Error('Este texto no está en el archivo.');
+      if (e.borrada_en) throw new Error('Este texto ya no está en el archivo de su autor. Primero devuélvalo a su archivo.');
+      if (!(e.autor === yo.id || (tutor() && e.archivada_por === yo.id))) throw new Error('Solo quien escribió el texto puede volver a publicarlo.');
+      e.archivada_en = null; e.archivada_por = null;
+      emitir('entregas', 'UPDATE', e);
+    },
+    async borrarDeMiArchivo(id) {
+      const e = db.entregas.find(x => x.id === id);
+      if (!e || e.autor !== yo.id || !e.archivada_en || e.borrada_en) throw new Error('Este texto no está en su archivo.');
+      e.borrada_en = ahora();
+      emitir('entregas', 'UPDATE', e);
+    },
+    async devolverAlArchivo(id) {
+      exigirTutor();
+      const e = db.entregas.find(x => x.id === id);
+      if (e) { e.borrada_en = null; emitir('entregas', 'UPDATE', e); }
+    },
+    async misBorradas() {
+      return db.entregas.filter(e => e.autor === yo.id && e.borrada_en).map(e => ({ dinamica: e.dinamica, item_id: e.item_id, reto_fecha: e.reto_fecha }));
     },
     async cambiarEstadoEntrega(id, est) { exigirTutor(); db.entregas.find(x => x.id === id).estado = est; emitir('entregas', 'UPDATE', {}); },
     async borrarEntrega(id) {
@@ -464,7 +521,7 @@ export async function crearApiDemo() {
     },
     async conteoConsigna(id, grupo) {
       const g = tutor() && grupo ? grupo : yo.grupo_id;
-      return db.entregas.filter(e => e.dinamica === 'consignas' && e.item_id === id && e.estado === 'publicada'
+      return db.entregas.filter(e => e.dinamica === 'consignas' && e.item_id === id && e.estado === 'publicada' && !e.archivada_en
         && (() => { const p = db.perfiles.find(x => x.id === e.autor); return p && p.rol !== 'tutor' && p.grupo_id === g && p.modo === 'participante'; })()).length;
     },
 
@@ -545,7 +602,8 @@ export async function crearApiDemo() {
         if (c.autor === yo.id || !comentarioVisible(c)) continue;
         const e = db.entregas.find(x => x.id === c.entrega_id);
         const p = c.padre_id && db.comentarios.find(x => x.id === c.padre_id);
-        if (!(e?.autor === yo.id || p?.autor === yo.id)) continue;
+        if (!e || e.archivada_en) continue;
+        if (!(e.autor === yo.id || p?.autor === yo.id)) continue;
         const visto = db.lecturas[`${yo.id}:${c.entrega_id}`];
         if (visto && c.creado <= visto) continue;
         cuenta[c.entrega_id] = (cuenta[c.entrega_id] || 0) + 1;

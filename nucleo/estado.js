@@ -27,8 +27,8 @@ export const ROLES = { creador: 'Creador', invitado: 'Invitado', tutor: 'Tutor' 
 // Aviso antes de publicar, según quién podrá leer el texto.
 export function avisoPublicar(que = 'su texto', lo = 'lo', verbo = 'leer') {
   return soyVisible()
-    ? `Al publicar, el grupo podrá ${verbo} ${que}. Después podrá editar${lo}, pero no borrar${lo}.`
-    : `Al publicar, solo el tutor podrá ${verbo} ${que}. Después podrá editar${lo}, pero no borrar${lo}.`;
+    ? `Al publicar, el grupo podrá ${verbo} ${que}. Después podrá editar${lo} o borrar${lo}.`
+    : `Al publicar, solo el tutor podrá ${verbo} ${que}. Después podrá editar${lo} o borrar${lo}.`;
 }
 
 export function grupo(id) {
