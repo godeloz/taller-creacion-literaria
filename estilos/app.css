@@ -1302,3 +1302,25 @@ body.enfoque .aviso-sql { display: none; }
 .reto-acordeon-meta .linea-ico { display: inline-flex; gap: 6px; align-items: center; }
 .reto-acordeon details.entrena { margin-top: 12px; font-size: 14.5px; }
 @keyframes reto-desplegar { from { opacity: 0; transform: translateY(-6px); } to { opacity: 1; transform: none; } }
+
+/* =====================================================================
+   Archivo de textos: franja sobre un texto archivado y «Mi archivo»
+   ===================================================================== */
+.franja-archivo {
+  display: flex; flex-wrap: wrap; align-items: center; gap: 10px 16px;
+  background: var(--fondo-2); border: 1px solid var(--linea-2); border-radius: var(--r-md);
+  padding: 12px 16px; margin-bottom: 16px; font-size: 14.5px; line-height: 1.45;
+}
+.franja-archivo.borrada { background: #FBEAE8; border-color: #F1C9C4; }
+.franja-archivo-txt { display: flex; gap: 10px; align-items: flex-start; flex: 1 1 320px; }
+.franja-archivo-txt > .ico { flex-shrink: 0; margin-top: 1px; }
+.franja-archivo .fila { gap: 8px; }
+.archivo-lista { display: grid; gap: 14px; }
+.archivo-fila { background: var(--superficie); border-radius: var(--r-lg); padding: 20px 24px; border: 2px solid transparent; transition: border-color .4s ease; }
+.archivo-fila.reciente { border-color: var(--lima); }
+.archivo-fila h3 { font-family: var(--f-display); font-weight: 500; font-size: 24px; line-height: 1.15; margin: 10px 0 6px; }
+.archivo-extracto { font-family: var(--f-lectura); font-size: 15.5px; line-height: 1.6; color: var(--tinta-2); margin: 0 0 14px; max-width: 64ch; }
+@media (max-width: 760px) {
+  .archivo-fila { padding: 18px; }
+  .franja-archivo .fila { width: 100%; }
+}
