@@ -22,4 +22,5 @@ export const MODULOS = {
   forma: () => import('./forma.js'),
   fallar: () => import('./fallar.js'),
   pliegues: () => import('./pliegues.js'),
+  'correo-secretos': () => import('./correo-secretos.js'),
 };
