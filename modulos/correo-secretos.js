@@ -6,7 +6,7 @@
 // Las genera herramientas/optimizar_imagenes.py a partir de imagenes/correo-secretos/. Las traducciones son
 // el contenido de la dinámica (paquete «secretos»): { id, imagen?, traduccion }.
 import { estado, esTutor } from '../nucleo/estado.js';
-import { esc, local, barajar, aviso, errorAviso, modal, debounce } from '../nucleo/ui.js';
+import { esc, local, barajar, aviso, errorAviso, modal, debounce, confirmar } from '../nucleo/ui.js';
 import { icono } from '../nucleo/iconos.js';
 import { montarEscritorio } from '../nucleo/escritorio.js';
 import { publicarEntrega } from '../nucleo/publicar.js';
@@ -396,6 +396,7 @@ function escribir(cont, base, s, limpieza, editando = null) {
     editando: !!editando,
     textoBoton: editando ? 'Guardar cambios' : 'Publicar',
     placeholder: 'Escriba o pegue aquí su historia…',
+    tituloObligatorio: true,
     alPublicar: async d => {
       const vista = `<blockquote class="cs-epigrafe">${esc(comillas(s.traduccion))}</blockquote>${d.html}`;
       await publicarEntrega({
@@ -409,6 +410,19 @@ function escribir(cont, base, s, limpieza, editando = null) {
     },
   });
   limpieza.push(() => es.destruir());
+
+  // Cambiar de secreto: descarta lo escrito (no se guarda ni se publica) y vuelve a los secretos.
+  if (!editando) {
+    cont.querySelector('#publicar').insertAdjacentHTML('beforebegin',
+      `<button type="button" class="btn btn-fantasma" id="cs-cambiar">${icono('sobre', 18)}<span>Cambiar<span class="solo-ancho"> de secreto</span></span></button>`);
+    cont.querySelector('#cs-cambiar').addEventListener('click', async () => {
+      if (es.tieneTexto() && !(await confirmar('¿Cambiar de secreto? Lo que escribió para este secreto se borra y no se publica.', { si: 'Descartar y cambiar', no: 'Seguir escribiendo', peligro: true }))) return;
+      await es.descartar();
+      local(claveCamino, null);
+      if (s.origen !== 'banco') marcarVisto(base, s.id);   // para que el siguiente sea otro
+      location.hash = s.origen === 'banco' ? `${RUTA}/${BANCO}` : `${RUTA}?descubrir`;
+    });
+  }
 
   // Panel plegable (se recuerda en este navegador).
   const mesa = cont.querySelector('.escritorio');
