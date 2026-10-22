@@ -6,7 +6,7 @@ import { avatar, etiquetaDinamica, barraReacciones, activarReacciones, montarCom
 import { descargarTXT, imprimir } from '../nucleo/exportar.js';
 import { botonBorrar, franjaArchivo, activarArchivo, irA } from '../nucleo/archivo.js';
 
-export default async function vistaEntrega(cont, { params }) {
+export default async function vistaEntrega(cont, { params, query = {} }) {
   const id = params[0];
   const e = await estado.api.entrega(id);
   if (!e) {
@@ -18,7 +18,7 @@ export default async function vistaEntrega(cont, { params }) {
   // Los textos de las consignas se leen en la vista de lectura crítica.
   if (e.dinamica === 'consignas' && e.item_id) {
     const { default: lecturaCritica } = await import('./lectura-critica.js');
-    return lecturaCritica(cont, e);
+    return lecturaCritica(cont, e, { nota: query.nota });
   }
   const d = dinamica(e.dinamica);
   let consigna = '';
@@ -109,6 +109,8 @@ export default async function vistaEntrega(cont, { params }) {
 
   activarReacciones(cont.querySelector('#reacciones'), reacciones);
   await montarComentarios(cont.querySelector('#comentarios'), e);
+  // Desde una notificación de comentario: ir a los comentarios.
+  if (query.nota) cont.querySelector('#comentarios')?.scrollIntoView({ block: 'start', behavior: 'smooth' });
 
   const nombre = `${e.perfil?.nombre || 'texto'} ${e.titulo || d?.nombre || ''}`;
   cont.querySelector('#b-copiar')?.addEventListener('click', () => copiar([e.titulo, e.texto].filter(Boolean).join('\n\n')));
