@@ -206,7 +206,7 @@ export async function crearApiDemo() {
   window.addEventListener('storage', ev => {
     if (ev.key !== CLAVE) return;
     db = local(CLAVE);
-    ['entregas', 'sesion_clase', 'comentarios', 'reacciones', 'coincidencias'].forEach(t => oyentes.filter(o => o.tabla === t).forEach(o => o.cb({ eventType: 'UPDATE' })));
+    ['entregas', 'sesion_clase', 'comentarios', 'reacciones', 'coincidencias', 'notificaciones'].forEach(t => oyentes.filter(o => o.tabla === t).forEach(o => o.cb({ eventType: 'UPDATE' })));
   });
 
   let yo = db.perfiles.find(p => p.id === db.sesion) || null;
@@ -259,7 +259,7 @@ export async function crearApiDemo() {
   }
 
   function evaluarInsignias(u) {
-    const dar = s => { if (!db.otorgadas.some(o => o.usuario === u && o.insignia === s)) db.otorgadas.push({ usuario: u, insignia: s, fecha: ahora() }); };
+    const dar = s => { if (!db.otorgadas.some(o => o.usuario === u && o.insignia === s)) { db.otorgadas.push({ usuario: u, insignia: s, fecha: ahora() }); avisar.insignia(u, s); } };
     const mias = db.entregas.filter(e => e.autor === u);
     if (mias.some(e => e.dinamica === 'reto')) dar('primera-pagina');
     const r = calcularRacha(mias.filter(e => e.reto_fecha).map(e => e.reto_fecha), hoyISO());
@@ -272,6 +272,152 @@ export async function crearApiDemo() {
     const menu = db.dinamicas.filter(d => d.en_menu && abierta(d.slug));
     if (mias.length && menu.every(d => mias.some(e => e.dinamica === d.slug))) dar('todas-las-dinamicas');
   }
+
+  // ---------- notificaciones (mismas reglas que 13-notificaciones.sql) ----------
+  // ¿Puede «v» ver la actividad de «a»? (puedeVer, pero para cualquier persona)
+  const puedeVerDe = (v, a) => {
+    if (!v || !a) return false;
+    if (v === a) return true;
+    const quien = db.perfiles.find(p => p.id === v), el = db.perfiles.find(p => p.id === a);
+    if (!quien || !el) return false;
+    if (quien.rol === 'tutor' || el.rol === 'tutor') return true;
+    return ['participante', 'observador'].includes(quien.modo) && el.modo === 'participante' && !!quien.grupo_id && quien.grupo_id === el.grupo_id;
+  };
+  const ms = t => new Date(t).getTime();
+  const DIA = 864e5;
+  // Suma un aviso: si hay uno sin leer con la misma clave, lo actualiza; si no, crea uno.
+  const notifSumar = (usuario, tipo, clave, { actor = null, entrega_id = null, comentario_id = null, consigna_id = null, grupo_id = null, datos = {}, cuando = null } = {}) => {
+    if (!usuario || usuario === actor) return;
+    const t = cuando || ahora();
+    const n = db.notificaciones.find(x => x.usuario === usuario && x.clave === clave && !x.leida_en);
+    if (n) {
+      n.n += 1;
+      if (actor) n.actores = [...n.actores.filter(a => a !== actor), actor];
+      n.comentario_id = comentario_id || n.comentario_id;
+      Object.assign(n.datos, datos);
+      n.actualizado = t;
+    } else {
+      db.notificaciones.push({ id: crypto.randomUUID(), usuario, tipo, clave, n: 1, actores: actor ? [actor] : [], entrega_id, comentario_id,
+        consigna_id, grupo_id, datos: { ...datos }, creado: t, actualizado: t, leida_en: null });
+    }
+  };
+  // Crea un aviso una sola vez (los que dependen de la hora).
+  const notifUna = (usuario, tipo, clave, creado, { consigna_id = null, grupo_id = null, datos = {} } = {}) => {
+    if (db.notificaciones.some(x => x.usuario === usuario && x.clave === clave)) return;
+    db.notificaciones.push({ id: crypto.randomUUID(), usuario, tipo, clave, n: 1, actores: [], entrega_id: null, comentario_id: null,
+      consigna_id, grupo_id, datos: { ...datos }, creado: creado || ahora(), actualizado: ahora(), leida_en: null });
+  };
+  const marcaSeg = () => Math.floor(Date.now() / 1000);
+  const tutoresIds = () => db.perfiles.filter(p => p.rol === 'tutor').map(p => p.id);
+  const rolDe = id => db.perfiles.find(x => x.id === id)?.rol;
+  const estadoNotif = u => (db.notifEstado[u] ||= { visto_en: null, coment_estudiantes: false, racha_conocida: null });
+  const avisar = {
+    comentario(c, cuando) {
+      const e = db.entregas.find(x => x.id === c.entrega_id);
+      if (!e || e.archivada_en) return;
+      const actor = c.autor;
+      if (e.autor !== actor && puedeVerDe(e.autor, actor)) {
+        if (c.tipo === 'devolucion') notifSumar(e.autor, 'devolucion', `devol:${e.id}`, { actor, entrega_id: e.id, comentario_id: c.id, cuando });
+        else notifSumar(e.autor, 'comentario', `coment:${e.id}:${actor}`, { actor, entrega_id: e.id, comentario_id: c.id, cuando });
+      }
+      const p = c.padre_id && db.comentarios.find(x => x.id === c.padre_id);
+      if (p && p.autor !== actor && p.autor !== e.autor && puedeVerDe(p.autor, actor)) {
+        notifSumar(p.autor, 'respuesta', `resp:${e.id}:${actor}`, { actor, entrega_id: e.id, comentario_id: c.id, cuando });
+      }
+      if (e.dinamica === 'consignas' && rolDe(actor) !== 'tutor' && rolDe(e.autor) !== 'tutor') {
+        for (const t of tutoresIds()) {
+          if (estadoNotif(t).coment_estudiantes) notifSumar(t, 'tut-coment', `tut-coment:${e.id}`, { actor, entrega_id: e.id, comentario_id: c.id, consigna_id: e.item_id, grupo_id: e.grupo_id, cuando });
+        }
+      }
+    },
+    reaccion(entrega_id, usuario) {
+      const e = db.entregas.find(x => x.id === entrega_id);
+      if (e && !e.archivada_en && e.autor !== usuario && puedeVerDe(e.autor, usuario)) notifSumar(e.autor, 'reaccion', `reac:${e.id}`, { actor: usuario, entrega_id: e.id });
+    },
+    coincido(comentario_id, usuario, cuando) {
+      const c = db.comentarios.find(x => x.id === comentario_id);
+      const e = c && db.entregas.find(x => x.id === c.entrega_id);
+      if (e && !e.archivada_en && c.autor !== usuario && puedeVerDe(c.autor, usuario)) notifSumar(c.autor, 'coincido', `coinc:${e.id}`, { actor: usuario, entrega_id: e.id, comentario_id: c.id, cuando });
+    },
+    revisado(entrega_id, por, cuando) {
+      const e = db.entregas.find(x => x.id === entrega_id);
+      if (e && !e.archivada_en) notifSumar(e.autor, 'revisado', `rev:${e.id}`, { actor: por, entrega_id: e.id, cuando });
+    },
+    insignia(usuario, slug, por = null) {
+      notifSumar(usuario, 'insignia', `insig:${slug}`, { actor: por, datos: { insignia: slug } });
+    },
+    // Lo que el tutor hace con el archivo de un texto ajeno. (Ocultar no se avisa.)
+    archivo(e, tipo) {
+      if (!tutor() || e.autor === yo.id) return;
+      notifSumar(e.autor, tipo, `${tipo}:${e.id}:${marcaSeg()}`, { actor: yo.id, entrega_id: e.id });
+    },
+    publicar(f) {
+      if (f.dinamica !== 'consignas' || rolDe(f.autor) === 'tutor') return;
+      for (const t of tutoresIds()) notifSumar(t, 'tut-textos', `tut-textos:${f.item_id}:${f.grupo_id || ''}`, { actor: f.autor, consigna_id: f.item_id, grupo_id: f.grupo_id });
+    },
+    perfil(antes, p) {
+      if (!antes || p.rol === 'tutor') return;
+      if (antes.modo !== p.modo) notifSumar(p.id, 'modo', `modo:${marcaSeg()}`, { datos: { modo: p.modo } });
+      if (antes.grupo_id !== p.grupo_id && p.grupo_id) notifSumar(p.id, 'grupo', `grupo:${marcaSeg()}`, { grupo_id: p.grupo_id });
+    },
+    plazo(antes, a) {
+      if (!antes || ms(antes.cierre) === ms(a.cierre) || a.oculta || ms(a.apertura) > Date.now() || ms(a.cierre) <= Date.now()) return;
+      for (const p of db.perfiles.filter(x => x.grupo_id === a.grupo_id && x.rol !== 'tutor')) {
+        notifSumar(p.id, 'consigna-plazo', `cons-plazo:${a.consigna_id}:${marcaSeg()}`, { actor: yo.id, consigna_id: a.consigna_id, grupo_id: a.grupo_id,
+          datos: { cierre: a.cierre, antes: antes.cierre, reabierta: ms(antes.cierre) <= Date.now() } });
+      }
+    },
+  };
+  const horaBogota = () => Number(new Intl.DateTimeFormat('en-US', { timeZone: 'America/Bogota', hour: 'numeric', hourCycle: 'h23' }).format(new Date()));
+  // Los avisos que dependen de la hora (notificaciones_generar en la base).
+  function generarNotificaciones() {
+    const est = estadoNotif(yo.id);
+    const ya = Date.now();
+    const consigna = id => db.consignas.find(x => x.id === id);
+    if (tutor()) {
+      for (const a of db.consignaGrupos) {
+        const c = consigna(a.consigna_id);
+        if (!c || c.archivada || a.oculta || ms(a.cierre) > ya || ms(a.cierre) <= ya - 7 * DIA) continue;
+        const delGrupo = db.entregas.filter(e => e.dinamica === 'consignas' && e.item_id === a.consigna_id && e.grupo_id === a.grupo_id && rolDe(e.autor) !== 'tutor');
+        notifUna(yo.id, 'tut-cierre', `tut-cierre:${a.consigna_id}:${a.grupo_id}`, a.cierre, { consigna_id: a.consigna_id, grupo_id: a.grupo_id, datos: {
+          total: db.perfiles.filter(p => p.grupo_id === a.grupo_id && p.rol !== 'tutor').length,
+          escribieron: new Set(delGrupo.map(e => e.autor)).size,
+          sin_revisar: delGrupo.filter(e => !e.archivada_en && !db.revisiones.some(r => r.entrega_id === e.id)).length,
+        } });
+      }
+      return;
+    }
+    if (yo.grupo_id) {
+      for (const a of db.consignaGrupos) {
+        const c = consigna(a.consigna_id);
+        if (a.grupo_id !== yo.grupo_id || !c || c.archivada || a.oculta || ms(a.apertura) > ya || ms(a.cierre) <= ya - 7 * DIA) continue;
+        const escribi = db.entregas.some(e => e.autor === yo.id && e.dinamica === 'consignas' && e.item_id === a.consigna_id);
+        const ref = { consigna_id: a.consigna_id, grupo_id: a.grupo_id, datos: { cierre: a.cierre } };
+        if (ms(a.cierre) > ya) {
+          if (!escribi && ms(a.apertura) > ya - 30 * DIA) notifUna(yo.id, 'consigna-abierta', `cons-abre:${a.consigna_id}`, a.apertura, ref);
+          if (!escribi && ms(a.cierre) - DIA <= ya) notifUna(yo.id, 'consigna-cierre', `cons-cierra:${a.consigna_id}:${Math.floor(ms(a.cierre) / 1000)}`, ahora(), ref);
+        } else if (yo.modo === 'participante' && !escribi) {
+          notifUna(yo.id, 'consigna-lectura', `cons-lectura:${a.consigna_id}`, a.cierre, { consigna_id: a.consigna_id, grupo_id: a.grupo_id });
+        }
+      }
+    }
+    const r = calcularRacha(db.entregas.filter(e => e.autor === yo.id && e.reto_fecha).map(e => e.reto_fecha), hoyISO());
+    if (horaBogota() >= 18 && r.actual > 0 && !r.hoy_hecho) {
+      notifUna(yo.id, 'racha-riesgo', `racha-riesgo:${hoyISO()}`, ahora(), { datos: { fecha: hoyISO(), actual: r.actual, comodin: r.comodin_disponible } });
+    }
+    if ((est.racha_conocida || 0) > 0 && r.actual === 0) notifUna(yo.id, 'racha-perdida', `racha-perdida:${hoyISO()}`, ahora(), { datos: { n: est.racha_conocida } });
+    est.racha_conocida = r.actual;
+  }
+  // Una demo creada antes del centro de notificaciones recibe los avisos de lo que ya pasó.
+  if (!db.notificaciones) {
+    db.notificaciones = [];
+    db.notifEstado = db.notifEstado || {};
+    [...db.comentarios].sort((a, b) => a.creado.localeCompare(b.creado)).forEach(c => avisar.comentario(c, c.creado));
+    (db.coincidencias || []).forEach(x => avisar.coincido(x.comentario_id, x.usuario, x.creado));
+    (db.revisiones || []).forEach(r => avisar.revisado(r.entrega_id, r.revisado_por, r.creado));
+    guardar();
+  }
+  db.notifEstado = db.notifEstado || {};
 
   return {
     modo: 'demo',
@@ -407,6 +553,7 @@ export async function crearApiDemo() {
       if (e.sesion_id && s && s.activa && s.id === e.sesion_id && e.dinamica !== 'consignas') fila.sesion_id = e.sesion_id;
       db.entregas.push(fila);
       evaluarInsignias(yo.id);
+      avisar.publicar(fila);
       emitir('entregas', 'INSERT', fila);
       return { id: fila.id };
     },
@@ -436,6 +583,7 @@ export async function crearApiDemo() {
       if (!e || !(e.autor === yo.id || tutor()) || !visible(e)) throw new Error('No tiene permiso para hacer esto.');
       if (e.archivada_en) return;
       e.archivada_en = ahora(); e.archivada_por = yo.id; e.borrada_en = null;
+      avisar.archivo(e, 'archivo-enviado');
       emitir('entregas', 'UPDATE', e);
     },
     async recuperarEntrega(id) {
@@ -444,6 +592,7 @@ export async function crearApiDemo() {
       if (e.borrada_en) throw new Error('Este texto ya no está en el archivo de su autor. Primero devuélvalo a su archivo.');
       if (!(e.autor === yo.id || (tutor() && e.archivada_por === yo.id))) throw new Error('Solo quien escribió el texto puede volver a publicarlo.');
       e.archivada_en = null; e.archivada_por = null;
+      avisar.archivo(e, 'archivo-publicado');
       emitir('entregas', 'UPDATE', e);
     },
     async borrarDeMiArchivo(id) {
@@ -455,7 +604,12 @@ export async function crearApiDemo() {
     async devolverAlArchivo(id) {
       exigirTutor();
       const e = db.entregas.find(x => x.id === id);
-      if (e) { e.borrada_en = null; emitir('entregas', 'UPDATE', e); }
+      if (e) {
+        const devuelto = !!e.borrada_en;
+        e.borrada_en = null;
+        if (devuelto) avisar.archivo(e, 'archivo-devuelto');
+        emitir('entregas', 'UPDATE', e);
+      }
     },
     async misBorradas() {
       return db.entregas.filter(e => e.autor === yo.id && e.borrada_en).map(e => ({ dinamica: e.dinamica, item_id: e.item_id, reto_fecha: e.reto_fecha }));
@@ -497,7 +651,9 @@ export async function crearApiDemo() {
       if (!(cierre > apertura)) throw new Error('El cierre tiene que ser después de la apertura.');
       const antes = asignacion(consigna_id, grupo_id);
       db.consignaGrupos = db.consignaGrupos.filter(x => !(x.consigna_id === consigna_id && x.grupo_id === grupo_id));
-      db.consignaGrupos.push({ consigna_id, grupo_id, apertura, cierre, oculta: !!antes?.oculta });
+      const nueva = { consigna_id, grupo_id, apertura, cierre, oculta: !!antes?.oculta };
+      db.consignaGrupos.push(nueva);
+      avisar.plazo(antes, nueva);
       guardar();
     },
     async ocultarConsigna(consigna_id, grupo_id, oculta) {
@@ -528,7 +684,7 @@ export async function crearApiDemo() {
     async reacciones(ids) { const s = new Set(ids); return db.reacciones.filter(r => s.has(r.entrega_id) && puedeVer(r.usuario)); },
     async reaccionar(entrega_id, tipo, poner) {
       db.reacciones = db.reacciones.filter(r => !(r.entrega_id === entrega_id && r.tipo === tipo && r.usuario === yo.id));
-      if (poner) db.reacciones.push({ entrega_id, tipo, usuario: yo.id });
+      if (poner) { db.reacciones.push({ entrega_id, tipo, usuario: yo.id }); avisar.reaccion(entrega_id, yo.id); }
       emitir('reacciones', 'INSERT', {});
     },
     async comentarios(entrega_id) {
@@ -553,6 +709,7 @@ export async function crearApiDemo() {
       if (c.tipo === 'devolucion' && db.comentarios.some(x => x.entrega_id === entrega_id && x.tipo === 'devolucion')) throw new Error('Este texto ya tiene una devolución. Puede editarla.');
       db.comentarios.push(c);
       evaluarInsignias(yo.id);
+      avisar.comentario(c);
       emitir('comentarios', 'INSERT', {});
       return { id: c.id };
     },
@@ -577,6 +734,7 @@ export async function crearApiDemo() {
         const c = db.comentarios.find(x => x.id === comentario_id);
         if (!c || !comentarioVisible(c) || c.autor === yo.id || c.padre_id) throw new Error('No tiene permiso para hacer esto.');
         db.coincidencias.push({ comentario_id, usuario: yo.id, creado: ahora() });
+        avisar.coincido(comentario_id, yo.id);
       }
       emitir('coincidencias', 'INSERT', {});
     },
@@ -587,7 +745,7 @@ export async function crearApiDemo() {
     async marcarRevisado(entrega_id, si) {
       exigirTutor();
       db.revisiones = db.revisiones.filter(r => r.entrega_id !== entrega_id);
-      if (si) db.revisiones.push({ entrega_id, revisado_por: yo.id, creado: ahora() });
+      if (si) { db.revisiones.push({ entrega_id, revisado_por: yo.id, creado: ahora() }); avisar.revisado(entrega_id, yo.id); }
       guardar();
     },
     async abrirLectura(entrega_id) {
@@ -627,8 +785,11 @@ export async function crearApiDemo() {
     async otorgadas(u) { return db.otorgadas.filter(o => (!u || o.usuario === u) && puedeVer(o.usuario)); },
     async otorgar(usuario, insignia, nota) {
       exigirTutor();
+      const habia = db.otorgadas.some(o => o.usuario === usuario && o.insignia === insignia);
       db.otorgadas = db.otorgadas.filter(o => !(o.usuario === usuario && o.insignia === insignia));
-      db.otorgadas.push({ usuario, insignia, nota, fecha: ahora(), otorgada_por: yo.id }); guardar();
+      db.otorgadas.push({ usuario, insignia, nota, fecha: ahora(), otorgada_por: yo.id });
+      if (!habia) avisar.insignia(usuario, insignia, yo.id);
+      guardar();
     },
     async quitarInsignia(usuario, insignia) { exigirTutor(); db.otorgadas = db.otorgadas.filter(o => !(o.usuario === usuario && o.insignia === insignia)); guardar(); },
 
@@ -684,7 +845,8 @@ export async function crearApiDemo() {
       if (!f) { f = { email, creado: ahora() }; db.lista.push(f); }
       Object.assign(f, { nombre: p.nombre.trim(), rol: p.rol, modo: p.modo, grupo_id: p.grupo_id || null });
       const perfil = db.perfiles.find(x => x.email === email);
-      if (perfil) Object.assign(perfil, { nombre: f.nombre, rol: f.rol, modo: f.modo, grupo_id: f.grupo_id });
+      const antes = perfil && { modo: perfil.modo, grupo_id: perfil.grupo_id };
+      if (perfil) { Object.assign(perfil, { nombre: f.nombre, rol: f.rol, modo: f.modo, grupo_id: f.grupo_id }); avisar.perfil(antes, perfil); }
       guardar();
     },
     async quitarDeLista(email) { exigirTutor(); db.lista = db.lista.filter(x => x.email !== email); guardar(); },
@@ -704,6 +866,46 @@ export async function crearApiDemo() {
       if ((password || '').length < 8) throw new Error('La contraseña debe tener al menos 8 caracteres.');
       return { ok: true };
     },
+
+    // ---------- notificaciones ----------
+    async notificaciones() {
+      generarNotificaciones();
+      const est = estadoNotif(yo.id);
+      const limite = Date.now() - 30 * DIA;
+      const lista = db.notificaciones
+        .filter(n => n.usuario === yo.id && ms(n.actualizado) > limite)
+        .filter(n => {
+          const e = n.entrega_id && db.entregas.find(x => x.id === n.entrega_id);
+          if (n.entrega_id && !e) return false;
+          if (e && !n.tipo.startsWith('archivo-') && (e.archivada_en || e.borrada_en)) return false;
+          if (n.tipo === 'consigna-cierre' && db.entregas.some(x => x.autor === yo.id && x.dinamica === 'consignas' && x.item_id === n.consigna_id)) return false;
+          if (n.tipo === 'racha-riesgo' && db.entregas.some(x => x.autor === yo.id && x.reto_fecha === n.datos.fecha)) return false;
+          return true;
+        })
+        .map(n => {
+          const e = n.entrega_id && db.entregas.find(x => x.id === n.entrega_id);
+          return {
+            ...structuredClone(n),
+            cuando: ['consigna-abierta', 'consigna-lectura', 'tut-cierre'].includes(n.tipo) ? n.creado : n.actualizado,
+            actores: [...n.actores].reverse().map(id => db.perfiles.find(p => p.id === id)).filter(Boolean).map(p => ({ id: p.id, nombre: p.nombre, rol: p.rol })),
+            entrega_titulo: e ? e.titulo : null, entrega_autor: e ? e.autor : null, entrega_dinamica: e ? e.dinamica : null,
+            entrega_autor_nombre: e ? db.perfiles.find(p => p.id === e.autor)?.nombre ?? null : null,
+            consigna_titulo: n.consigna_id ? db.consignas.find(c => c.id === n.consigna_id)?.titulo ?? null : null,
+            grupo_nombre: n.grupo_id ? db.grupos.find(g => g.id === n.grupo_id)?.nombre ?? null : null,
+          };
+        })
+        .sort((a, b) => ms(b.cuando) - ms(a.cuando))
+        .slice(0, 60);
+      guardar();
+      return { visto_en: est.visto_en, coment_estudiantes: !!est.coment_estudiantes, lista };
+    },
+    async leerNotificaciones(ids = null) {
+      const s = ids && new Set(ids);
+      for (const n of db.notificaciones) if (n.usuario === yo.id && !n.leida_en && (!s || s.has(n.id))) n.leida_en = ahora();
+      guardar();
+    },
+    async verNotificaciones() { estadoNotif(yo.id).visto_en = ahora(); guardar(); },
+    async preferenciaNotificaciones(v) { estadoNotif(yo.id).coment_estudiantes = !!v; guardar(); },
 
     // En la demostración no hay base de datos: se dan por corridos todos los SQL.
     async sqlCorridos() { return tutor() ? [...VERSION.sql] : []; },

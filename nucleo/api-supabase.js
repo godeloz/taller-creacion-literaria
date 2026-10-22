@@ -415,10 +415,29 @@ export function crearApiSupabase(CONFIG) {
       return [...new Set(ok(await sb.rpc('sql_estado')).map(r => r.archivo))];
     },
 
+    // ---------- notificaciones (13-notificaciones.sql) ----------
+    // { visto_en, coment_estudiantes, lista }: los avisos de los últimos 30 días.
+    // Antes de responder, la base crea los que dependen de la hora (consignas, racha).
+    async notificaciones() {
+      return ok(await sb.rpc('notificaciones'));
+    },
+    // ids: las que se leyeron; sin ids, todas.
+    async leerNotificaciones(ids = null) {
+      ok(await sb.rpc('notificaciones_leer', { p_ids: ids }));
+    },
+    // Abrió el panel: el círculo de la campana vuelve a cero.
+    async verNotificaciones() {
+      ok(await sb.rpc('notificaciones_vistas'));
+    },
+    async preferenciaNotificaciones(comentEstudiantes) {
+      ok(await sb.rpc('notificaciones_preferencia', { p_coment_estudiantes: !!comentEstudiantes }));
+    },
+
     // ---------- tiempo real ----------
-    suscribir(tabla, cb) {
+    // filtro (opcional), como lo pide Supabase: 'usuario=eq.<id>'
+    suscribir(tabla, cb, filtro) {
       const canal = sb.channel(`t-${tabla}-${Math.random().toString(36).slice(2)}`)
-        .on('postgres_changes', { event: '*', schema: 'public', table: tabla }, p => cb(p))
+        .on('postgres_changes', { event: '*', schema: 'public', table: tabla, ...(filtro ? { filter: filtro } : {}) }, p => cb(p))
         .subscribe();
       return () => sb.removeChannel(canal);
     },
