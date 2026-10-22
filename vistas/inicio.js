@@ -4,7 +4,7 @@ import { esc, saludo, fechaLarga, hoyISO, enlazar } from '../nucleo/ui.js';
 import { icono, llama } from '../nucleo/iconos.js';
 import { avatar, tarjetaEntrega, vacio, revisarInsigniasNuevas, acordeonReto } from '../nucleo/componentes.js';
 import { tileDinamica } from './dinamicas.js';
-import { franjaInicio, activarFranja } from './consignas.js';
+import { franjaInicio, activarFranja } from './consignas-franja.js';
 
 const DIAS = ['L', 'M', 'M', 'J', 'V', 'S', 'D'];
 
@@ -48,18 +48,21 @@ export function listaRanking(filas) {
 
 export default async function inicio(cont) {
   const api = estado.api;
-  const [reto, mio, conteo, racha, ranking, recientes, franjaConsigna, avisos, hechas] = await Promise.all([
+  // Las reacciones se piden apenas llegan los textos recientes, sin esperar al resto.
+  const pRecientes = api.entregas({ limite: 6 }).catch(() => []);
+  const pReacciones = pRecientes.then(r => api.reacciones(r.map(e => e.id))).catch(() => []);
+  const [reto, mio, conteo, racha, ranking, recientes, franjaConsigna, avisos, hechas, reacciones] = await Promise.all([
     api.retoDelDia().catch(() => null),
     api.miRetoHoy().catch(() => null),
     api.conteoReto().catch(() => 0),
     api.racha(estado.yo.id).catch(() => null),
     api.ranking().catch(() => []),
-    api.entregas({ limite: 6 }).catch(() => []),
+    pRecientes,
     franjaInicio().catch(() => ''),
     novedades().catch(() => ''),
     api.realizadas().catch(() => ({})),
+    pReacciones,
   ]);
-  const reacciones = await api.reacciones(recientes.map(e => e.id)).catch(() => []);
   const nombre = estado.yo.nombre.split(' ')[0];
   const dinamicas = estado.dinamicas.filter(d => d.en_menu && d.estado !== 'oculta');
   const abiertas = dinamicas.filter(estaAbierta).length;
