@@ -1514,6 +1514,8 @@ body.enfoque .campana, body.enfoque .panel-notif, body.enfoque .notif-velo { dis
   .cs-acciones .btn { flex: 1 1 auto; justify-content: center; }
   .cs-ref { flex-direction: column; align-items: flex-start; }
   .cs-ref-postal img { max-width: 100%; }
+  .cs-escritorio .mesa-pie { flex-wrap: wrap; row-gap: 6px; }
+  .cs-escritorio .mesa-pie .contador { flex-basis: 100%; }
 }
 @media (prefers-reduced-motion: reduce) {
   .cs-sobre, .cs-marco, .escritorio.cs-escritorio { transition: none; }
