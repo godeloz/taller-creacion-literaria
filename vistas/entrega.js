@@ -26,6 +26,8 @@ export default async function vistaEntrega(cont, { params, query = {} }) {
   if (e.dinamica === 'consignas' && e.item_id) {
     const cs = await estado.api.consigna(e.item_id).catch(() => null);
     if (cs) consigna = `<div class="consigna-ref"><b>Consigna</b>${esc(cs.titulo)}${enlaceRespuestas(e)}</div>`;
+  } else if (e.dinamica === 'correo-secretos') {
+    consigna = refSecreto(e);
   } else if (e.item_id) {
     try {
       const c = await estado.api.contenido(e.dinamica, e.item_id);
@@ -136,6 +138,19 @@ function enlaceRespuestas(e) {
   if (e.dinamica === 'consignas' && e.item_id) return `<a class="enlace-respuestas" href="#/consignas/${encodeURIComponent(e.item_id)}">Ver los textos de esta consigna</a>`;
   const href = e.dinamica === 'reto' && e.reto_fecha ? `#/muro?reto=${e.reto_fecha}`
     : e.item_id && !e.item_id.startsWith('propio-') ? `#/muro?dinamica=${encodeURIComponent(e.dinamica)}&item=${encodeURIComponent(e.item_id)}` : '';
-  const a = { reto: 'a este reto', maraton: 'a esta carta', poema: 'a este poema', s7: 'a este texto', fallar: 'a este texto', pliegues: 'a este texto' }[e.dinamica] || 'a esta consigna';
+  const a = { reto: 'a este reto', maraton: 'a esta carta', poema: 'a este poema', s7: 'a este texto', fallar: 'a este texto', pliegues: 'a este texto', 'correo-secretos': 'a este secreto' }[e.dinamica] || 'a esta consigna';
   return href ? `<a class="enlace-respuestas" href="${href}">Ver todas las respuestas ${a}</a>` : '';
+}
+
+// Correo de secretos: la postal (si la hay) y el camino que tomó quien escribe. La traducción va en la vista, como epígrafe.
+// La imagen se carga solo al abrir la entrega (no en el muro).
+function refSecreto(e) {
+  const d = e.datos || {};
+  const caminos = { 1: 'Primera frase', 2: 'Revelación final', 3: 'Secreto oculto' };
+  const img = d.imagen && /^[a-z0-9-]+$/.test(d.imagen)
+    ? `<img src="img/correo-secretos/${d.imagen}.webp" ${d.ancho ? `width="${Number(d.ancho)}" height="${Number(d.alto)}"` : ''} alt="${esc(`Postal: ${d.traduccion || ''}`)}" loading="lazy" decoding="async">` : '';
+  return `<div class="consigna-ref cs-ref">
+    ${img ? `<figure class="cs-ref-postal">${img}</figure>` : ''}
+    <div><b>${d.imagen ? 'Postal de PostSecret' : 'Secreto del Banco'}</b>${caminos[d.camino] ? `Camino ${Number(d.camino)} · ${caminos[d.camino]}` : ''}${enlaceRespuestas(e)}</div>
+  </div>`;
 }

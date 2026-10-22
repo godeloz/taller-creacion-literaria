@@ -6,7 +6,7 @@ import { tarjetaEntrega, vacio, ICONO_DINAMICA, colorTexto, acordeonReto } from 
 import { miAsignacion, estadoDe } from '../nucleo/consignas.js';
 
 // Segundo nivel del muro: las respuestas a un mismo elemento de una dinámica.
-const TODOS = { reto: 'Todos los días', maraton: 'Todas las cartas', poema: 'Todos los poemas', cutup: 'Todos los juegos', s7: 'Todos los textos', forma: 'Todas las consignas', fallar: 'Todos los textos', pliegues: 'Todos los textos', consignas: 'Todas las consignas' };
+const TODOS = { reto: 'Todos los días', maraton: 'Todas las cartas', poema: 'Todos los poemas', cutup: 'Todos los juegos', s7: 'Todos los textos', forma: 'Todas las consignas', fallar: 'Todos los textos', pliegues: 'Todos los textos', consignas: 'Todas las consignas', 'correo-secretos': 'Todos los secretos' };
 const PROPIOS = '_propios';
 // En estas dinámicas, las respuestas a un texto se abren cuando uno publica la suya.
 const A_CIEGAS = ['fallar', 'consignas'];
@@ -57,7 +57,8 @@ export default async function muro(cont, { query }) {
       estado.api.entregas({ dinamica: f.dinamica, incluirOcultas: esTutor() }).catch(() => []),
     ]);
     const visibles = deLaDinamica.filter(deGrupo);
-    const nombre = c => c?.datos?.titulo || c?.datos?.nombre || '';
+    const corto = t => { const s = String(t || '').replace(/^[«"“]|[»"”.]+$/g, '').trim(); return s.length > 48 ? s.slice(0, 46).trim() + '…' : s; };
+    const nombre = c => c?.datos?.titulo || c?.datos?.nombre || corto(c?.datos?.traduccion);
     if (f.dinamica === 'reto') {
       const titulos = Object.fromEntries(items.map(c => [c.item_id, nombre(c)]));
       const fechas = [...new Map(visibles.filter(e => e.reto_fecha).map(e => [e.reto_fecha, e.item_id])).entries()]
@@ -176,9 +177,11 @@ export default async function muro(cont, { query }) {
     let entregas = await estado.api.entregas({ ...f, incluirOcultas: esTutor() });
     entregas = entregas.filter(deGrupo);
     if (soloPropios) entregas = entregas.filter(e => e.item_id?.startsWith('propio-'));
-    // Pliegues: la tarjeta resalta lo que viene del texto de origen (va en datos, que la lista no trae).
-    if (entregas.some(e => e.dinamica === 'pliegues' && !e.datos)) {
-      const conDatos = await estado.api.entregas({ ...f, dinamica: 'pliegues', conVista: true, incluirOcultas: esTutor() }).catch(() => []);
+    // Pliegues (resalta lo que viene del texto de origen) y Correo de secretos (epígrafe con el secreto):
+    // la tarjeta necesita datos, que la lista no trae.
+    for (const din of ['pliegues', 'correo-secretos']) {
+      if (!entregas.some(e => e.dinamica === din && !e.datos)) continue;
+      const conDatos = await estado.api.entregas({ ...f, dinamica: din, conVista: true, incluirOcultas: esTutor() }).catch(() => []);
       const datos = new Map(conDatos.map(x => [x.id, x.datos]));
       entregas.forEach(e => { if (datos.has(e.id)) e.datos = datos.get(e.id); });
     }
