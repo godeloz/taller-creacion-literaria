@@ -5,6 +5,7 @@ import { calcularRacha } from './racha.js';
 import { VERSION } from '../version.js';
 
 const CLAVE = 'taller-demo-v2';
+const barajarDemo = a => a.map(x => [Math.random(), x]).sort((p, q) => p[0] - q[0]).map(x => x[1]);
 const GRUPO = 'grupo-demo';
 const GRUPO2 = 'grupo-invitados';
 
@@ -17,6 +18,7 @@ const DINAMICAS = [
   { slug: 'forma', nombre: 'La forma de las historias', descripcion: 'Trace el arco emocional de una historia, al modo de Vonnegut.', color: '#8B6CFF', estado: 'abierta', orden: 5, en_menu: true, desbloqueo: null },
   { slug: 'fallar', nombre: 'Fallar mejor', descripcion: 'Revise un borrador con control de cambios y compárelo con la versión final.', color: '#5B3DF5', estado: 'abierta', orden: 6, en_menu: true, desbloqueo: null },
   { slug: 'pliegues', nombre: 'Pliegues', descripcion: 'Pliegue un texto y reescríbalo a partir de las frases que emergen.', color: '#FFB547', estado: 'abierta', orden: 8, en_menu: true, desbloqueo: null },
+  { slug: 'correo-secretos', nombre: 'Correo de secretos', descripcion: 'Descubra secretos ajenos y cuente la historia que esconden.', color: '#FFD84D', estado: 'abierta', orden: 9, en_menu: true, desbloqueo: null },
   { slug: 'consignas', nombre: 'Consignas de escritura', descripcion: 'Un ejercicio por semana: se escribe, se publica y se lee en taller.', color: '#C6F24E', estado: 'abierta', orden: 7, en_menu: false, desbloqueo: null },
 ];
 
@@ -32,6 +34,8 @@ const INSIGNIAS = [
   ['todas-las-dinamicas', 'Todoterreno', 'Publicó al menos una vez en cada dinámica abierta.', 'estrella', '#C6F24E', 'auto'],
   ['mencion-tutor', 'Mención del tutor', 'Reconocimiento especial otorgado por el tutor.', 'pluma', '#121212', 'manual'],
   ['primer-pliegue', 'Primer pliegue', 'Publicó su primer Pliegue.', 'pliegue', '#FFB547', 'auto'],
+  ['primer-secreto-contado', 'Primer secreto contado', 'Contó la historia de su primer secreto.', 'sobre', '#FFD84D', 'auto'],
+  ['primer-secreto-revelado', 'Primer secreto revelado', 'Envió su primer secreto anónimo al Banco de secretos.', 'candado', '#FFD84D', 'auto'],
 ].map(([slug, nombre, descripcion, icono, color, tipo], i) => ({ slug, nombre, descripcion, icono, color, tipo, orden: i + 1 }));
 
 const PERSONAS = [
@@ -61,6 +65,7 @@ async function completarDemo(db) {
   let cambio = false;
   if (!db.consignas) { sembrarConsignas(db); cambio = true; }
   if (!db.coincidencias) { sembrarLectura(db); cambio = true; }
+  if (!db.secretosBanco) { sembrarBanco(db); cambio = true; }
   for (const i of INSIGNIAS) if (!db.insignias.some(x => x.slug === i.slug)) { db.insignias.push({ ...i }); cambio = true; }
   if (!faltan.length) return cambio;
   const { MODULOS } = await import('../modulos/registro.js');
@@ -193,7 +198,25 @@ async function sembrar() {
   ejemplo('c3', 1, 'maraton', contenidos.find(c => c.dinamica === 'maraton').item_id, 'Primera carta', '(Texto de ejemplo del modo demostración.)\n\nUna carta del Maratón ya publicada.');
   sembrarConsignas(db);
   sembrarLectura(db);
+  sembrarBanco(db);
   return db;
+}
+
+// Banco de secretos de ejemplo (Correo de secretos): cuatro publicados y tres por revisar.
+// Como en la base de datos, no se guarda quién escribió cada uno ni cuándo.
+function sembrarBanco(db) {
+  const hace = h => new Date(Date.now() - h * 3600e3).toISOString();
+  const s = (texto, estado, h) => ({ id: crypto.randomUUID(), texto, estado, publicado_en: estado === 'publicado' ? hace(h) : null, orden: Math.random() });
+  db.secretosBanco = [
+    s('Todavía tengo la llave de una casa donde ya no vive nadie que conozca.', 'publicado', 30),
+    s('Finjo que leí los libros de los que hablo en clase.', 'publicado', 28),
+    s('Le escribo cartas a mi abuela aunque murió hace seis años.', 'publicado', 20),
+    s('Cada vez que alguien dice mi nombre en voz alta, siento que me descubrieron.', 'publicado', 5),
+    s('Nunca devolví el libro que me prestó mi profesor del colegio.', 'pendiente'),
+    s('Me aprendí de memoria el horario de alguien que no sabe que existo.', 'pendiente'),
+    s('Reviso el celular de mi hermano cuando se baña.', 'pendiente'),
+  ];
+  db.secretosEnvios = {};
 }
 
 export async function crearApiDemo() {
@@ -267,6 +290,7 @@ export async function crearApiDemo() {
     if (mias.filter(e => e.dinamica === 'maraton').length >= 5) dar('maratonista');
     if (mias.filter(e => e.dinamica === 'poema').length >= 3) dar('desarmador');
     if (mias.some(e => e.dinamica === 'pliegues')) dar('primer-pliegue');
+    if (mias.some(e => e.dinamica === 'correo-secretos')) dar('primer-secreto-contado');
     const largos = db.comentarios.filter(c => c.autor === u && contarPalabras(c.texto) >= 20 && db.entregas.find(e => e.id === c.entrega_id)?.autor !== u);
     if (largos.length >= 10) dar('lector-atento');
     const menu = db.dinamicas.filter(d => d.en_menu && abierta(d.slug));
@@ -791,6 +815,48 @@ export async function crearApiDemo() {
       if (!habia) avisar.insignia(usuario, insignia, yo.id);
       guardar();
     },
+    // ---------- Banco de secretos (Correo de secretos; mismas reglas que 14-correo-secretos.sql) ----------
+    async secretosBanco() {
+      return db.secretosBanco.filter(b => b.estado === 'publicado' || (tutor() && b.estado === 'oculto'))
+        .map(({ id, texto, estado, publicado_en }) => ({ id, texto, estado, publicado_en }))
+        .sort((a, b) => (b.publicado_en || '').localeCompare(a.publicado_en || ''));
+    },
+    async secretosEnviadosHoy() { return db.secretosEnvios[`${yo.id}:${hoyISO()}`] || 0; },
+    async enviarSecreto(texto) {
+      if (!abierta('correo-secretos') && !tutor()) throw new Error('Esta dinámica todavía no está abierta');
+      const t = String(texto || '').trim();
+      if (!t) throw new Error('Escriba su secreto antes de enviarlo.');
+      if (t.length > 500) throw new Error(`El secreto admite máximo 500 caracteres (el suyo tiene ${t.length}).`);
+      const clave = `${yo.id}:${hoyISO()}`;
+      const n = db.secretosEnvios[clave] || 0;
+      if (n >= 3) throw new Error('Hoy ya envió 3 secretos. Mañana puede enviar otro.');
+      db.secretosBanco.push({ id: crypto.randomUUID(), texto: t, estado: 'pendiente', publicado_en: null, orden: Math.random() });
+      db.secretosEnvios[clave] = n + 1;
+      // La insignia guarda solo el día, no la hora.
+      if (!db.otorgadas.some(o => o.usuario === yo.id && o.insignia === 'primer-secreto-revelado')) {
+        db.otorgadas.push({ usuario: yo.id, insignia: 'primer-secreto-revelado', fecha: new Date(`${hoyISO()}T00:00:00-05:00`).toISOString() });
+        avisar.insignia(yo.id, 'primer-secreto-revelado');
+      }
+      guardar();
+      return { quedan: 3 - n - 1 };
+    },
+    // Tutor: los secretos por revisar aparecen solo cuando hay al menos 3, en desorden y sin fecha.
+    async secretosPendientes() {
+      exigirTutor();
+      const p = db.secretosBanco.filter(b => b.estado === 'pendiente');
+      return { n: p.length, lista: p.length >= 3 ? barajarDemo(p).map(({ id, texto }) => ({ id, texto })) : [] };
+    },
+    async moderarSecreto(id, nuevo) {
+      exigirTutor();
+      const b = db.secretosBanco.find(x => x.id === id);
+      if (!b) throw new Error('Ese secreto ya no existe.');
+      const permitido = { pendiente: ['publicado', 'descartado'], publicado: ['oculto'], oculto: ['publicado'] }[b.estado] || [];
+      if (!permitido.includes(nuevo)) throw new Error('No se puede hacer ese cambio.');
+      if (nuevo === 'publicado' && !b.publicado_en) b.publicado_en = ahora();
+      b.estado = nuevo;
+      guardar();
+    },
+
     async quitarInsignia(usuario, insignia) { exigirTutor(); db.otorgadas = db.otorgadas.filter(o => !(o.usuario === usuario && o.insignia === insignia)); guardar(); },
 
     async proyectos() { return db.proyectos.filter(p => p.autor === yo.id); },

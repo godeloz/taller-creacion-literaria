@@ -336,6 +336,25 @@ export function crearApiSupabase(CONFIG) {
       ok(await sb.from('insignias_otorgadas').delete().eq('usuario', usuario).eq('insignia', insignia));
     },
 
+    // ---------- Banco de secretos (Correo de secretos, 14-correo-secretos.sql) ----------
+    // Los secretos no tienen autor ni fecha. Publicados: todos los leen; ocultos: solo el tutor.
+    async secretosBanco() {
+      return ok(await sb.from('secretos_banco').select('id,texto,estado,publicado_en').in('estado', ['publicado', 'oculto']).order('publicado_en', { ascending: false }));
+    },
+    async secretosEnviadosHoy() {
+      return ok(await sb.rpc('secretos_enviados_hoy')) || 0;
+    },
+    async enviarSecreto(texto) {
+      return ok(await sb.rpc('enviar_secreto', { p_texto: texto }));
+    },
+    // Tutor: { n, lista } — la lista llega solo con al menos 3 por revisar, en desorden y sin fecha.
+    async secretosPendientes() {
+      return ok(await sb.rpc('secretos_pendientes'));
+    },
+    async moderarSecreto(id, nuevo) {
+      ok(await sb.rpc('moderar_secreto', { p_id: id, p_estado: nuevo }));
+    },
+
     // ---------- cuaderno ----------
     async proyectos() {
       return ok(await sb.from('cuaderno_proyectos').select('*').order('creado'));

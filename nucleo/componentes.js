@@ -13,7 +13,7 @@ export function colorTexto(hex) {
   return (L + 0.05) / 0.0588 >= 4.5 ? '#16141C' : '#FFFFFF';
 }
 
-export const ICONO_DINAMICA = { reto: 'chispa', maraton: 'cartas', poema: 'fichas', cutup: 'tijeras', s7: 'diccionario', forma: 'curva', fallar: 'revision', consignas: 'pagina', pliegues: 'pliegue' };
+export const ICONO_DINAMICA = { reto: 'chispa', maraton: 'cartas', poema: 'fichas', cutup: 'tijeras', s7: 'diccionario', forma: 'curva', fallar: 'revision', consignas: 'pagina', pliegues: 'pliegue', 'correo-secretos': 'sobre' };
 
 export function avatar(p, tam = 40) {
   if (!p) return `<span class="avatar" style="width:${tam}px;height:${tam}px;background:var(--linea)"></span>`;
@@ -69,6 +69,7 @@ export function tarjetaEntrega(e, reacciones = []) {
     </div>
     ${etiquetaSoloTutor(e.perfil) ? `<div style="margin:-4px 0 8px">${etiquetaSoloTutor(e.perfil)}</div>` : ''}
     ${e.titulo ? `<div class="entrada-titulo">${esc(e.titulo)}</div>` : ''}
+    ${e.dinamica === 'correo-secretos' && e.datos?.traduccion ? `<div class="entrada-epigrafe">${esc(/^[«"“]/.test(e.datos.traduccion.trim()) ? e.datos.traduccion.trim() : `«${e.datos.traduccion.trim()}»`)}</div>` : ''}
     <div class="entrada-extracto">${e.dinamica === 'pliegues' && Array.isArray(e.datos?.marcas) ? extractoMarcado(extracto, e.datos.marcas) : esc(extracto)}</div>
     <div class="entrada-pie">
       <span class="mini-reacciones">
