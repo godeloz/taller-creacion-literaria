@@ -1,5 +1,5 @@
 // Conexión real con Supabase.
-import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm';
+// La librería (vendor/supabase-<versión>.js) la carga api.js antes de llamar a crearApiSupabase: queda en window.supabase.
 import { hoyISO } from './ui.js';
 
 const CAMPOS_LISTA = 'id,autor,grupo_id,dinamica,item_id,titulo,texto,palabras,reto_fecha,sesion_id,estado,editada,creado,actualizado,archivada_en,archivada_por,borrada_en,perfil:perfiles!entregas_autor_fkey(id,nombre,avatar,foto_url,rol,modo,grupo_id),comentarios(count)';
@@ -13,7 +13,7 @@ function traducir(error) {
 }
 
 export function crearApiSupabase(CONFIG) {
-  const sb = createClient(CONFIG.supabaseUrl, CONFIG.supabaseKey, {
+  const sb = window.supabase.createClient(CONFIG.supabaseUrl, CONFIG.supabaseKey, {
     auth: { persistSession: true, autoRefreshToken: true, storageKey: 'taller-sesion' },
   });
   let yo = null;
@@ -121,9 +121,13 @@ export function crearApiSupabase(CONFIG) {
     },
     // Mi reto de hoy, aunque esté en mi archivo. Si lo borré de mi archivo: { id: null, borrada: true }.
     async miRetoHoy() {
-      const r = ok(await sb.from('entregas').select('id,titulo,creado,archivada_en').eq('autor', yo.id).eq('reto_fecha', hoyISO()).maybeSingle());
+      // Las dos consultas van a la vez (antes, la segunda esperaba a la primera).
+      const [res, borradas] = await Promise.all([
+        sb.from('entregas').select('id,titulo,creado,archivada_en').eq('autor', yo.id).eq('reto_fecha', hoyISO()).maybeSingle(),
+        this.misBorradas().catch(() => []),
+      ]);
+      const r = ok(res);
       if (r) return r;
-      const borradas = await this.misBorradas().catch(() => []);
       return borradas.some(b => b.reto_fecha === hoyISO()) ? { id: null, borrada: true } : null;
     },
     async racha(usuario) {
@@ -167,8 +171,12 @@ export function crearApiSupabase(CONFIG) {
     },
     // Cuántos textos propios hay en cada dinámica: { slug: n } (marca «Realizada» en las tarjetas).
     async realizadas() {
-      const filas = ok(await sb.from('entregas').select('dinamica').eq('autor', yo.id));
-      filas.push(...await this.misBorradas().catch(() => []));
+      const [res, borradas] = await Promise.all([
+        sb.from('entregas').select('dinamica').eq('autor', yo.id),
+        this.misBorradas().catch(() => []),
+      ]);
+      const filas = ok(res);
+      filas.push(...borradas);
       return filas.reduce((m, f) => { m[f.dinamica] = (m[f.dinamica] || 0) + 1; return m; }, {});
     },
     async entrega(id) {

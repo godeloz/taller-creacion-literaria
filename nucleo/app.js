@@ -15,10 +15,13 @@ let relojClase = null;
 
 async function iniciar() {
   try {
+    precargarRuta();
     estado.api = await crearApi();
+    // Dinámicas, perfiles y grupos se piden a la vez que la sesión. Si no hay sesión, fallan en silencio y no se usan.
+    const base = recargarBase().then(() => true, () => false);
     const yo = await estado.api.sesion();
     if (!yo) return mostrarIngreso();
-    await entrar(yo);
+    await entrar(yo, base);
   } catch (e) {
     console.error(e);
     app.innerHTML = `<div class="contenedor contenedor-estrecho"><div class="tarjeta"><h1 class="titulo-seccion">No se pudo abrir el taller</h1><p>${esc(e.message)}</p><div class="fila"><button class="btn" onclick="location.reload()">Intentar de nuevo</button><button class="btn btn-fantasma" onclick="localStorage.removeItem('taller-sesion');location.reload()">Cerrar sesión</button></div></div></div>`;
@@ -31,10 +34,11 @@ async function mostrarIngreso() {
   await ingreso(app, { alEntrar: entrar });
 }
 
-async function entrar(yo) {
+async function entrar(yo, base = null) {
   estado.yo = yo;
-  await recargarBase();
-  try { estado.sesionClase = await estado.api.sesionClase(); } catch { estado.sesionClase = null; }
+  const clase = estado.api.sesionClase().catch(() => null);
+  if (!(base && await base)) await recargarBase();
+  estado.sesionClase = await clase;
   pintarMarco();
   estado.api.alCambiarSesion?.(u => { if (!u) location.reload(); });
   estado.api.suscribir('sesion_clase', async () => {
@@ -178,6 +182,27 @@ function pintarFranja() {
   relojClase = setInterval(tic, 1000);
 }
 
+const VISTAS = {
+  '': () => import('../vistas/inicio.js'),
+  dinamicas: () => import('../vistas/dinamicas.js'),
+  consignas: () => import('../vistas/consignas.js'),
+  muro: () => import('../vistas/muro.js'),
+  entrega: () => import('../vistas/entrega.js'),
+  perfil: () => import('../vistas/perfil.js'),
+  cuaderno: () => import('../vistas/cuaderno.js'),
+  archivo: () => import('../vistas/archivo.js'),
+  tutor: () => import('../vistas/tutor.js'),
+  proyectar: () => import('../vistas/proyeccion.js'),
+};
+
+// Al abrir la app, la pantalla de destino (o la dinámica) empieza a descargarse mientras llegan la sesión y los datos.
+function precargarRuta() {
+  const [p0, p1] = location.hash.replace(/^#\/?/, '').split('?')[0].split('/');
+  const cargar = p0 === 'd' ? MODULOS[decodeURIComponent(p1 || '')] : p0 === 'reto' ? MODULOS.reto
+    : p0 === 'editar' ? null : Object.hasOwn(VISTAS, p0) ? VISTAS[p0] : VISTAS[''];
+  cargar?.().catch(() => { /* si falla, el enrutador lo intenta de nuevo y muestra el error */ });
+}
+
 async function enrutar() {
   const hash = location.hash.replace(/^#\/?/, '');
   const [ruta, qs] = hash.split('?');
@@ -203,24 +228,13 @@ async function enrutar() {
   window.scrollTo(0, 0);
 
   try {
-    let cargar;
     const ctx = { params: partes.slice(1), query };
     switch (partes[0]) {
-      case '': cargar = () => import('../vistas/inicio.js'); break;
-      case 'dinamicas': cargar = () => import('../vistas/dinamicas.js'); break;
-      case 'consignas': cargar = () => import('../vistas/consignas.js'); break;
-      case 'muro': cargar = () => import('../vistas/muro.js'); break;
-      case 'entrega': cargar = () => import('../vistas/entrega.js'); break;
-      case 'perfil': cargar = () => import('../vistas/perfil.js'); break;
-      case 'cuaderno': cargar = () => import('../vistas/cuaderno.js'); break;
-      case 'archivo': cargar = () => import('../vistas/archivo.js'); break;
-      case 'tutor': cargar = () => import('../vistas/tutor.js'); break;
-      case 'proyectar': cargar = () => import('../vistas/proyeccion.js'); break;
       case 'reto': return abrirModulo(vista, 'reto', { ...ctx });
       case 'd': return abrirModulo(vista, partes[1], { item_id: partes[2] || null, query });
       case 'editar': return abrirEdicion(vista, partes[1]);
-      default: cargar = () => import('../vistas/inicio.js');
     }
+    const cargar = Object.hasOwn(VISTAS, partes[0]) ? VISTAS[partes[0]] : VISTAS[''];
     const { default: render } = await cargar();
     vista.innerHTML = '';
     limpiarVista = await render(vista, ctx);
