@@ -7,6 +7,7 @@ import { $, esc, errorAviso, confirmar } from './ui.js';
 import { icono } from './iconos.js';
 import { avatar } from './componentes.js';
 import { MODULOS } from '../modulos/registro.js';
+import { campanaHTML, iniciarNotificaciones, marcarPorRuta } from './notificaciones.js';
 
 const app = document.getElementById('app');
 let limpiarVista = null;
@@ -82,6 +83,7 @@ function pintarMarco() {
         <nav class="nav" aria-label="Secciones">
           ${nav.map(([ruta, ico, txt]) => `<a href="#/${ruta}" data-ruta="${ruta}">${icono(ico, 18)}<span class="txt">${txt}</span></a>`).join('')}
         </nav>
+        ${campanaHTML()}
         <a class="usuario" href="#/perfil" title="Mi perfil">
           <span class="usuario-texto"><span class="usuario-nombre">${esc(yo.nombre)}</span><span class="usuario-rol">${esc(ROLES[yo.rol] || 'Creador')}</span></span>
           <span id="avatar-cabecera">${avatar(yo, 42)}</span>
@@ -100,6 +102,7 @@ function pintarMarco() {
   $('#salir-demo')?.addEventListener('click', async () => { await estado.api.cerrarSesion(); location.hash = '#/'; location.reload(); });
   pintarFranja();
   revisarSQL();
+  iniciarNotificaciones();
 }
 
 // Solo para el tutor: avisa si en Supabase falta correr algún SQL de los que esta versión necesita.
@@ -181,6 +184,7 @@ async function enrutar() {
   const partes = ruta.split('/').map(decodeURIComponent);
   const query = Object.fromEntries(new URLSearchParams(qs || ''));
   document.body.classList.remove('enfoque');
+  marcarPorRuta(partes, query);
   if (typeof limpiarVista === 'function') { try { limpiarVista(); } catch { /* nada */ } }
   limpiarVista = null;
 
@@ -190,7 +194,11 @@ async function enrutar() {
     a.classList.toggle('activo', activo);
   });
 
-  const vista = document.getElementById('vista');
+  // Cada pantalla arranca sobre un contenedor nuevo: así no se acumulan los escuchadores que dejó la anterior
+  // (antes, abrir varios textos seguidos hacía que un botón abriera varias ventanas, una encima de otra).
+  const previa = document.getElementById('vista');
+  const vista = previa.cloneNode(false);
+  previa.replaceWith(vista);
   vista.innerHTML = '<div class="cargando">Cargando</div>';
   window.scrollTo(0, 0);
 
