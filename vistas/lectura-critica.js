@@ -99,7 +99,7 @@ function ubicar(completo, a) {
 }
 
 // ---------------------------------------------------------------------
-export default async function lecturaCritica(cont, e) {
+export default async function lecturaCritica(cont, e, { nota = null } = {}) {
   const api = estado.api;
   const yo = estado.yo.id;
   const tutorYo = esTutor();
@@ -345,6 +345,23 @@ export default async function lecturaCritica(cont, e) {
   let silencio = 0;   // no avisar de «notas nuevas» por lo que uno mismo acaba de hacer
   async function recargar() { silencio = Date.now() + 2500; await cargar(); pintar(); }
   pintar();
+
+  // Desde una notificación: mostrar la nota que se avisa (si el modo la escondía, se pasa a «Todas»).
+  if (nota) {
+    const c = comentarios.find(x => x.id === nota);
+    const raiz = c && (c.padre_id ? comentarios.find(x => x.id === c.padre_id) || c : c);
+    if (raiz) {
+      if (modo === 'limpio' || !enModo(raiz)) { modo = 'todas'; pintar(); }
+      setTimeout(() => {
+        if (raiz.ancla && raiz.tipo !== 'devolucion') { abrirNotas([raiz.id]); return; }
+        const t = cont.querySelector(`[data-nota="${raiz.id}"]`);
+        if (!t) return;
+        t.scrollIntoView({ block: 'center', behavior: 'smooth' });
+        t.classList.add('resalta');
+        setTimeout(() => t.classList.remove('resalta'), 1600);
+      }, 200);
+    }
+  }
 
   // ---------- selección de un fragmento ----------
   function rangoActual() {
@@ -744,6 +761,8 @@ export default async function lecturaCritica(cont, e) {
   });
 
   return () => {
+    cont.removeEventListener('click', alClic);
+    cont.removeEventListener('submit', alEnviar);
     document.removeEventListener('selectionchange', alCambiarSeleccion);
     window.removeEventListener('scroll', alDesplazar);
     clearTimeout(tSel);
