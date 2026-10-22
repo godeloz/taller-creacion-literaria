@@ -9,10 +9,12 @@ export function montarEscritorio(cont, op) {
     acento = 'var(--coral)', panelHTML = '', clave, limite = null, cronometroMin = null,
     pedirTitulo = true, titulo = '', html = '', placeholder = 'Escriba aquí…',
     textoBoton = 'Publicar', editando = false, alPublicar, avisoPublicar, botonGuardar = false,
+    tituloObligatorio = false,   // sin título no se publica (Correo de secretos)
   } = op;
 
   const claveLocal = `borrador:${estado.yo.id}:${clave}`;
   let publicado = false;
+  let descartado = false;
   cont.innerHTML = `
   <div class="contenedor" style="max-width:1400px">
     <div class="escritorio" style="--acento:${acento}">
@@ -28,7 +30,7 @@ export function montarEscritorio(cont, op) {
           <button type="button" class="herr" id="enfoque" title="Modo enfoque: oculta todo menos la consigna y el texto" aria-label="Modo enfoque">${icono('enfoque', 18)}</button>
         </div>
         <div class="hoja-escribir">
-          ${pedirTitulo ? `<input class="titulo-escribir" id="titulo" placeholder="Título (opcional)" maxlength="140" value="${esc(titulo)}">` : ''}
+          ${pedirTitulo ? `<input class="titulo-escribir" id="titulo" placeholder="${tituloObligatorio ? 'Título' : 'Título (opcional)'}" maxlength="140" value="${esc(titulo)}"${tituloObligatorio ? ' required aria-required="true"' : ''}>` : ''}
           <div class="editor" id="editor" contenteditable="true" spellcheck="true" lang="es" data-ph="${esc(placeholder)}" role="textbox" aria-multiline="true" aria-label="Texto"></div>
         </div>
         <div class="mesa-pie">
@@ -52,11 +54,12 @@ export function montarEscritorio(cont, op) {
 
   function actualizarContador() {
     const n = contarPalabras(ed.innerText);
-    contador.textContent = limite ? `${n} / ${limite} palabras` : `${n} ${n === 1 ? 'palabra' : 'palabras'}`;
+    const sinTitulo = tituloObligatorio && !!tit && !tit.value.trim();
+    contador.textContent = (limite ? `${n} / ${limite} palabras` : `${n} ${n === 1 ? 'palabra' : 'palabras'}`) + (sinTitulo && n ? ' · Falta el título' : '');
     contador.classList.toggle('cerca', !!limite && n > limite * 0.9 && n <= limite);
-    contador.classList.toggle('pasado', !!limite && n > limite);
-    botonPublicar.disabled = n === 0 || (!!limite && n > limite);
-    botonPublicar.title = limite && n > limite ? `Supera el límite de ${limite} palabras` : '';
+    contador.classList.toggle('pasado', (!!limite && n > limite) || (sinTitulo && n > 0));
+    botonPublicar.disabled = n === 0 || (!!limite && n > limite) || sinTitulo;
+    botonPublicar.title = limite && n > limite ? `Supera el límite de ${limite} palabras` : sinTitulo ? 'Escriba un título para publicar' : '';
   }
 
   // ---------- carga inicial: texto editado, o el borrador más reciente ----------
@@ -159,6 +162,7 @@ export function montarEscritorio(cont, op) {
     const datos = leer();
     datos.palabras = contarPalabras(datos.texto);
     if (!datos.palabras) return;
+    if (tituloObligatorio && !datos.titulo) { aviso('Escriba un título para publicar.', 'error'); tit?.focus(); return; }
     if (!editando) {
       const ok = await confirmar(avisoPublicar || avisoGeneral(), { si: 'Publicar', no: 'Seguir escribiendo' });
       if (!ok) return;
@@ -182,8 +186,17 @@ export function montarEscritorio(cont, op) {
   return {
     destruir() {
       clearInterval(tic);
-      if (!editando && !publicado && ed.innerText.trim()) guardarNube.ahora?.();
+      if (!editando && !publicado && !descartado && ed.innerText.trim()) guardarNube.ahora?.();
       document.body.classList.remove('enfoque');
+    },
+    // ¿Hay algo escrito (título o texto)?
+    tieneTexto: () => !!(ed.innerText.trim() || tit?.value.trim()),
+    // Borra el borrador (aquí y en la nube) sin publicarlo; al salir ya no se guarda.
+    async descartar() {
+      descartado = true;
+      guardarNube.cancelar();
+      local(claveLocal, null);
+      if (!editando) await estado.api.borrarBorrador(clave).catch(() => {});
     },
   };
 }
