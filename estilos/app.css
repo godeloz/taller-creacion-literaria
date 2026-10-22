@@ -1402,3 +1402,119 @@ body.enfoque .campana, body.enfoque .panel-notif, body.enfoque .notif-velo { dis
   .nav a.activo .txt { display: inline; }
 }
 @media print { .campana, .panel-notif, .notif-velo { display: none !important; } }
+
+/* =====================================================================
+   Correo de secretos: postales de PostSecret y Banco de secretos (acento amarillo)
+   ===================================================================== */
+.cs .btn-grande { min-height: 54px; padding: 0 26px; font-size: 16px; }
+.cs-nav { display: flex; gap: 6px; flex-wrap: wrap; margin: 0 0 22px; }
+.cs-nav a { display: inline-flex; align-items: center; gap: 8px; padding: 8px 16px; border-radius: 999px; text-decoration: none; color: var(--tinta-2); font-weight: 600; font-size: 14.5px; background: rgba(22, 20, 28, .04); }
+.cs-nav a:hover { background: rgba(22, 20, 28, .08); color: var(--tinta); }
+.cs-nav a.activo { background: var(--tinta); color: #fff; }
+.cs-n { min-width: 22px; height: 22px; padding: 0 6px; border-radius: 999px; background: var(--acento); color: var(--tinta); font-size: 12.5px; font-weight: 800; display: inline-grid; place-items: center; }
+
+.cs-portada { max-width: 760px; margin: 0 auto; padding: clamp(10px, 3vw, 30px) 0 20px; text-align: center; }
+.cs-portada-sello { width: 76px; height: 76px; border-radius: 50%; background: var(--acento); color: var(--tinta); display: inline-grid; place-items: center; margin-bottom: 14px; transform: rotate(-6deg); }
+.cs-portada .rotulo { display: block; }
+.cs-portada .saludo { margin: 6px 0 22px; }
+.cs-portada-texto { text-align: left; font-family: var(--f-lectura); font-size: 19px; line-height: 1.8; color: var(--tinta); background: var(--papel); border: 1px solid var(--linea); border-radius: var(--r-lg); padding: clamp(22px, 4vw, 40px); }
+.cs-portada-texto p { margin: 0 0 1em; }
+.cs-portada-texto p:last-child { margin-bottom: 0; }
+.cs-portada-texto a { color: var(--violeta); }
+.cs-portada-acciones { justify-content: center; margin: 26px 0 10px; gap: 10px; }
+.cs-portada .tenue { font-size: 14px; }
+
+.cs-escena-sobre { display: flex; flex-direction: column; align-items: center; gap: 30px; padding: clamp(10px, 4vw, 40px) 0; }
+.cs-sobre { width: min(640px, 100%); height: auto; transform: rotate(-2deg); filter: drop-shadow(0 18px 30px rgba(22, 20, 28, .22)); transition: transform .42s ease, opacity .42s ease; }
+.cs-sobre.abrir { transform: translateY(-26px) rotate(5deg) scale(.9); opacity: 0; }
+.cs-sobre-vacio { aspect-ratio: 3 / 2; display: grid; place-items: center; background: var(--papel); border-radius: 10px; color: var(--tenue); }
+
+.cs-secreto { display: grid; grid-template-columns: minmax(0, 1.25fr) minmax(280px, 1fr); gap: clamp(20px, 3vw, 40px); align-items: center; }
+.cs-secreto.cs-horizontal { grid-template-columns: minmax(0, 1fr); max-width: 900px; margin: 0 auto; }
+.cs-marco { margin: 0; display: grid; place-items: center; min-height: 340px; padding: 10px; transform: rotate(var(--giro, -1.5deg)); transition: transform .12s ease; }
+.cs-postal { max-width: 100%; max-height: min(64vh, 620px); width: auto; height: auto; border-radius: 4px; box-shadow: 0 16px 34px rgba(22, 20, 28, .2); background: var(--papel); }
+.cs-marco.girando .cs-postal { height: min(56vh, 500px); width: auto; filter: blur(1.2px) saturate(.9); }
+.cs-marco.girando.lento .cs-postal { filter: blur(.4px); }
+.cs-lado { display: flex; flex-direction: column; gap: 14px; }
+.cs-horizontal .cs-lado { max-width: 720px; margin: 0 auto; width: 100%; }
+.cs-eligiendo { font-family: var(--f-mono); font-size: 14px; letter-spacing: .08em; text-transform: uppercase; color: var(--tenue); }
+.cs-traduccion { font-family: var(--f-lectura); font-style: italic; font-size: clamp(21px, 2.4vw, 27px); line-height: 1.5; color: var(--tinta); margin: 0; }
+.cs-sello { align-self: flex-start; display: inline-flex; align-items: center; gap: 7px; padding: 6px 14px; border: 2px solid var(--verde); color: var(--verde); border-radius: 999px; font-size: 13.5px; font-weight: 700; transform: rotate(-2deg); }
+.cs-acciones { display: flex; flex-wrap: wrap; gap: 10px; }
+
+/* Escritura: panel con la postal y los caminos, plegable */
+.cs-panel-cab { display: flex; align-items: center; gap: 8px; margin: -6px 0 12px; }
+.cs-pestana { display: none; }
+.cs-panel-postal { margin: 0 0 14px; text-align: center; }
+.cs-panel-postal img { display: inline-block; width: auto; max-width: 100%; height: auto; max-height: 34vh; border-radius: 4px; box-shadow: 0 8px 18px rgba(22, 20, 28, .14); }
+.cs-traduccion-panel { font-size: 19px; margin-bottom: 18px; }
+.cs-panel-sub { font-family: var(--f-ui); font-size: 15px; font-weight: 700; margin: 0 0 10px; color: var(--tinta); }
+.cs-caminos { display: flex; flex-direction: column; gap: 8px; }
+.cs-camino { text-align: left; border: 1.5px solid var(--linea); background: #fff; border-radius: var(--r-sm); padding: 11px 13px; display: flex; flex-direction: column; gap: 3px; color: var(--tinta-2); font-size: 14.5px; line-height: 1.5; cursor: pointer; }
+.cs-camino b { color: var(--tinta); font-size: 14.5px; }
+.cs-camino:hover { border-color: var(--linea-2); }
+.cs-camino.on { border-color: var(--tinta); background: rgba(255, 216, 77, .28); }
+.cs-camino:focus-visible { outline: 2px solid var(--violeta); outline-offset: 2px; }
+.cs-nota { font-size: 13px; color: var(--tenue); margin: 10px 0 0; }
+.escritorio.cs-escritorio { transition: grid-template-columns .2s ease; }
+.escritorio.cs-plegado { grid-template-columns: 64px minmax(0, 1fr); }
+.cs-plegado .consigna-panel { padding: 14px 8px; overflow: visible; }
+.cs-plegado .cs-panel-cab, .cs-plegado .cs-panel-cuerpo { display: none; }
+.cs-plegado .cs-pestana { display: flex; flex-direction: column; align-items: center; gap: 10px; width: 100%; border: 0; background: transparent; color: var(--tinta); font-weight: 700; font-size: 12.5px; padding: 6px 0; cursor: pointer; }
+.cs-plegado .cs-pestana span { writing-mode: vertical-rl; transform: rotate(180deg); letter-spacing: .06em; }
+
+.cs-despues { text-align: center; background: #fff; border-radius: var(--r-lg); padding: clamp(28px, 5vw, 52px); border-top: 6px solid var(--acento); }
+.cs-despues .saludo { margin: 6px 0 10px; }
+.cs-despues p { color: var(--tinta-2); font-size: 16.5px; margin: 0 0 24px; }
+.cs-acciones-despues { justify-content: center; }
+
+.cs-modal-texto { margin-top: 0; color: var(--tinta-2); line-height: 1.55; }
+.cs-anonimo { display: flex; gap: 10px; align-items: flex-start; background: rgba(255, 216, 77, .3); border-radius: var(--r-sm); padding: 12px 14px; font-weight: 600; font-size: 14.5px; line-height: 1.45; color: var(--tinta); }
+.cs-area { font-family: var(--f-lectura); font-size: 18px; line-height: 1.6; min-height: 140px; }
+.cs-modal-pie { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 12px; align-items: start; }
+.cs-modal-pie .nota-campo { margin: 0; }
+
+.cs-banco-cab { display: flex; gap: 16px; align-items: flex-end; justify-content: space-between; flex-wrap: wrap; margin-bottom: 22px; }
+.cs-banco-cab .saludo { margin: 0 0 4px; }
+.cs-banco-cab p { margin: 0; }
+.cs-revision { background: #fff; border-radius: var(--r-lg); padding: 20px 22px; margin-bottom: 26px; border-left: 6px solid var(--acento); }
+.cs-revision .titulo-seccion { margin: 0; }
+.cs-nota-tutor { font-size: 14px; margin: 6px 0 14px; }
+.cs-cartas { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(300px, 100%), 1fr)); gap: 16px; align-items: start; }
+.cs-carta { margin: 0; background: var(--papel); border: 1px solid var(--linea); border-radius: 6px; padding: 22px 22px 16px; box-shadow: 0 6px 16px rgba(22, 20, 28, .06); display: flex; flex-direction: column; gap: 14px; }
+.cs-carta-texto { font-family: var(--f-lectura); font-style: italic; font-size: 19px; line-height: 1.55; margin: 0; color: var(--tinta); }
+.cs-carta-pie { display: flex; flex-direction: column; gap: 10px; }
+.cs-carta .btn { white-space: normal; text-align: left; height: auto; min-height: 36px; padding-top: 7px; padding-bottom: 7px; line-height: 1.3; }
+.cs-carta-pendiente { background: #fff; }
+.cs-ocultos .cs-carta { opacity: .65; }
+.cs-titulo-ocultos { margin: 30px 0 2px; }
+
+/* En la entrega y en el muro */
+.lectura .cs-epigrafe { font-style: italic; font-size: 18px; color: var(--tinta-2); border-left: 3px solid var(--acento, #FFD84D); padding: 2px 0 2px 16px; margin: 0 0 1.6em; }
+.entrada-epigrafe { font-family: var(--f-lectura); font-style: italic; font-size: 15px; line-height: 1.5; color: var(--tinta-2); border-left: 3px solid #FFD84D; padding-left: 10px; margin: 0 0 8px; }
+.cs-ref { display: flex; gap: 18px; align-items: center; border-left-color: #FFD84D; }
+.cs-ref-postal { margin: 0; flex: 0 0 auto; }
+.cs-ref-postal img { display: block; max-width: min(320px, 46vw); max-height: 300px; width: auto; height: auto; border-radius: 4px; box-shadow: 0 8px 18px rgba(22, 20, 28, .16); }
+
+@media (max-width: 960px) {
+  .cs-secreto { grid-template-columns: minmax(0, 1fr); }
+  .cs-marco { min-height: 0; }
+  .cs-postal { max-height: 58vh; }
+  .escritorio.cs-plegado { grid-template-columns: minmax(0, 1fr); }
+  .cs-plegado .consigna-panel { padding: 6px 12px; max-height: none; }
+  .cs-plegado .cs-pestana { flex-direction: row; justify-content: center; }
+  .cs-plegado .cs-pestana span { writing-mode: horizontal-tb; transform: none; }
+  .cs-panel-postal img { max-height: 18vh; }
+  .cs-panel-cuerpo { display: flex; flex-direction: column; }
+  .cs-traduccion-panel { order: -1; font-size: 17px; margin-bottom: 12px; }
+}
+@media (max-width: 760px) {
+  .cs-portada-texto { font-size: 17.5px; }
+  .cs .btn-grande { width: 100%; justify-content: center; }
+  .cs-acciones .btn { flex: 1 1 auto; justify-content: center; }
+  .cs-ref { flex-direction: column; align-items: flex-start; }
+  .cs-ref-postal img { max-width: 100%; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .cs-sobre, .cs-marco, .escritorio.cs-escritorio { transition: none; }
+}
