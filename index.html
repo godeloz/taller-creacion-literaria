@@ -10,6 +10,41 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400..700;1,9..144,400..700&family=Manrope:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&family=Literata:ital,opsz,wght@0,7..72,400;0,7..72,500;0,7..72,600;1,7..72,400&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="estilos/app.css">
+<!-- Carga rápida: lo que el arranque necesita se pide todo a la vez, sin esperar a que un archivo descubra al siguiente.
+     Si cambian los import de nucleo/app.js, conviene actualizar esta lista (si queda vieja, la app funciona igual, solo más lenta). -->
+<link rel="modulepreload" href="nucleo/app.js">
+<link rel="modulepreload" href="config.js">
+<link rel="modulepreload" href="version.js">
+<link rel="modulepreload" href="nucleo/api.js">
+<link rel="modulepreload" href="nucleo/estado.js">
+<link rel="modulepreload" href="nucleo/ui.js">
+<link rel="modulepreload" href="nucleo/iconos.js">
+<link rel="modulepreload" href="nucleo/componentes.js">
+<link rel="modulepreload" href="nucleo/notificaciones.js">
+<link rel="modulepreload" href="modulos/registro.js">
+<script>
+  (function () {
+    var d = document, demo = /[?&]demo(=|&|$)/.test(location.search);
+    function pre(src) { var l = d.createElement('link'); l.rel = 'modulepreload'; l.href = src; d.head.appendChild(l); }
+    if (demo) pre('nucleo/api-demo.js');
+    else {
+      // Librería de Supabase en un solo archivo (el mismo nombre está en nucleo/api.js).
+      var s = d.createElement('script');
+      s.src = 'vendor/supabase-2.118.0.js';
+      window.supabaseListo = new Promise(function (ok, mal) {
+        s.onload = ok;
+        s.onerror = function () { mal(new Error('No se pudo cargar la conexión con el taller. Revise su internet e intente de nuevo.')); };
+      });
+      window.supabaseListo.catch(function () {});
+      d.head.appendChild(s);
+      pre('nucleo/api-supabase.js');
+    }
+    // El inicio y lo que importa, si es la pantalla de llegada.
+    if (!location.hash.replace(/^#\/?/, '').split('?')[0]) {
+      ['vistas/inicio.js', 'vistas/dinamicas.js', 'vistas/consignas-franja.js', 'nucleo/consignas.js'].forEach(pre);
+    }
+  })();
+</script>
 </head>
 <body>
 <div id="app"><div class="cargando">Abriendo el taller</div></div>

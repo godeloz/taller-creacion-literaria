@@ -10,8 +10,8 @@
 //
 // La marca se ve, muy discreta, en el pie de la app: sirve para saber qué versión está publicada.
 export const VERSION = {
-  marca: '2026-10-22 07:50',
-  nombre: 'Centro de notificaciones',
+  marca: '2026-10-22 11:01',
+  nombre: 'Carga más rápida',
   sql: [
     '01-esquema',
     '02-contenido-inicial',
