@@ -10,8 +10,8 @@
 //
 // La marca se ve, muy discreta, en el pie de la app: sirve para saber qué versión está publicada.
 export const VERSION = {
-  marca: '2026-10-24 09:10',
-  nombre: 'Reto del día: 19 retos nuevos del Maratón',
+  marca: '2026-10-28 16:40',
+  nombre: 'Repositorio con GitHub Desktop',
   sql: [
     '01-esquema',
     '02-contenido-inicial',

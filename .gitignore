@@ -1,0 +1,4 @@
+# Archivos del sistema y de pruebas: no se publican.
+.DS_Store
+capturas/
+__pycache__/
