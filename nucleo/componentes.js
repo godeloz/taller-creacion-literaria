@@ -13,7 +13,7 @@ export function colorTexto(hex) {
   return (L + 0.05) / 0.0588 >= 4.5 ? '#16141C' : '#FFFFFF';
 }
 
-export const ICONO_DINAMICA = { reto: 'chispa', maraton: 'cartas', poema: 'fichas', cutup: 'tijeras', s7: 'diccionario', forma: 'curva', fallar: 'revision', consignas: 'pagina', pliegues: 'pliegue', 'correo-secretos': 'sobre' };
+export const ICONO_DINAMICA = { reto: 'chispa', maraton: 'cartas', poema: 'fichas', cutup: 'tijeras', s7: 'diccionario', forma: 'curva', fallar: 'revision', consignas: 'pagina', pliegues: 'pliegue', 'correo-secretos': 'sobre', 'juego-de-dados': 'dado' };
 
 export function avatar(p, tam = 40) {
   if (!p) return `<span class="avatar" style="width:${tam}px;height:${tam}px;background:var(--linea)"></span>`;
@@ -51,6 +51,13 @@ function extractoMarcado(t, marcas) {
   return h + esc(t.slice(pos));
 }
 
+// Juego de dados: la fila de dados (miniaturas) sobre el extracto; los usados en la historia, resaltados.
+function filaDados(d) {
+  const dados = Array.isArray(d?.dados) ? d.dados.filter(x => /^[a-z0-9-]+$/.test(x)) : [];
+  if (!dados.length) return '';
+  return `<div class="entrada-dados">${dados.map((x, k) => `<img src="img/juego-de-dados/mini/${x}.webp" width="40" height="40" alt="${esc(d.nombres?.[k] || x)}" title="${esc(d.nombres?.[k] || x)}" loading="lazy" decoding="async" class="${d.usados?.[k] ? 'usado' : ''}">`).join('')}</div>`;
+}
+
 export function tarjetaEntrega(e, reacciones = []) {
   const mias = reacciones.filter(r => r.entrega_id === e.id);
   const conteo = t => mias.filter(r => r.tipo === t).length;
@@ -70,6 +77,7 @@ export function tarjetaEntrega(e, reacciones = []) {
     ${etiquetaSoloTutor(e.perfil) ? `<div style="margin:-4px 0 8px">${etiquetaSoloTutor(e.perfil)}</div>` : ''}
     ${e.titulo ? `<div class="entrada-titulo">${esc(e.titulo)}</div>` : ''}
     ${e.dinamica === 'correo-secretos' && e.datos?.traduccion ? `<div class="entrada-epigrafe">${esc(/^[«"“]/.test(e.datos.traduccion.trim()) ? e.datos.traduccion.trim() : `«${e.datos.traduccion.trim()}»`)}</div>` : ''}
+    ${e.dinamica === 'juego-de-dados' ? filaDados(e.datos) : ''}
     <div class="entrada-extracto">${e.dinamica === 'pliegues' && Array.isArray(e.datos?.marcas) ? extractoMarcado(extracto, e.datos.marcas) : esc(extracto)}</div>
     <div class="entrada-pie">
       <span class="mini-reacciones">

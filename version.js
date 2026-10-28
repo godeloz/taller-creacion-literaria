@@ -10,8 +10,8 @@
 //
 // La marca se ve, muy discreta, en el pie de la app: sirve para saber qué versión está publicada.
 export const VERSION = {
-  marca: '2026-10-28 16:40',
-  nombre: 'Repositorio con GitHub Desktop',
+  marca: '2026-10-28 18:14',
+  nombre: 'Juego de dados',
   sql: [
     '01-esquema',
     '02-contenido-inicial',
@@ -27,6 +27,7 @@ export const VERSION = {
     '12-permisos-tablas',
     '13-notificaciones',
     '14-correo-secretos',
+    '15-juego-de-dados',
   ],
 };
 

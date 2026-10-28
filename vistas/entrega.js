@@ -28,6 +28,8 @@ export default async function vistaEntrega(cont, { params, query = {} }) {
     if (cs) consigna = `<div class="consigna-ref"><b>Consigna</b>${esc(cs.titulo)}${enlaceRespuestas(e)}</div>`;
   } else if (e.dinamica === 'correo-secretos') {
     consigna = refSecreto(e);
+  } else if (e.dinamica === 'juego-de-dados') {
+    consigna = refDados(e);
   } else if (e.item_id) {
     try {
       const c = await estado.api.contenido(e.dinamica, e.item_id);
@@ -138,7 +140,7 @@ function enlaceRespuestas(e) {
   if (e.dinamica === 'consignas' && e.item_id) return `<a class="enlace-respuestas" href="#/consignas/${encodeURIComponent(e.item_id)}">Ver los textos de esta consigna</a>`;
   const href = e.dinamica === 'reto' && e.reto_fecha ? `#/muro?reto=${e.reto_fecha}`
     : e.item_id && !e.item_id.startsWith('propio-') ? `#/muro?dinamica=${encodeURIComponent(e.dinamica)}&item=${encodeURIComponent(e.item_id)}` : '';
-  const a = { reto: 'a este reto', maraton: 'a esta carta', poema: 'a este poema', s7: 'a este texto', fallar: 'a este texto', pliegues: 'a este texto', 'correo-secretos': 'a este secreto' }[e.dinamica] || 'a esta consigna';
+  const a = { reto: 'a este reto', maraton: 'a esta carta', poema: 'a este poema', s7: 'a este texto', fallar: 'a este texto', pliegues: 'a este texto', 'correo-secretos': 'a este secreto', 'juego-de-dados': 'a esta mesa' }[e.dinamica] || 'a esta consigna';
   return href ? `<a class="enlace-respuestas" href="${href}">Ver todas las respuestas ${a}</a>` : '';
 }
 
@@ -152,5 +154,19 @@ function refSecreto(e) {
   return `<div class="consigna-ref cs-ref">
     ${img ? `<figure class="cs-ref-postal">${img}</figure>` : ''}
     <div><b>${d.imagen ? 'Postal de PostSecret' : 'Secreto del Banco'}</b>${caminos[d.camino] ? `Camino ${Number(d.camino)} · ${caminos[d.camino]}` : ''}${enlaceRespuestas(e)}</div>
+  </div>`;
+}
+
+// Juego de dados: los dados con que se escribió la historia (los usados, resaltados), la mesa y las tiradas.
+// La vista trae además una línea de texto con los nombres de los dados (para el PDF); aquí se oculta.
+function refDados(e) {
+  const d = e.datos || {};
+  const dados = Array.isArray(d.dados) ? d.dados.filter(x => /^[a-z0-9-]+$/.test(x)) : [];
+  const n = Number(d.tiradas) || 0;
+  return `<div class="consigna-ref jd-ref">
+    <div><b>Juego de dados</b>${esc(d.mesa_nombre || 'Mesa')}${n ? ` · ${n} ${n === 1 ? 'tirada' : 'tiradas'}` : ''}${enlaceRespuestas(e)}</div>
+    ${dados.length ? `<div class="jd-ref-dados">${dados.map((x, k) => `<figure class="${d.usados?.[k] ? 'usado' : ''}">
+      <img src="img/juego-de-dados/mini/${x}.webp" width="240" height="240" alt="" loading="lazy" decoding="async">
+      <figcaption>${esc(d.nombres?.[k] || x)}</figcaption></figure>`).join('')}</div>` : ''}
   </div>`;
 }

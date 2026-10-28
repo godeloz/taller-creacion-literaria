@@ -23,4 +23,5 @@ export const MODULOS = {
   fallar: () => import('./fallar.js'),
   pliegues: () => import('./pliegues.js'),
   'correo-secretos': () => import('./correo-secretos.js'),
+  'juego-de-dados': () => import('./juego-de-dados.js'),
 };

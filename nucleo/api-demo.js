@@ -19,6 +19,7 @@ const DINAMICAS = [
   { slug: 'fallar', nombre: 'Fallar mejor', descripcion: 'Revise un borrador con control de cambios y compárelo con la versión final.', color: '#5B3DF5', estado: 'abierta', orden: 6, en_menu: true, desbloqueo: null },
   { slug: 'pliegues', nombre: 'Pliegues', descripcion: 'Pliegue un texto y reescríbalo a partir de las frases que emergen.', color: '#FFB547', estado: 'abierta', orden: 8, en_menu: true, desbloqueo: null },
   { slug: 'correo-secretos', nombre: 'Correo de secretos', descripcion: 'Descubra secretos ajenos y cuente la historia que esconden.', color: '#FFD84D', estado: 'abierta', orden: 9, en_menu: true, desbloqueo: null },
+  { slug: 'juego-de-dados', nombre: 'Juego de dados', descripcion: 'Lance cinco dados, guarde los que quiera y escriba la historia que el azar le asigne.', color: '#1FB5C9', estado: 'abierta', orden: 10, en_menu: true, desbloqueo: null },
   { slug: 'consignas', nombre: 'Consignas de escritura', descripcion: 'Un ejercicio por semana: se escribe, se publica y se lee en taller.', color: '#C6F24E', estado: 'abierta', orden: 7, en_menu: false, desbloqueo: null },
 ];
 
@@ -36,6 +37,7 @@ const INSIGNIAS = [
   ['primer-pliegue', 'Primer pliegue', 'Publicó su primer Pliegue.', 'pliegue', '#FFB547', 'auto'],
   ['primer-secreto-contado', 'Primer secreto contado', 'Contó la historia de su primer secreto.', 'sobre', '#FFD84D', 'auto'],
   ['primer-secreto-revelado', 'Primer secreto revelado', 'Envió su primer secreto anónimo al Banco de secretos.', 'candado', '#FFD84D', 'auto'],
+  ['aprendiz-de-tahur', 'Aprendiz de tahúr', 'Escribió su primera historia con los dados.', 'dado', '#1FB5C9', 'auto'],
 ].map(([slug, nombre, descripcion, icono, color, tipo], i) => ({ slug, nombre, descripcion, icono, color, tipo, orden: i + 1 }));
 
 const PERSONAS = [
@@ -291,6 +293,7 @@ export async function crearApiDemo() {
     if (mias.filter(e => e.dinamica === 'poema').length >= 3) dar('desarmador');
     if (mias.some(e => e.dinamica === 'pliegues')) dar('primer-pliegue');
     if (mias.some(e => e.dinamica === 'correo-secretos')) dar('primer-secreto-contado');
+    if (mias.some(e => e.dinamica === 'juego-de-dados')) dar('aprendiz-de-tahur');
     const largos = db.comentarios.filter(c => c.autor === u && contarPalabras(c.texto) >= 20 && db.entregas.find(e => e.id === c.entrega_id)?.autor !== u);
     if (largos.length >= 10) dar('lector-atento');
     const menu = db.dinamicas.filter(d => d.en_menu && abierta(d.slug));

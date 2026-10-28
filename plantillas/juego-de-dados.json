@@ -1,0 +1,229 @@
+{
+  "tipo": "mesas",
+  "nombre": "Juego de dados · Mesa general",
+  "mesas": [
+    {
+      "id": "general",
+      "nombre": "Mesa general",
+      "premisa": [
+        "Confíe en que el azar le mostrará una historia a su medida.",
+        "Convierta los dados en una decisión estructural.",
+        "Convierta cada dado en un párrafo, una voz, un personaje o un punto de vista.",
+        "Después de la tercera tirada, escribir la historia que el azar le asignó le permite jugar otra vez."
+      ],
+      "dados": [
+        {
+          "nombre": "Personajes",
+          "caras": [
+            {
+              "imagen": "astronauta"
+            },
+            {
+              "imagen": "bruja"
+            },
+            {
+              "imagen": "caperucita-roja",
+              "nombre": "Caperucita Roja"
+            },
+            {
+              "imagen": "espartano"
+            },
+            {
+              "imagen": "hada"
+            },
+            {
+              "imagen": "luchador"
+            },
+            {
+              "imagen": "mujer-maravilla",
+              "nombre": "Mujer Maravilla"
+            },
+            {
+              "imagen": "ninja"
+            },
+            {
+              "imagen": "pirata"
+            },
+            {
+              "imagen": "samurai",
+              "nombre": "Samurái"
+            },
+            {
+              "imagen": "una-maga",
+              "nombre": "Maga"
+            },
+            {
+              "imagen": "vikingo"
+            }
+          ]
+        },
+        {
+          "nombre": "Criaturas",
+          "caras": [
+            {
+              "imagen": "ellfo",
+              "nombre": "Elfo"
+            },
+            {
+              "imagen": "diablo"
+            },
+            {
+              "imagen": "fantasma"
+            },
+            {
+              "imagen": "frankenstein"
+            },
+            {
+              "imagen": "la-novia-de-frankenstein",
+              "nombre": "La novia de Frankenstein"
+            },
+            {
+              "imagen": "hombre-lobo"
+            },
+            {
+              "imagen": "la-parca"
+            },
+            {
+              "imagen": "sirena"
+            },
+            {
+              "imagen": "troll",
+              "nombre": "Trol"
+            },
+            {
+              "imagen": "zombi"
+            },
+            {
+              "imagen": "gorgona-medusa",
+              "nombre": "Gorgona"
+            }
+          ]
+        },
+        {
+          "nombre": "Animales y bestias",
+          "caras": [
+            {
+              "imagen": "ballena"
+            },
+            {
+              "imagen": "gorila"
+            },
+            {
+              "imagen": "lobo"
+            },
+            {
+              "imagen": "zorro"
+            },
+            {
+              "imagen": "medusa-marina",
+              "nombre": "Medusa"
+            },
+            {
+              "imagen": "rey-sapo"
+            },
+            {
+              "imagen": "unicornio"
+            },
+            {
+              "imagen": "dragon-marino",
+              "nombre": "Dragón marino"
+            },
+            {
+              "imagen": "hydra",
+              "nombre": "Hidra"
+            },
+            {
+              "imagen": "fosil",
+              "nombre": "Fósil"
+            },
+            {
+              "imagen": "telarana",
+              "nombre": "Telaraña"
+            }
+          ]
+        },
+        {
+          "nombre": "Lugares y fenómenos",
+          "caras": [
+            {
+              "imagen": "desierto"
+            },
+            {
+              "imagen": "arbol",
+              "nombre": "Árbol"
+            },
+            {
+              "imagen": "montana",
+              "nombre": "Montaña"
+            },
+            {
+              "imagen": "ola"
+            },
+            {
+              "imagen": "rio",
+              "nombre": "Río"
+            },
+            {
+              "imagen": "volcan",
+              "nombre": "Volcán"
+            },
+            {
+              "imagen": "laberinto"
+            },
+            {
+              "imagen": "casa-embrujada"
+            },
+            {
+              "imagen": "cometa"
+            },
+            {
+              "imagen": "tormenta"
+            },
+            {
+              "imagen": "tornado"
+            }
+          ]
+        },
+        {
+          "nombre": "Objetos",
+          "caras": [
+            {
+              "imagen": "barco-pirata"
+            },
+            {
+              "imagen": "bomba"
+            },
+            {
+              "imagen": "caballo-de-troya",
+              "nombre": "Caballo de Troya"
+            },
+            {
+              "imagen": "calavera"
+            },
+            {
+              "imagen": "cohete"
+            },
+            {
+              "imagen": "escafandra"
+            },
+            {
+              "imagen": "planta-nuclear"
+            },
+            {
+              "imagen": "sombrero-de-mago"
+            },
+            {
+              "imagen": "submarino"
+            },
+            {
+              "imagen": "telescopio"
+            },
+            {
+              "imagen": "veneno"
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}
