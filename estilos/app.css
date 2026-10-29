@@ -1622,6 +1622,8 @@ body.enfoque .campana, body.enfoque .panel-notif, body.enfoque .notif-velo { dis
   .jd-contador { align-items: flex-start; }
   .jd-panel-dados { gap: 6px; margin-top: 8px; }
   .jd-mini-nombre { display: none; }
+  .jd-escritorio .mesa-pie { flex-wrap: wrap; row-gap: 6px; }
+  .jd-escritorio .mesa-pie .contador { flex-basis: 100%; }
   .jd-ref-dados figure { width: 64px; }
 }
 @media (prefers-reduced-motion: reduce) {

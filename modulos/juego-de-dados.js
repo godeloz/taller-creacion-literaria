@@ -363,7 +363,7 @@ async function jugar(cont, mesaBase, limpieza) {
   botonLanzar.addEventListener('click', lanzar);
   botonEscribir.addEventListener('click', async () => {
     if (animando || !p.tirada) return;
-    if (p.tirada < TIRADAS && !(await confirmar('¿Escribir con estos dados? Ya no podrá volver a lanzarlos: la próxima partida empieza cuando publique esta historia.', { si: 'Escribir con estos dados', no: 'Seguir jugando' }))) return;
+    if (p.tirada < TIRADAS && !(await confirmar('¿Escribir con estos dados? Ya no podrá volver a lanzarlos.', { si: 'Escribir con estos dados', no: 'Seguir jugando' }))) return;
     p.escribiendo = true;
     p.guardados = p.guardados.map(() => true);
     guardarPartida(p);
@@ -430,6 +430,18 @@ function escribir(cont, mesa, p, limpieza) {
   limpieza.push(() => es.destruir());
   cont.querySelector('.escritorio').classList.add('jd-escritorio');
   activarMinis(cont, mesa, p.caras, p.usados, () => guardarPartida(p));
+
+  // Volver a jugar: descarta esta partida y lo escrito (no se guarda ni se publica) y deja la mesa en cero.
+  cont.querySelector('#publicar').insertAdjacentHTML('beforebegin',
+    `<button type="button" class="btn btn-fantasma" id="jd-volver">${icono('dado', 18)}Volver a jugar</button>`);
+  cont.querySelector('#jd-volver').addEventListener('click', async () => {
+    if (es.tieneTexto() && !(await confirmar('¿Volver a jugar? Lo que escribió con estos dados se borra y no se publica.', { si: 'Descartar y volver a jugar', no: 'Seguir escribiendo', peligro: true }))) return;
+    await es.descartar();
+    es.destruir();
+    await borrarPartida(mesa.id);
+    await jugar(cont, mesa, limpieza);
+    cont.querySelector('#jd-lanzar')?.focus();
+  });
 }
 
 // Editar una historia ya publicada: los mismos dados; se pueden marcar o desmarcar los usados.

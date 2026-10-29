@@ -10,8 +10,8 @@
 //
 // La marca se ve, muy discreta, en el pie de la app: sirve para saber qué versión está publicada.
 export const VERSION = {
-  marca: '2026-10-28 19:19',
-  nombre: 'Juego de dados: dados en recuadros, sin nombres',
+  marca: '2026-10-28 21:40',
+  nombre: 'Juego de dados: Volver a jugar',
   sql: [
     '01-esquema',
     '02-contenido-inicial',
