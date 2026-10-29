@@ -44,7 +44,8 @@ export default async function vistaEntrega(cont, { params, query = {} }) {
           : e.dinamica === 's7' ? 'Texto original'
           : e.dinamica === 'forma' ? 'Consigna'
           : e.dinamica === 'fallar' ? 'Borrador revisado'
-          : e.dinamica === 'pliegues' ? 'Texto de origen' : d?.nombre || '';
+          : e.dinamica === 'pliegues' ? 'Texto de origen'
+          : e.dinamica === 'definicional' ? 'Frase de partida' : d?.nombre || '';
         // Reto del día: el nombre abre y cierra sus instrucciones.
         consigna = e.dinamica === 'reto'
           ? `<div class="consigna-ref"><b>${esc(etiqueta)}</b>${acordeonReto(c.datos)}${enlaceRespuestas(e)}</div>`
@@ -58,6 +59,10 @@ export default async function vistaEntrega(cont, { params, query = {} }) {
   if (!consigna && e.dinamica === 'pliegues' && e.item_id?.startsWith('propio-')) {
     const o = e.datos?.origen || {};
     consigna = `<div class="consigna-ref"><b>Texto de origen</b>${esc(o.titulo || (o.autor ? 'Un texto' : 'Un texto propio'))}${o.autor ? `, de ${esc(o.autor)}` : ''}</div>`;
+  }
+  if (!consigna && e.dinamica === 'definicional' && e.item_id?.startsWith('propio-')) {
+    const o = e.datos?.origen || {};
+    consigna = `<div class="consigna-ref"><b>Frase de partida</b>${o.autor ? `Una frase de ${esc(o.autor)}${o.obra ? `, ${esc(o.obra)}` : ''}` : 'Una frase propia'}</div>`;
   }
   const reacciones = await estado.api.reacciones([e.id]).catch(() => []);
   const mia = e.autor === estado.yo.id;
@@ -161,7 +166,7 @@ function enlaceRespuestas(e) {
   if (e.dinamica === 'consignas' && e.item_id) return `<a class="enlace-respuestas" href="#/consignas/${encodeURIComponent(e.item_id)}">Ver los textos de esta consigna</a>`;
   const href = e.dinamica === 'reto' && e.reto_fecha ? `#/muro?reto=${e.reto_fecha}`
     : e.item_id && !e.item_id.startsWith('propio-') ? `#/muro?dinamica=${encodeURIComponent(e.dinamica)}&item=${encodeURIComponent(e.item_id)}` : '';
-  const a = { reto: 'a este reto', maraton: 'a esta carta', poema: 'a este poema', s7: 'a este texto', fallar: 'a este texto', pliegues: 'a este texto', 'correo-secretos': 'a este secreto', 'juego-de-dados': 'a esta mesa' }[e.dinamica] || 'a esta consigna';
+  const a = { reto: 'a este reto', maraton: 'a esta carta', poema: 'a este poema', s7: 'a este texto', fallar: 'a este texto', pliegues: 'a este texto', 'correo-secretos': 'a este secreto', 'juego-de-dados': 'a esta mesa', definicional: 'a esta frase' }[e.dinamica] || 'a esta consigna';
   return href ? `<a class="enlace-respuestas" href="${href}">Ver todas las respuestas ${a}</a>` : '';
 }
 

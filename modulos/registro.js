@@ -24,4 +24,5 @@ export const MODULOS = {
   pliegues: () => import('./pliegues.js'),
   'correo-secretos': () => import('./correo-secretos.js'),
   'juego-de-dados': () => import('./juego-de-dados.js'),
+  definicional: () => import('./definicional.js'),
 };

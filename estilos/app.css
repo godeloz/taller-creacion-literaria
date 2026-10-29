@@ -1657,3 +1657,137 @@ body.enfoque .campana, body.enfoque .panel-notif, body.enfoque .notif-velo { dis
   .s7-comp-poema .s7-comp-n { margin-bottom: 4px; }
 }
 @media print { .s7-conmutador, .s7-comparar { display: none !important; } .lectura.oculto { display: block !important; } }
+
+/* =====================================================================
+   Diccionario (pieza común: nucleo/diccionario.js)
+   ===================================================================== */
+.dicc-buscar { display: flex; gap: 8px; margin-bottom: 12px; }
+.dicc-buscar .entrada { min-height: 40px; flex: 1; min-width: 0; }
+.dicc-cargando { font-size: 14px; color: var(--tenue); margin: 6px 0; }
+.dicc-bloque { padding: 10px 0 12px; border-top: 1px solid var(--linea); }
+.dicc-bloque:first-child { border-top: 0; padding-top: 0; }
+.dicc-lema { font-family: var(--f-display); font-weight: 500; font-size: 22px; line-height: 1.15; margin: 0 0 6px; color: var(--tinta); }
+.dicc-clase { font-family: var(--f-ui); font-size: 13px; font-weight: 600; color: var(--tenue); margin-left: 4px; }
+.dicc-aceps { margin: 0; padding-left: 1.5em; display: flex; flex-direction: column; gap: 6px; }
+.dicc-acep { font-family: var(--f-lectura); font-size: 15.5px; line-height: 1.55; color: var(--tinta-2); }
+.dicc-acep::marker { font-family: var(--f-mono); font-size: 12px; color: var(--tenue); }
+.dicc-mas { display: none; }
+.dicc-bloque.abierto .dicc-mas { display: list-item; }
+.dicc-marca { font-family: var(--f-ui); font-size: 12px; font-style: italic; color: var(--tenue); }
+.dicc-trasladar {
+  display: inline-flex; align-items: center; gap: 4px; margin-left: 6px; vertical-align: 1px; border: 1px solid var(--linea-2);
+  background: #fff; border-radius: 999px; padding: 2px 10px 2px 7px; font-family: var(--f-ui); font-size: 12.5px; font-weight: 700; color: var(--tinta);
+}
+.dicc-trasladar:hover { border-color: var(--acento, var(--tinta)); background: var(--acento, var(--tinta)); color: #fff; }
+.dicc-ver-todas { margin-top: 6px; }
+.dicc-forma { font-size: 14.5px; color: var(--tinta-2); margin: 4px 0 10px; }
+.dicc-nada { font-size: 15px; color: var(--tinta-2); margin: 4px 0 10px; }
+.dicc-pie { display: flex; flex-wrap: wrap; gap: 6px 16px; justify-content: space-between; font-size: 12.5px; color: var(--tenue); margin: 10px 0 0; padding-top: 10px; border-top: 1px solid var(--linea); }
+.dicc-pie a { color: inherit; }
+.dicc-dle { font-weight: 700; color: var(--tinta-2) !important; }
+
+/* =====================================================================
+   Literatura definicional (acento granate)
+   ===================================================================== */
+.df-escritorio [hidden] { display: none !important; }
+
+/* portada */
+.df-intro { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 22px; align-items: start; background: #fff; border-radius: var(--r-lg); padding: clamp(22px, 4vw, 40px); border-top: 6px solid var(--acento); margin-bottom: 18px; }
+.df-sello { width: 56px; height: 56px; border-radius: 16px; display: grid; place-items: center; background: var(--acento); color: #fff; }
+.df-intro .saludo { margin: 8px 0 14px; font-size: clamp(32px, 4.4vw, 50px); }
+.df-intro-texto { font-family: var(--f-lectura); font-size: 17.5px; line-height: 1.7; color: var(--tinta-2); max-width: 68ch; }
+.df-intro-texto p { margin: 0 0 .7em; }
+.df-info { display: grid; grid-template-columns: minmax(0, 1.5fr) minmax(0, 1fr); gap: 18px; margin-bottom: 30px; align-items: start; }
+.df-caja { background: #fff; border-radius: var(--r-lg); padding: clamp(20px, 3vw, 30px); }
+.df-caja > .rotulo { display: block; margin-bottom: 14px; }
+.df-paraque-lista { margin: 0; padding-left: 1.1em; display: flex; flex-direction: column; gap: 8px; font-size: 15.5px; line-height: 1.5; color: var(--tinta-2); }
+.df-paraque-lista li::marker { color: var(--acento); }
+.df-titulo-sec { margin: 0 0 14px; }
+.df-tarjeta-frase { font-family: var(--f-lectura); font-size: 19px; line-height: 1.45; color: var(--tinta); }
+.df-tarjeta-meta { font-size: 13px; color: var(--tenue); }
+.df-mas { width: 44px; height: 44px; border-radius: 50%; display: grid; place-items: center; background: var(--acento); color: #fff; }
+.df-nueva { min-height: 170px; }
+.df-pegar { font-family: var(--f-lectura); font-size: 18px; line-height: 1.6; min-height: 120px; }
+.df-dos-campos { display: grid; grid-template-columns: 1fr 1fr; gap: 0 14px; }
+.nota-campo.falta { color: var(--rojo); }
+
+/* la escalera (entrega publicada, ejemplo, «Ver la escalera») */
+.v-definicional { display: flex; flex-direction: column; gap: 14px; }
+.v-df-nivel { border-left: 3px solid rgba(158, 43, 78, .28); padding: 2px 0 2px 16px; }
+.v-df-nivel p { margin: 0 0 .5em; }
+.v-df-nivel p:last-child { margin-bottom: 0; }
+.v-df-nivel .v-rotulo { margin-bottom: 4px; }
+.v-df-n0 { border-left-color: var(--linea-2); }
+.v-df-n0 p { font-style: italic; }
+.v-df-n1 { margin-left: 12px; }
+.v-df-n2 { margin-left: 24px; border-left-color: rgba(158, 43, 78, .45); }
+.v-df-n3 { margin-left: 36px; border-left-color: rgba(158, 43, 78, .62); }
+.v-df-n4, .v-df-n5, .v-df-n6 { margin-left: 48px; border-left-color: rgba(158, 43, 78, .8); }
+.df-caja .v-definicional, .df-detalle .v-definicional { font-family: var(--f-lectura); font-size: 16px; line-height: 1.6; color: var(--tinta-2); }
+.df-modal .v-definicional { font-family: var(--f-lectura); font-size: 17px; line-height: 1.65; }
+
+/* escritorio */
+.df-nota { font-size: 14.5px; color: var(--tenue); margin-top: .8em !important; }
+.df-progreso { margin-top: 16px; padding: 14px 16px; border-radius: var(--r-md); background: var(--fondo); }
+.df-escalones { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 6px; margin: 8px 0 6px; }
+.df-escalon { display: inline-flex; flex-direction: column; align-items: center; min-width: 46px; padding: 4px 8px; border-radius: 10px; background: #fff; }
+.df-escalon small { font-family: var(--f-mono); font-size: 10.5px; letter-spacing: .06em; text-transform: uppercase; color: var(--tenue); }
+.df-escalon b { font-family: var(--f-mono); font-size: 15px; font-variant-numeric: tabular-nums; }
+.df-escalon.on { background: var(--acento); color: #fff; }
+.df-escalon.on small { color: rgba(255, 255, 255, .8); }
+.df-flecha { color: var(--tenue); font-size: 13px; }
+.df-faltan-panel { margin: 0; font-size: 14px; color: var(--tinta-2); }
+.df-detalle summary { cursor: pointer; font-weight: 700; color: var(--tinta); list-style: none; display: flex; align-items: center; gap: 8px; }
+.df-detalle summary::-webkit-details-marker { display: none; }
+.df-detalle[open] summary { margin-bottom: 12px; }
+.df-detalle .df-paraque-lista { font-size: 14.5px; }
+.df-rotulo { margin-left: 6px; }
+
+.df-hoja { gap: 0; }
+.df-fuente { background: #fff; border: 1px solid var(--linea); border-radius: var(--r-md); padding: 16px 18px; margin-bottom: 14px; }
+.df-fuente-cab { display: flex; flex-wrap: wrap; gap: 4px 12px; justify-content: space-between; align-items: baseline; margin-bottom: 8px; }
+.df-faltan { font-size: 13px; color: var(--acento); font-weight: 700; }
+.df-faltan.listo { color: #0B5A3F; }
+.df-palabras { font-family: var(--f-lectura); font-size: 19px; line-height: 1.9; color: var(--tinta); margin: 0; }
+.df-pal {
+  font: inherit; color: inherit; background: transparent; border: 0; padding: 0 1px; margin: 0; border-radius: 4px; cursor: pointer;
+  text-decoration: underline; text-decoration-color: var(--acento); text-decoration-thickness: 2px; text-underline-offset: 4px;
+}
+.df-pal:hover { background: rgba(158, 43, 78, .08); }
+.df-pal:focus-visible { outline: 2px solid var(--violeta); outline-offset: 1px; }
+.df-pal.funcional { text-decoration: none; color: var(--tenue); }
+.df-pal.definida { text-decoration: line-through; text-decoration-color: rgba(158, 43, 78, .55); text-decoration-thickness: 1.5px; color: var(--tenue); }
+.df-pal.queda { text-decoration-style: dotted; text-decoration-color: var(--linea-2); }
+.df-pal.elegida { background: var(--acento); color: #fff; text-decoration: none; }
+
+.df-dicc { background: #fff; border: 1.5px solid var(--acento); border-radius: var(--r-md); padding: 12px 16px 14px; margin-bottom: 16px; }
+.df-dicc-cab { display: flex; align-items: center; gap: 10px; margin-bottom: 6px; }
+.df-dicc-palabra { font-family: var(--f-display); font-size: 20px; }
+.df-marcas { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; padding-bottom: 10px; margin-bottom: 10px; border-bottom: 1px solid var(--linea); }
+.df-marcas .estado-pill { display: inline-flex; align-items: center; gap: 4px; }
+#df-dicc-cuerpo { max-height: 46vh; overflow: auto; overscroll-behavior: contain; padding-right: 4px; }
+
+.df-escribe-rotulo { display: block; margin: 4px 0 8px; }
+.df-texto {
+  width: 100%; min-height: 160px; resize: none; overflow: hidden; border: 0; outline: none; background: transparent;
+  font-family: var(--f-lectura); font-size: 19.5px; line-height: 1.85; color: var(--tinta); caret-color: var(--acento); padding: 0 0 18vh;
+}
+.df-texto::placeholder { color: #B5AEA3; font-style: italic; }
+.df-texto::selection { background: rgba(158, 43, 78, .2); }
+
+@media (max-width: 960px) {
+  .df-info { grid-template-columns: 1fr; }
+  #df-dicc-cuerpo { max-height: 40vh; }
+}
+@media (max-width: 760px) {
+  .df-intro { grid-template-columns: 1fr; gap: 12px; }
+  .df-dos-campos { grid-template-columns: 1fr; }
+  .df-palabras { font-size: 17.5px; }
+  .df-texto { font-size: 18px; }
+  .v-df-n1 { margin-left: 6px; }
+  .v-df-n2 { margin-left: 12px; }
+  .v-df-n3 { margin-left: 18px; }
+  .v-df-n4, .v-df-n5, .v-df-n6 { margin-left: 24px; }
+  .df-escritorio .mesa-pie { flex-wrap: wrap; gap: 8px; }
+  .df-escritorio .mesa-pie .contador { width: 100%; }
+}

@@ -1,0 +1,10 @@
+Diccionario de la app Taller de Creación Literaria.
+
+Las definiciones vienen del Wikcionario en español (https://es.wiktionary.org),
+en la extracción de kaikki.org (https://kaikki.org/eswiktionary/), y se
+publican con la misma licencia: Creative Commons Atribución-CompartirIgual 4.0
+(https://creativecommons.org/licenses/by-sa/4.0/deed.es).
+
+Cambios: solo las palabras en español, sin ejemplos, etimologías ni
+traducciones; las formas (plurales, conjugaciones) remiten a su lema.
+Lo arma herramientas/armar_diccionario.py (fuera del repositorio).

@@ -20,6 +20,7 @@ const DINAMICAS = [
   { slug: 'pliegues', nombre: 'Pliegues', descripcion: 'Pliegue un texto y reescríbalo a partir de las frases que emergen.', color: '#FFB547', estado: 'abierta', orden: 8, en_menu: true, desbloqueo: null },
   { slug: 'correo-secretos', nombre: 'Correo de secretos', descripcion: 'Descubra secretos ajenos y cuente la historia que esconden.', color: '#FFD84D', estado: 'abierta', orden: 9, en_menu: true, desbloqueo: null },
   { slug: 'juego-de-dados', nombre: 'Juego de dados', descripcion: 'Lance cinco dados, guarde los que quiera y escriba la historia que el azar le asigne.', color: '#1FB5C9', estado: 'abierta', orden: 10, en_menu: true, desbloqueo: null },
+  { slug: 'definicional', nombre: 'Literatura definicional', descripcion: 'Reescriba una frase con las definiciones de sus palabras y expándala nivel por nivel.', color: '#9E2B4E', estado: 'abierta', orden: 11, en_menu: true, desbloqueo: null },
   { slug: 'consignas', nombre: 'Consignas de escritura', descripcion: 'Un ejercicio por semana: se escribe, se publica y se lee en taller.', color: '#C6F24E', estado: 'abierta', orden: 7, en_menu: false, desbloqueo: null },
 ];
 
@@ -38,6 +39,7 @@ const INSIGNIAS = [
   ['primer-secreto-contado', 'Primer secreto contado', 'Contó la historia de su primer secreto.', 'sobre', '#FFD84D', 'auto'],
   ['primer-secreto-revelado', 'Primer secreto revelado', 'Envió su primer secreto anónimo al Banco de secretos.', 'candado', '#FFD84D', 'auto'],
   ['aprendiz-de-tahur', 'Aprendiz de tahúr', 'Escribió su primera historia con los dados.', 'dado', '#1FB5C9', 'auto'],
+  ['cuatro-peldanos', 'Cuatro peldaños', 'Publicó una escalera de cuatro niveles en Literatura definicional.', 'libro', '#9E2B4E', 'auto'],
 ].map(([slug, nombre, descripcion, icono, color, tipo], i) => ({ slug, nombre, descripcion, icono, color, tipo, orden: i + 1 }));
 
 const PERSONAS = [
@@ -294,6 +296,7 @@ export async function crearApiDemo() {
     if (mias.some(e => e.dinamica === 'pliegues')) dar('primer-pliegue');
     if (mias.some(e => e.dinamica === 'correo-secretos')) dar('primer-secreto-contado');
     if (mias.some(e => e.dinamica === 'juego-de-dados')) dar('aprendiz-de-tahur');
+    if (mias.some(e => e.dinamica === 'definicional' && (e.datos?.niveles?.length || 0) >= 4)) dar('cuatro-peldanos');
     const largos = db.comentarios.filter(c => c.autor === u && contarPalabras(c.texto) >= 20 && db.entregas.find(e => e.id === c.entrega_id)?.autor !== u);
     if (largos.length >= 10) dar('lector-atento');
     const menu = db.dinamicas.filter(d => d.en_menu && abierta(d.slug));
@@ -602,6 +605,7 @@ export async function crearApiDemo() {
       if (aCiegas(e) && 'datos' in c && JSON.stringify(c.datos?.runs) !== JSON.stringify(e.datos?.runs)) throw new Error('Su versión ya está publicada y no se puede cambiar. Solo puede completar sus explicaciones.');
       for (const k of ['titulo', 'texto', 'vista', 'datos']) if (k in c) e[k] = c[k];
       e.palabras = contarPalabras(e.texto); e.editada = true; e.actualizado = ahora();
+      if (e.dinamica === 'definicional') evaluarInsignias(e.autor); // como el disparador de 17, también al editar
       emitir('entregas', 'UPDATE', e);
     },
     // ---------- archivo (mismas reglas que 11-archivo.sql) ----------

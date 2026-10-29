@@ -1,0 +1,22 @@
+{
+  "frases": [
+    {
+      "id": "el-espejo",
+      "texto": "El espejo devuelve un rostro que ya no reconoce."
+    },
+    {
+      "id": "tolstoi-familias",
+      "texto": "Todas las familias felices se parecen unas a otras, pero cada familia infeliz lo es a su manera.",
+      "autor": "Lev Tolstói",
+      "obra": "Anna Karénina",
+      "traductor": "Diego Agudelo Gómez"
+    },
+    {
+      "id": "kafka-metamorfosis",
+      "texto": "Una mañana, tras un sueño intranquilo, Gregorio Samsa se halló convertido en un monstruoso insecto.",
+      "autor": "Franz Kafka",
+      "obra": "La metamorfosis",
+      "traductor": "Diego Agudelo Gómez"
+    }
+  ]
+}
