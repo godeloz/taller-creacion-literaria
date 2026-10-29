@@ -1791,3 +1791,53 @@ body.enfoque .campana, body.enfoque .panel-notif, body.enfoque .notif-velo { dis
   .df-escritorio .mesa-pie { flex-wrap: wrap; gap: 8px; }
   .df-escritorio .mesa-pie .contador { width: 100%; }
 }
+
+/* =====================================================================
+   Literatura definicional · colores de la escritura y navegación entre niveles (1.1)
+   ===================================================================== */
+.df-c-d, .v-df-d { color: #9E2B4E; }
+.df-c-p, .v-df-p { color: var(--violeta); }
+.v-definicional.limpia .v-df-d, .v-definicional.limpia .v-df-p { color: inherit; }
+.v-df-leyenda { font-family: var(--f-ui); font-size: 13px; color: var(--tenue); margin: 2px 0 0; }
+.v-definicional.limpia .v-df-leyenda { display: none; }
+.df-conmutador { margin: 0 0 14px; }
+.df-rotulo { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+/* escritura con colores: el área de texto es transparente y debajo va el texto coloreado */
+.df-escribe-cab { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 14px; margin: 4px 0 8px; }
+.df-leyenda { font-size: 12.5px; color: var(--tenue); }
+.df-leyenda span { font-weight: 700; }
+.df-descartar { color: var(--tenue); }
+.df-descartar:hover { color: var(--rojo); }
+.df-editor { position: relative; }
+.df-fondo, .df-editor .df-texto {
+  font-family: var(--f-lectura); font-size: 19.5px; line-height: 1.85; letter-spacing: normal; word-spacing: normal;
+  white-space: pre-wrap; overflow-wrap: break-word; word-break: normal; tab-size: 4;
+  margin: 0; border: 0; box-sizing: border-box; width: 100%; padding: 0 0 18vh;
+}
+.df-fondo { position: absolute; inset: 0; color: var(--tinta); pointer-events: none; }
+.df-editor .df-texto { position: relative; display: block; z-index: 1; color: transparent; background: transparent; caret-color: var(--acento); }
+
+/* niveles anteriores y borradores */
+.df-anteriores { display: flex; flex-direction: column; gap: 8px; margin-bottom: 10px; }
+.df-ref { border-left: 3px solid var(--linea-2); padding: 2px 0 2px 14px; }
+.df-ref .rotulo { display: block; margin-bottom: 2px; }
+.df-ref p { margin: 0; font-family: var(--f-lectura); font-size: 15.5px; line-height: 1.6; color: var(--tenue); }
+.df-adelante { display: flex; flex-direction: column; gap: 10px; margin-top: 6px; }
+.df-adelante:empty { display: none; }
+.df-borrador { border: 1.5px dashed var(--linea-2); border-radius: var(--r-md); padding: 10px 16px 14px; opacity: .78; }
+.df-borrador-cab { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 12px; margin-bottom: 6px; }
+.df-borrador-aviso { font-size: 12.5px; color: #B26A00; font-weight: 700; }
+.df-borrador p { margin: 0; font-family: var(--f-lectura); font-size: 16px; line-height: 1.65; color: var(--tinta-2); }
+button.df-escalon { border: 0; font: inherit; color: inherit; cursor: pointer; }
+button.df-escalon:hover { box-shadow: inset 0 0 0 1.5px var(--acento); }
+button.df-escalon:focus-visible { outline: 2px solid var(--violeta); outline-offset: 2px; }
+.df-escalon.borrador { background: transparent; box-shadow: inset 0 0 0 1.5px var(--linea-2); }
+.df-escalon.borrador small::after { content: ' · borrador'; text-transform: none; letter-spacing: 0; }
+
+@media (max-width: 760px) {
+  .df-fondo, .df-editor .df-texto { font-size: 18px; }
+  .df-ref p { font-size: 15px; }
+  .df-rotulo { display: none; }
+}
+@media print { .df-conmutador { display: none !important; } .v-definicional.limpia .v-df-d, .v-definicional.limpia .v-df-p { color: inherit; } }

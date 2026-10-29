@@ -2,16 +2,23 @@
 // palabras por sus definiciones (nivel 1); luego se hace lo mismo con el nivel 1 (nivel 2),
 // y así sucesivamente. Las definiciones salen del diccionario común (nucleo/diccionario.js).
 //
-// Cada nivel empieza con una copia del anterior. Arriba queda el nivel anterior con sus
-// palabras para tocar; al tocar una se abren sus definiciones y «Trasladar» la cambia, en la
-// escritura, por la acepción elegida. Las palabras se marcan como definidas o «se queda así»;
-// las funcionales (artículos, preposiciones…) no cuentan. Se publica desde el nivel 2.
+// Cada nivel empieza con una copia del anterior. Arriba se ve toda la escalera; el nivel
+// anterior trae sus palabras para tocar: al tocar una se abren sus definiciones y «Trasladar»
+// la cambia, en la escritura, por la acepción elegida. Las palabras se marcan como definidas o
+// «se queda así»; las funcionales (artículos, preposiciones…) no cuentan. En la escritura, lo
+// trasladado se ve en granate y lo que escribe la persona, en violeta. Se puede ir y volver
+// entre niveles: solo el nivel abierto se edita; los de adelante quedan como borradores.
+// Se publica (la escalera completa) desde el nivel 2.
 //
 // Borrador (clave 'definicional:<item>'): { estado: E }
-//   E = { v, origen: { texto, autor, obra, traductor, propio }, max, titulo,
-//         niveles: [{ texto, marcas: { <posición>: 'd' | 'q' }, ins: { <posición>: texto trasladado } }] }
-//   niveles[k] es el nivel k + 1; las marcas son de las palabras del nivel anterior (o de la frase).
-// Entrega: texto = último nivel + la escalera · datos = { origen, niveles: [texto…], marcas: […], max }
+//   E = { v, origen: { texto, autor, obra, traductor, propio }, max, titulo, actual,
+//         niveles: [{ texto, marcas: { <posición>: 'd' | 'q' }, ins: { <posición>: texto trasladado },
+//                     tramos: [[inicio, fin, 'd' | 'p']…], fuente }] }
+//   niveles[k] es el nivel k + 1; actual, el que está abierto. Las marcas son de las palabras del
+//   nivel anterior tal como era en «fuente» (si ese nivel cambia, se reacomodan al volver).
+//   tramos: lo trasladado del diccionario ('d') y lo escrito a mano ('p'); el resto viene del nivel anterior.
+// Entrega: texto = último nivel + la escalera · datos = { origen, niveles: [texto…], marcas: […], tramos: […], max }
+//   (desde la versión 1.1; las de la 1.0 no traen tramos)
 // Las frases propias usan item_id 'propio-<id>' y una lista en el borrador 'definicional:_propios'.
 import { estado, avisoPublicar } from '../nucleo/estado.js';
 import { esc, local, debounce, contarPalabras, confirmar, aviso, errorAviso, hace, modal } from '../nucleo/ui.js';
@@ -22,7 +29,7 @@ import { montarDiccionario, esFuncional } from '../nucleo/diccionario.js';
 
 const SLUG = 'definicional';
 const ACENTO = '#9E2B4E';
-const VERSION = '1.0';
+const VERSION = '1.1';
 const PROPIO = 'propio-';
 const NUEVO = 'propio-nuevo';
 const CLAVE_INDICE = `${SLUG}:_propios`;
@@ -59,7 +66,62 @@ const PARA_QUE = [
 ];
 
 const esPropio = id => String(id || '').startsWith(PROPIO);
-const limpio = t => String(t ?? '').replace(/\r\n?/g, '\n').replace(/[ \t]+/g, ' ').replace(/ *\n */g, '\n').replace(/\n{3,}/g, '\n\n').trim();
+// ---------- origen de cada carácter: 'b' (nivel anterior), 'd' (diccionario), 'p' (escrito a mano) ----------
+const aTramos = org => {
+  const t = [];
+  for (let i = 0; i < org.length;) {
+    let j = i + 1;
+    while (j < org.length && org[j] === org[i]) j++;
+    if (org[i] === 'd' || org[i] === 'p') t.push([i, j, org[i]]);
+    i = j;
+  }
+  return t;
+};
+const deTramos = (tramos, largo) => {
+  const org = new Array(largo).fill('b');
+  for (const x of Array.isArray(tramos) ? tramos : []) {
+    if (!Array.isArray(x) || !(x[2] === 'd' || x[2] === 'p')) continue;
+    for (let i = Math.max(0, x[0] | 0); i < Math.min(largo, x[1] | 0); i++) org[i] = x[2];
+  }
+  return org;
+};
+// Limpia espacios y saltos (como al publicar) sin perder de dónde viene cada carácter.
+function limpiarConOrigen(texto, org = []) {
+  const t = String(texto ?? '');
+  const c = [];
+  const o = [];
+  const ultimo = () => c[c.length - 1];
+  for (let i = 0; i < t.length; i++) {
+    let x = t[i];
+    if (x === '\r') { if (t[i + 1] === '\n') continue; x = '\n'; }
+    if (x === '\t') x = ' ';
+    if (x === ' ') { if (!c.length || ultimo() === ' ' || ultimo() === '\n') continue; }
+    else if (x === '\n') {
+      while (ultimo() === ' ') { c.pop(); o.pop(); }
+      if (!c.length || (ultimo() === '\n' && c[c.length - 2] === '\n')) continue;
+    }
+    c.push(x); o.push(org[i] || 'b');
+  }
+  while (ultimo() === ' ' || ultimo() === '\n') { c.pop(); o.pop(); }
+  return { texto: c.join(''), org: o };
+}
+const limpio = t => limpiarConOrigen(t).texto;
+
+// Texto con sus colores. enParrafos: <p> por párrafo (vista publicada); si no, el texto tal cual (capa del editor).
+function coloreado(texto, tramos, { enParrafos = true, clase = 'v-df' } = {}) {
+  const org = deTramos(tramos, texto.length);
+  let html = '';
+  for (let i = 0; i < texto.length;) {
+    let j = i + 1;
+    while (j < texto.length && org[j] === org[i]) j++;
+    const cl = org[i] === 'b' ? '' : `${clase}-${org[i]}`;
+    let h = esc(texto.slice(i, j));
+    if (enParrafos) h = h.replace(/\n{2,}/g, cl ? `</span></p><p><span class="${cl}">` : '</p><p>').replace(/\n/g, '<br>');
+    html += cl ? `<span class="${cl}">${h}</span>` : h;
+    i = j;
+  }
+  return enParrafos ? `<p>${html}</p>` : html;
+}
 const corto = (t, n) => { const s = String(t || '').replace(/\s+/g, ' ').trim(); return s.length > n ? s.slice(0, n - 1).trim() + '…' : s; };
 const palabras = t => contarPalabras(t);
 const enPalabras = n => `${n} ${n === 1 ? 'palabra' : 'palabras'}`;
@@ -74,12 +136,14 @@ const escRe = s => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 // ---------------------------------------------------------------------
 const parrafosHTML = t => limpio(t).split(/\n{2,}/).filter(Boolean).map(p => `<p>${esc(p).replace(/\n/g, '<br>')}</p>`).join('');
 
-export function escaleraHTML(original, niveles) {
+// tramos[k]: colores del nivel k + 1 (opcional). Con colores, la escalera trae su leyenda.
+export function escaleraHTML(original, niveles, tramos = null) {
+  const conColor = Array.isArray(tramos) && tramos.some(t => t?.length);
   return `<div class="v-definicional">${[original, ...niveles].map((t, k) => `
     <div class="v-df-nivel v-df-n${Math.min(k, MAX_NIVELES)}">
       <div class="v-rotulo">${k ? `Nivel ${k}` : 'Frase original'} · ${enPalabras(palabras(t))}</div>
-      ${parrafosHTML(t)}
-    </div>`).join('')}</div>`;
+      ${k && conColor && tramos[k - 1]?.length ? coloreado(t, tramos[k - 1]) : parrafosHTML(t)}
+    </div>`).join('')}${conColor ? '<p class="v-df-leyenda"><span class="v-df-d">Del diccionario</span> · <span class="v-df-p">Escritura propia</span></p>' : ''}</div>`;
 }
 
 function deQuien(o = {}) {
@@ -89,7 +153,7 @@ function deQuien(o = {}) {
 const creditoDe = o => `Literatura definicional a partir de ${deQuien(o)}.`;
 
 function vistaHTML(d) {
-  return `${escaleraHTML(d.origen.texto, d.niveles)}<p class="v-credito">${esc(creditoDe(d.origen))}</p>`;
+  return `${escaleraHTML(d.origen.texto, d.niveles, d.tramos)}<p class="v-credito">${esc(creditoDe(d.origen))}</p>`;
 }
 
 // Texto plano: el último nivel primero (es el que se ve en el muro) y debajo la escalera.
@@ -113,7 +177,7 @@ const paraQueHTML = () => `<ul class="df-paraque-lista">${PARA_QUE.map(p => `<li
 const nivelesMax = n => Math.min(MAX_NIVELES, Math.max(MIN_NIVELES, Number(n) || NIVELES_DEF));
 
 function nuevoEstado(origen, max) {
-  return { v: 1, origen, max: nivelesMax(max), titulo: '', niveles: [{ texto: origen.texto, marcas: {}, ins: {} }] };
+  return { v: 1, origen, max: nivelesMax(max), titulo: '', actual: 0, niveles: [{ texto: origen.texto, marcas: {}, ins: {}, tramos: [], fuente: origen.texto }] };
 }
 
 function limpiarEstado(e) {
@@ -121,11 +185,17 @@ function limpiarEstado(e) {
   const marcas = m => Object.fromEntries(Object.entries(m || {}).filter(([k, v]) => /^\d+$/.test(k) && (v === 'd' || v === 'q')));
   const ins = m => Object.fromEntries(Object.entries(m || {}).filter(([k, v]) => /^\d+$/.test(k) && typeof v === 'string'));
   const max = Math.max(nivelesMax(e.max), e.niveles.length);
+  const niveles = e.niveles.slice(0, max).map(n => {
+    const texto = String(n?.texto ?? '');
+    return { texto, marcas: marcas(n?.marcas), ins: ins(n?.ins), tramos: aTramos(deTramos(n?.tramos, texto.length)), fuente: typeof n?.fuente === 'string' ? n.fuente : null };
+  });
+  // Los borradores anteriores a la versión 1.1 no guardan «fuente»: se dan por alineados.
+  niveles.forEach((n, k) => { if (n.fuente === null) n.fuente = k ? niveles[k - 1].texto : e.origen.texto; });
+  const actual = Number.isInteger(e.actual) && e.actual >= 0 && e.actual < niveles.length ? e.actual : niveles.length - 1;
   return {
     v: 1,
     origen: { texto: e.origen.texto, autor: String(e.origen.autor || ''), obra: String(e.origen.obra || ''), traductor: String(e.origen.traductor || ''), propio: !!e.origen.propio },
-    max, titulo: String(e.titulo || ''),
-    niveles: e.niveles.slice(0, max).map(n => ({ texto: String(n?.texto ?? ''), marcas: marcas(n?.marcas), ins: ins(n?.ins) })),
+    max, titulo: String(e.titulo || ''), actual, niveles,
   };
 }
 
@@ -134,7 +204,7 @@ function desdeEntrega(entrega) {
   if (!d.origen?.texto || !Array.isArray(d.niveles) || !d.niveles.length) return null;
   return limpiarEstado({
     origen: d.origen, max: Math.max(d.max || NIVELES_DEF, d.niveles.length), titulo: entrega.titulo || '',
-    niveles: d.niveles.map((t, k) => ({ texto: t, marcas: d.marcas?.[k] || {} })),
+    niveles: d.niveles.map((t, k) => ({ texto: t, marcas: d.marcas?.[k] || {}, tramos: d.tramos?.[k] || [] })),
   });
 }
 
@@ -399,7 +469,10 @@ async function trabajar(cont, itemId, { entrega = null, fija = false } = {}) {
 
   let sel = null;      // posición de la palabra elegida en el nivel anterior
   let publicado = false;
-  const k = () => E.niveles.length - 1;
+  let org = [];        // de dónde viene cada carácter del nivel abierto
+  let previo = '';     // texto del nivel abierto antes del último cambio (para saber qué se escribió)
+  const k = () => E.actual;
+  const ultimo = () => E.niveles.length - 1;
   const N = () => E.niveles[k()];
   const baseDe = j => (j ? E.niveles[j - 1].texto : E.origen.texto);
   const base = () => baseDe(k());
@@ -423,7 +496,7 @@ async function trabajar(cont, itemId, { entrega = null, fija = false } = {}) {
             <li>Toque una palabra del nivel anterior para ver sus definiciones.</li>
             <li>Elija una acepción y pulse <strong>Trasladar</strong>: la palabra se cambia por esa definición en su escritura. También puede escribirla a mano.</li>
             <li>Ajuste la frase para que se sostenga: conjugue, concuerde, reacomode.</li>
-            <li>Pase al nivel siguiente: lo que escribió será el nuevo punto de partida.</li>
+            <li>Pase al nivel siguiente: lo que escribió será el nuevo punto de partida. Puede volver a cualquier nivel desde los escalones; no se borra nada.</li>
           </ol>
           <p class="df-nota">Artículos, preposiciones y pronombres no hace falta definirlos. Puede publicar desde el nivel ${MIN_NIVELES}.</p>
         </div>
@@ -446,6 +519,7 @@ async function trabajar(cont, itemId, { entrega = null, fija = false } = {}) {
         </div>
         <div class="hoja-escribir df-hoja">
           <input class="titulo-escribir" id="titulo" placeholder="Título (opcional)" maxlength="140" value="${esc(E.titulo)}" aria-label="Título">
+          <div class="df-anteriores" id="df-anteriores"></div>
           <div class="df-fuente">
             <div class="df-fuente-cab"><span class="rotulo" id="df-fuente-rotulo"></span><span class="df-faltan" id="df-faltan"></span></div>
             <p class="df-palabras" id="df-palabras"></p>
@@ -460,8 +534,17 @@ async function trabajar(cont, itemId, { entrega = null, fija = false } = {}) {
             <div class="df-marcas" id="df-marcas"></div>
             <div id="df-dicc-cuerpo"></div>
           </div>
-          <label class="rotulo df-escribe-rotulo" for="df-texto" id="df-escribe-rotulo"></label>
-          <textarea class="df-texto" id="df-texto" spellcheck="true" rows="3"></textarea>
+          <div class="df-escribe-cab">
+            <label class="rotulo" for="df-texto" id="df-escribe-rotulo"></label>
+            <span class="df-leyenda"><span class="df-c-d">Del diccionario</span> · <span class="df-c-p">Escrito por usted</span></span>
+            <span class="espaciador"></span>
+            <button type="button" class="btn btn-chico btn-fantasma df-descartar" id="df-descartar">${icono('basura', 15)}<span id="df-descartar-txt"></span></button>
+          </div>
+          <div class="df-editor">
+            <div class="df-fondo" id="df-fondo" aria-hidden="true"></div>
+            <textarea class="df-texto" id="df-texto" spellcheck="true" rows="3"></textarea>
+          </div>
+          <div class="df-adelante" id="df-adelante"></div>
         </div>
         <div class="mesa-pie">
           <span class="contador" id="contador"></span>
@@ -514,39 +597,123 @@ async function trabajar(cont, itemId, { entrega = null, fija = false } = {}) {
     el.classList.toggle('listo', !f);
   }
 
+  // Los escalones también sirven para ir de un nivel a otro.
   function pintarProgreso() {
     const j = k();
     const escalones = [E.origen.texto, ...E.niveles.map(x => x.texto)];
     $('#df-progreso').innerHTML = `
       <span class="rotulo">Nivel ${j + 1} de ${E.max}</span>
-      <div class="df-escalones" aria-label="Palabras por nivel">${escalones.map((t, i) => `${i ? '<span class="df-flecha" aria-hidden="true">→</span>' : ''}<span class="df-escalon${i === j + 1 ? ' on' : ''}"><small>${i ? `N${i}` : 'Frase'}</small><b>${palabras(t)}</b></span>`).join('')}</div>
+      <div class="df-escalones" aria-label="Niveles y sus palabras">${escalones.map((t, i) => `${i ? '<span class="df-flecha" aria-hidden="true">→</span>' : ''}${i
+        ? `<button type="button" class="df-escalon${i === j + 1 ? ' on' : ''}${i - 1 > j ? ' borrador' : ''}" data-ir="${i - 1}" title="${i === j + 1 ? 'Nivel abierto' : `Ir al nivel ${i}`}"${i === j + 1 ? ' aria-current="step"' : ''}><small>N${i}</small><b>${palabras(t)}</b></button>`
+        : `<span class="df-escalon"><small>Frase</small><b>${palabras(t)}</b></span>`}`).join('')}</div>
       <p class="df-faltan-panel">${faltan() ? `${faltanTxt(faltan())} ${deBase(j)}.` : `Ya definió ${nombreBase(j)}.`}</p>`;
   }
 
   function pintarPie() {
     const j = k();
     const n = palabras(N().texto);
+    const total = E.niveles.length;
     $('#contador').textContent = `${enPalabras(n)} · antes ${palabras(base())}`;
     $('#df-atras').hidden = j === 0;
     $('#df-atras-txt').textContent = `Nivel ${j}`;
     $('#df-avanzar').hidden = j + 1 >= E.max;
-    $('#df-avanzar-txt').textContent = `Pasar al nivel ${j + 2}`;
-    $('#df-publicar').disabled = j + 1 < MIN_NIVELES;
-    $('#df-publicar').title = j + 1 < MIN_NIVELES ? `Puede publicar desde el nivel ${MIN_NIVELES}` : '';
+    $('#df-avanzar-txt').textContent = j < ultimo() ? `Nivel ${j + 2}` : `Pasar al nivel ${j + 2}`;
+    $('#df-descartar').hidden = !(j === ultimo() && j > 0);
+    $('#df-descartar-txt').textContent = `Descartar el nivel ${j + 1}`;
+    $('#df-publicar').disabled = total < MIN_NIVELES;
+    $('#df-publicar').title = total < MIN_NIVELES ? `Puede publicar desde el nivel ${MIN_NIVELES}` : '';
+  }
+
+  // Lo que va antes del nivel anterior: la frase y los niveles ya escritos (solo para leer).
+  function pintarAnteriores() {
+    const j = k();
+    const refs = [];
+    if (j >= 1) refs.push(['Frase original', E.origen.texto]);
+    for (let i = 0; i < j - 1; i++) refs.push([`Nivel ${i + 1}`, E.niveles[i].texto]);
+    $('#df-anteriores').innerHTML = refs.map(([r, t]) => `<div class="df-ref"><span class="rotulo">${r} · ${enPalabras(palabras(t))}</span><p>${esc(limpio(t)).replace(/\n/g, '<br>')}</p></div>`).join('');
+  }
+
+  // Los niveles de adelante, como borradores: se ven, pero no se editan desde aquí.
+  function pintarAdelante() {
+    const j = k();
+    let html = '';
+    for (let i = j + 1; i <= ultimo(); i++) {
+      const n = E.niveles[i];
+      const desfase = n.fuente !== E.niveles[i - 1].texto;
+      html += `<div class="df-borrador">
+        <div class="df-borrador-cab"><span class="rotulo">Nivel ${i + 1} · borrador</span>${desfase ? `<span class="df-borrador-aviso">El nivel ${i} cambió después de escribir este</span>` : ''}
+          <span class="espaciador"></span><button type="button" class="btn btn-chico btn-fantasma" data-ir="${i}">Ir al nivel ${i + 1}${icono('derecha', 15)}</button></div>
+        <p>${esc(limpio(n.texto)).replace(/\n/g, '<br>') || '<span class="tenue">Vacío</span>'}</p>
+      </div>`;
+    }
+    $('#df-adelante').innerHTML = html;
+  }
+  // Mientras se escribe en un nivel con borradores adelante, el aviso del siguiente se pone al día.
+  function avisoAdelante() {
+    const sig = E.niveles[k() + 1];
+    const cab = $('#df-adelante .df-borrador-cab');
+    if (!sig || !cab) return;
+    const desfase = sig.fuente !== N().texto;
+    const el = cab.querySelector('.df-borrador-aviso');
+    if (desfase && !el) cab.querySelector('.rotulo').insertAdjacentHTML('afterend', `<span class="df-borrador-aviso">El nivel ${k() + 1} cambió después de escribir este</span>`);
+    else if (!desfase && el) el.remove();
+  }
+
+  // La escritura se ve con sus colores en una capa debajo del área de texto (que es transparente).
+  function pintarFondo() {
+    $('#df-fondo').innerHTML = coloreado(area.value, aTramos(org), { enParrafos: false, clase: 'df-c' }) + '\n';
+  }
+  function guardarOrg() { N().tramos = aTramos(org); }
+
+  // Si el nivel anterior cambió desde que se marcaron sus palabras, las marcas pasan a la misma
+  // palabra (la misma vez que aparece) en el texto nuevo; las que ya no están, se quitan.
+  function realinear(n, b) {
+    if (n.fuente === b) return;
+    const viejos = tokens(n.fuente ?? b);
+    const nuevos = tokens(b);
+    const igual = (x, y) => x.t.toLowerCase() === y.t.toLowerCase();
+    const marcas = {};
+    const ins = {};
+    for (const [i, v] of Object.entries(n.marcas)) {
+      const t = viejos[i];
+      if (!t) continue;
+      const r = viejos.filter(x => igual(x, t)).indexOf(t);
+      const c = nuevos.filter(x => igual(x, t))[r];
+      if (!c) continue;
+      marcas[c.i] = v;
+      if (n.ins[i]) ins[c.i] = n.ins[i];
+    }
+    n.marcas = marcas;
+    n.ins = ins;
+    n.fuente = b;
   }
 
   function pintarNivel() {
     const j = k();
-    $('#df-rotulo').textContent = `Nivel ${j + 1}`;
+    realinear(N(), base());
+    org = deTramos(N().tramos, N().texto.length);
+    previo = N().texto;
+    $('#df-rotulo').textContent = `Nivel ${j + 1}${j < ultimo() ? ` · ${ultimo() - j} en borrador` : ''}`;
     $('#df-fuente-rotulo').textContent = j ? `Nivel ${j} · toque una palabra` : 'Frase original · toque una palabra';
     $('#df-escribe-rotulo').textContent = `Nivel ${j + 1} · su escritura`;
     area.value = N().texto;
     area.placeholder = `Escriba aquí el nivel ${j + 1}…`;
     crecer(area);
+    pintarFondo();
     cerrarDicc();
+    pintarAnteriores();
     pintarFuente();
+    pintarAdelante();
     pintarProgreso();
     pintarPie();
+  }
+
+  function irA(i) {
+    if (i === k() || i < 0 || i > ultimo()) return;
+    E.actual = i;
+    cambio();
+    pintarNivel();
+    window.scrollTo({ top: 0, behavior: 'smooth' });
   }
 
   function actualizar() { pintarFuente(); pintarProgreso(); pintarPie(); }
@@ -615,10 +782,10 @@ async function trabajar(cont, itemId, { entrega = null, fija = false } = {}) {
     if (sel !== null) {
       const ts = toks();
       const tok = ts[sel];
-      const previo = n.ins[sel];
-      const pk = previo ? v.indexOf(previo) : -1;
+      const antes = n.ins[sel];
+      const pk = antes ? v.indexOf(antes) : -1;
       if (pk >= 0) {
-        a = pk; b = pk + previo.length; mayus = /^\p{Lu}/u.test(previo);
+        a = pk; b = pk + antes.length; mayus = /^\p{Lu}/u.test(antes);
       } else {
         const iguales = ts.filter(x => x.t.toLowerCase() === tok.t.toLowerCase());
         const rango = iguales.indexOf(tok);
@@ -638,8 +805,13 @@ async function trabajar(cont, itemId, { entrega = null, fija = false } = {}) {
     const d = preparar(def, mayus);
     area.value = v.slice(0, a) + d + v.slice(b);
     n.texto = area.value;
+    org = [...org.slice(0, a), ...new Array(d.length).fill('d'), ...org.slice(b)];
+    previo = area.value;
+    guardarOrg();
     if (sel !== null) { n.marcas[sel] = 'd'; n.ins[sel] = d; }
     crecer(area);
+    pintarFondo();
+    if (k() < ultimo()) avisoAdelante();
     area.focus({ preventScroll: true });
     area.setSelectionRange(a, a + d.length);
     area.scrollIntoView({ block: 'center', behavior: 'smooth' });
@@ -649,26 +821,33 @@ async function trabajar(cont, itemId, { entrega = null, fija = false } = {}) {
   }
 
   // ---------- niveles ----------
+  // Si el nivel siguiente ya existe (como borrador), se va a él; si no, se crea con una copia de este.
   async function avanzar() {
     const j = k();
     if (j + 1 >= E.max) return;
+    if (j < ultimo()) { irA(j + 1); return; }
     const t = limpio(N().texto);
     if (!t) { aviso(`Escriba el nivel ${j + 1} antes de pasar al siguiente.`); return; }
     if (t === limpio(base())) { aviso(`El nivel ${j + 1} todavía es igual a ${nombreBase(j)}. Defina al menos una palabra.`); return; }
     const f = faltan();
     if (f && !(await confirmar(`${f === 1 ? 'Queda 1 palabra' : `Quedan ${f} palabras`} sin definir en ${nombreBase(j)}. ¿Pasar al nivel ${j + 2} de todos modos?`, { si: `Pasar al nivel ${j + 2}`, no: 'Seguir definiendo' }))) return;
-    E.niveles.push({ texto: N().texto, marcas: {}, ins: {} });
+    E.niveles.push({ texto: N().texto, marcas: {}, ins: {}, tramos: [], fuente: N().texto });
+    E.actual = ultimo();
     cambio();
     pintarNivel();
     window.scrollTo({ top: 0, behavior: 'smooth' });
     aviso(`Nivel ${j + 2}: ahora defina las palabras del nivel ${j + 1}.`);
   }
 
-  async function atras() {
+  // Volver no borra nada: el nivel que se deja queda como borrador.
+  function atras() { irA(k() - 1); }
+
+  async function descartar() {
     const j = k();
-    if (!j) return;
-    if (limpio(N().texto) !== limpio(base()) && !(await confirmar(`¿Volver al nivel ${j}? Se descarta lo que escribió en el nivel ${j + 1}.`, { si: `Volver al nivel ${j}`, no: 'Quedarme aquí', peligro: true }))) return;
+    if (!(j === ultimo() && j > 0)) return;
+    if (!(await confirmar(`¿Descartar el nivel ${j + 1}? Se borra lo que escribió en él.`, { si: `Descartar el nivel ${j + 1}`, no: 'Conservarlo', peligro: true }))) return;
     E.niveles.pop();
+    E.actual = ultimo();
     cambio();
     pintarNivel();
   }
@@ -676,7 +855,7 @@ async function trabajar(cont, itemId, { entrega = null, fija = false } = {}) {
   function verEscalera() {
     modal({
       titulo: 'La escalera hasta ahora',
-      cuerpo: `<div class="df-modal">${escaleraHTML(E.origen.texto, E.niveles.map(x => x.texto))}</div>`,
+      cuerpo: `<div class="df-modal">${escaleraHTML(E.origen.texto, E.niveles.map(x => x.texto), E.niveles.map(x => x.tramos))}</div>`,
       acciones: [{ texto: 'Cerrar', clase: 'btn-primario' }],
       ancho: 680,
     });
@@ -685,14 +864,18 @@ async function trabajar(cont, itemId, { entrega = null, fija = false } = {}) {
   async function publicar() {
     const n = E.niveles.length;
     if (n < MIN_NIVELES) return;
-    const textos = E.niveles.map(x => limpio(x.texto));
+    // Se publica la escalera completa, también los niveles que están como borrador.
+    const limpios = E.niveles.map(x => limpiarConOrigen(x.texto, deTramos(x.tramos, x.texto.length)));
+    const textos = limpios.map(x => x.texto);
     const hueco = textos.findIndex(t => !t);
     if (hueco >= 0) { aviso(`El nivel ${hueco + 1} está vacío.`); return; }
-    if (textos[n - 1] === textos[n - 2]) { aviso(`El nivel ${n} todavía es igual al nivel ${n - 1}. Reescríbalo o vuelva al nivel anterior para publicar.`); return; }
-    if (!entrega && !(await confirmar(`${avisoPublicar('su escalera', 'la')}`, { si: 'Publicar', no: 'Seguir escribiendo' }))) return;
+    if (textos[n - 1] === textos[n - 2]) { aviso(`El nivel ${n} todavía es igual al nivel ${n - 1}. Reescríbalo, o descártelo para publicar hasta el nivel ${n - 1}.`); return; }
+    const borradores = k() < ultimo() ? ` Se publican los ${n} niveles, también ${ultimo() - k() === 1 ? 'el que está' : 'los que están'} como borrador.` : '';
+    if (!entrega && !(await confirmar(`${avisoPublicar('su escalera', 'la')}${borradores}`, { si: 'Publicar', no: 'Seguir escribiendo' }))) return;
+    if (entrega && borradores && !(await confirmar(`${borradores.trim()} ¿Guardar los cambios?`, { si: 'Guardar cambios', no: 'Seguir escribiendo' }))) return;
     const btn = $('#df-publicar');
     btn.disabled = true;
-    const datos = { origen: E.origen, niveles: textos, marcas: E.niveles.map(x => x.marcas), max: E.max };
+    const datos = { origen: E.origen, niveles: textos, marcas: E.niveles.map(x => x.marcas), tramos: limpios.map(x => aTramos(x.org)), max: E.max };
     try {
       publicado = true;
       guardarNube.cancelar();
@@ -733,13 +916,35 @@ async function trabajar(cont, itemId, { entrega = null, fija = false } = {}) {
     pintarMarcas();
     requestAnimationFrame(() => { caja.scrollIntoView({ block: 'nearest', behavior: 'smooth' }); caja.querySelector('#dicc-q')?.focus(); });
   });
+  // Lo que se escribe o se cambia a mano queda marcado como escritura propia.
   area.addEventListener('input', () => {
-    N().texto = area.value;
+    const v = area.value;
+    const o = previo;
+    const max = Math.min(v.length, o.length);
+    let p = 0;
+    while (p < max && v[p] === o[p]) p++;
+    let s = 0;
+    while (s < max - p && v[v.length - 1 - s] === o[o.length - 1 - s]) s++;
+    org = [...org.slice(0, p), ...new Array(v.length - p - s).fill('p'), ...org.slice(o.length - s)];
+    previo = v;
+    N().texto = v;
+    guardarOrg();
     crecer(area);
+    pintarFondo();
     cambio();
     pintarProgreso();
     pintarPie();
+    if (k() < ultimo()) avisoAdelante();
   });
+  $('#df-progreso').addEventListener('click', ev => {
+    const b = ev.target.closest('[data-ir]');
+    if (b) irA(Number(b.dataset.ir));
+  });
+  $('#df-adelante').addEventListener('click', ev => {
+    const b = ev.target.closest('[data-ir]');
+    if (b) irA(Number(b.dataset.ir));
+  });
+  $('#df-descartar').addEventListener('click', descartar);
   $('#titulo').addEventListener('input', ev => { E.titulo = ev.target.value; cambio(); });
   $('#df-avanzar').addEventListener('click', avanzar);
   $('#df-atras').addEventListener('click', atras);

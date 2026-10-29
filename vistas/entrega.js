@@ -137,6 +137,20 @@ export default async function vistaEntrega(cont, { params, query = {} }) {
     });
   }
 
+  // Literatura definicional: la escalera con sus colores (diccionario y escritura propia) o en lectura limpia.
+  const vdf = cont.querySelector('.lectura .v-definicional');
+  if (vdf?.querySelector('.v-df-d, .v-df-p')) {
+    vdf.closest('.lectura').insertAdjacentHTML('beforebegin', `<div class="conmutador df-conmutador" role="tablist" aria-label="Lectura">
+      <button type="button" role="tab" data-dfv="color" class="on" aria-selected="true">Con colores</button>
+      <button type="button" role="tab" data-dfv="limpia" aria-selected="false">Lectura limpia</button></div>`);
+    cont.querySelector('.df-conmutador').addEventListener('click', ev => {
+      const b = ev.target.closest('[data-dfv]');
+      if (!b) return;
+      vdf.classList.toggle('limpia', b.dataset.dfv === 'limpia');
+      b.parentElement.querySelectorAll('button').forEach(x => { x.classList.toggle('on', x === b); x.setAttribute('aria-selected', x === b); });
+    });
+  }
+
   activarReacciones(cont.querySelector('#reacciones'), reacciones);
   await montarComentarios(cont.querySelector('#comentarios'), e);
   // Desde una notificación de comentario: ir a los comentarios.
