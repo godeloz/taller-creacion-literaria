@@ -1,6 +1,8 @@
 // Módulo: S+7 (Oulipo). Reescribir un cuento cambiando palabras por otras de la
 // misma clase gramatical, tomadas del diccionario. La ★ marca la regla clásica de
 // Jean Lescure: la entrada que está siete lugares después.
+// Hay varios textos para elegir (cuentos y poemas). En los poemas, cada estrofa es un
+// elemento de «parrafos» y los versos van separados por saltos de línea.
 import { estado, avisoPublicar } from '../nucleo/estado.js';
 import { esc, local, debounce, confirmar, aviso, errorAviso, hace } from '../nucleo/ui.js';
 import { icono } from '../nucleo/iconos.js';
@@ -17,10 +19,60 @@ function ajustarMayuscula(original, nueva) {
   return /^\p{Lu}/u.test(original) ? nueva.charAt(0).toUpperCase() + nueva.slice(1) : nueva;
 }
 
+// Corta cada párrafo (o estrofa) en palabras y separadores. Las claves «párrafo:posición»
+// son las que guardan las entregas en datos.cambios: este corte no debe cambiar.
+export function tokenizar(lista, POS = {}) {
+  return (lista || []).map((p, ip) => {
+    const partes = [];
+    let ultimo = 0, m;
+    RE_PALABRA.lastIndex = 0;
+    while ((m = RE_PALABRA.exec(p)) !== null) {
+      if (m.index > ultimo) partes.push({ t: 'sep', texto: p.slice(ultimo, m.index) });
+      partes.push({ t: 'pal', texto: m[0], clave: `${ip}:${partes.length}`, clase: POS[m[0].toLowerCase()] || 'otra' });
+      ultimo = RE_PALABRA.lastIndex;
+    }
+    if (ultimo < p.length) partes.push({ t: 'sep', texto: p.slice(ultimo) });
+    return partes;
+  });
+}
+
+export const esPoema = datos => datos?.forma === 'poema';
+// Separadores con salto de verso.
+const sep = texto => esc(texto).replace(/\n/g, '<br>');
+
+// Original y reescritura lado a lado. En los poemas, verso por verso; en la prosa, párrafo
+// por párrafo. En pantallas angostas, cada línea del original queda encima de la nueva.
+export function comparacionHTML(lista, cambios = {}, poema = false) {
+  const pinta = (toks, nueva) => toks.map(x => x.t === 'sep' ? esc(x.texto)
+    : cambios[x.clave] === undefined ? esc(x.texto)
+    : nueva ? `<span class="v-cambiada">${esc(cambios[x.clave])}</span>` : `<span class="s7-quitada">${esc(x.texto)}</span>`).join('');
+  const filas = [];
+  tokenizar(lista).forEach((toks, ip) => {
+    let lineas = [toks];
+    if (poema) {
+      let linea = [];
+      lineas = [linea];
+      for (const x of toks) {
+        if (x.t !== 'sep' || !x.texto.includes('\n')) { linea.push(x); continue; }
+        x.texto.split('\n').forEach((tr, k) => {
+          if (k) { linea = []; lineas.push(linea); }
+          if (tr) linea.push({ t: 'sep', texto: tr });
+        });
+      }
+      if (ip) filas.push('<div class="s7-comp-hueco"></div>');
+    }
+    for (const l of lineas) filas.push(`<div class="s7-comp-o">${pinta(l, false) || '&nbsp;'}</div><div class="s7-comp-n">${pinta(l, true) || '&nbsp;'}</div>`);
+  });
+  return `<div class="s7-comp${poema ? ' s7-comp-poema' : ''}">
+    <div class="rotulo s7-comp-cab">Original</div><div class="rotulo s7-comp-cab">Reescritura</div>
+    <p class="s7-comp-nota">En cada pareja, arriba el original (en gris) y abajo la reescritura.</p>
+    ${filas.join('')}</div>`;
+}
+
 export default {
   slug: 's7',
   nombre: 'S+7',
-  version: '1.0',
+  version: '1.1',
 
   async abrir(cont, ctx) {
     const todos = await estado.api.contenidos('s7');
@@ -29,15 +81,21 @@ export default {
     const editando = ctx.entrega || null;
     let texto;
     if (editando) {
-      texto = textos.find(t => t.item_id === editando.item_id) || await estado.api.contenido('s7', editando.item_id);
-      if (!texto) { cont.innerHTML = `<div class="contenedor">${vacio('El texto original ya no está disponible')}</div>`; return; }
+      // Desde la versión 1.1, la entrega guarda el texto original con que se escribió.
+      const guardado = editando.datos?.original?.parrafos ? editando.datos.original : null;
+      texto = textos.find(t => t.item_id === editando.item_id) || await estado.api.contenido('s7', editando.item_id).catch(() => null);
+      if (!texto && !guardado) { cont.innerHTML = `<div class="contenedor">${vacio('El texto original ya no está disponible')}</div>`; return; }
+      if (guardado) texto = { item_id: editando.item_id, datos: { ...(texto?.datos || {}), ...guardado, clases: texto?.datos?.clases || {} } };
     } else {
       if (!textos.length) { cont.innerHTML = `<div class="contenedor contenedor-estrecho">${vacio('No hay textos cargados', 'El tutor todavía no ha cargado un texto para esta dinámica.')}</div>`; return; }
       const id = ctx.item_id || ctx.sesion?.item_id;
+      if (!id && textos.length > 1) return portada(cont, textos);
       texto = textos.find(t => t.item_id === id);
-      if (!texto) { location.replace(`#/d/s7/${encodeURIComponent(textos[0].item_id)}`); return; }
+      if (!texto) { location.replace(textos.length > 1 ? '#/d/s7' : `#/d/s7/${encodeURIComponent(textos[0].item_id)}`); return; }
     }
     const T = texto.datos;
+    const POEMA = esPoema(T);
+    const QUE = POEMA ? 'poema' : 'cuento';
     const POS = Object.fromEntries(Object.entries(T.clases || {}).map(([k, v]) => [k.toLowerCase(), v]));
     const DICC = {};
     for (const k of ['sust', 'adj', 'verb', 'adv']) {
@@ -47,18 +105,7 @@ export default {
     const claveLocal = `borrador:${estado.yo.id}:${clave}`;
 
     // ---------- tokens ----------
-    const parrafos = (T.parrafos || []).map((p, ip) => {
-      const partes = [];
-      let ultimo = 0, m;
-      RE_PALABRA.lastIndex = 0;
-      while ((m = RE_PALABRA.exec(p)) !== null) {
-        if (m.index > ultimo) partes.push({ t: 'sep', texto: p.slice(ultimo, m.index) });
-        partes.push({ t: 'pal', texto: m[0], clave: `${ip}:${partes.length}`, clase: POS[m[0].toLowerCase()] || 'otra' });
-        ultimo = RE_PALABRA.lastIndex;
-      }
-      if (ultimo < p.length) partes.push({ t: 'sep', texto: p.slice(ultimo) });
-      return partes;
-    });
+    const parrafos = tokenizar(T.parrafos, POS);
     const TOK = {};
     parrafos.flat().filter(x => x.t === 'pal').forEach(x => { TOK[x.clave] = x; });
     const totalSignificativas = Object.values(TOK).filter(x => x.clase !== 'otra').length;
@@ -69,6 +116,7 @@ export default {
     let seleccion = null;
     let claseVista = null;
     let notaBorrador = '';
+    let publicado = false;
     if (editando) {
       cambios = { ...(editando.datos?.cambios || {}) };
       titulo = editando.titulo || '';
@@ -89,14 +137,15 @@ export default {
         <aside class="consigna-panel" id="panel"></aside>
         <section class="mesa">
           <div class="mesa-barra">
-            ${textos.length > 1 && !editando ? `<label class="sr" for="elegir-texto">Texto</label><select class="selector" id="elegir-texto" style="width:auto;min-height:36px;font-size:14px">${textos.map(t => `<option value="${esc(t.item_id)}" ${t.item_id === texto.item_id ? 'selected' : ''}>${esc(t.datos.titulo)}</option>`).join('')}</select>` : `<span class="rotulo">${esc(T.titulo)} · ${esc(T.autor || '')}</span>`}
+            ${textos.length > 1 && !editando && !ctx.sesion?.item_id ? `<a class="btn btn-chico btn-fantasma s7-otro" href="#/d/s7" title="Elegir otro texto">${icono('izquierda', 16)}Textos</a>` : ''}
+            <span class="rotulo s7-rotulo">${esc(T.titulo)}${T.autor ? ` · ${esc(T.autor)}` : ''}</span>
             <span class="espaciador"></span>
             <span class="guardado" id="guardado">${esc(notaBorrador)}</span>
             <button type="button" class="herr" id="comparar" title="Comparar con el original" aria-label="Comparar con el original">${icono('libro', 18)}</button>
           </div>
           <div class="hoja-escribir">
             <input class="titulo-escribir" id="titulo" placeholder="Título de la nueva versión (opcional)" maxlength="140" value="${esc(titulo)}">
-            <div class="s7-cuento" id="cuento"></div>
+            <div class="s7-cuento${POEMA ? ' s7-poema' : ''}" id="cuento"></div>
             <div id="comparacion" class="oculto"></div>
           </div>
           <div class="mesa-pie">
@@ -140,11 +189,11 @@ export default {
     function pintarPanel() {
       const cab = `
         <span class="rotulo">S+7 · Oulipo</span>
-        <h1>Reescriba el cuento con el diccionario</h1>
-        <div class="consigna-texto"><p>Haga clic en una palabra del cuento y cámbiela por otra de la misma clase gramatical, tomada cerca de ella en el diccionario. La opción marcada con <strong>★</strong> está exactamente siete entradas después: es la regla clásica de Jean Lescure. Ajuste el género, el número o la conjugación para que la frase se sostenga.</p></div>`;
+        <h1>Reescriba el ${QUE} con el diccionario</h1>
+        <div class="consigna-texto"><p>Haga clic en una palabra del ${QUE} y cámbiela por otra de la misma clase gramatical, tomada cerca de ella en el diccionario. La opción marcada con <strong>★</strong> está exactamente siete entradas después: es la regla clásica de Jean Lescure. Ajuste el género, el número o la conjugación para que la frase se sostenga.</p></div>`;
       let herramientas;
       if (!seleccion) {
-        herramientas = '<p class="tenue" style="font-size:14.5px">Elija una palabra del cuento para ver el diccionario.</p>';
+        herramientas = '<p class="tenue" style="font-size:14.5px">Elija una palabra del ${QUE} para ver el diccionario.</p>';
       } else {
         const tok = TOK[seleccion];
         const clase = claseVista || tok.clase;
@@ -173,7 +222,7 @@ export default {
 
     function pintarCuento() {
       $('#cuento').innerHTML = parrafos.map(ps => `<p>${ps.map(x => {
-        if (x.t === 'sep') return esc(x.texto);
+        if (x.t === 'sep') return sep(x.texto);
         const cambiada = cambios[x.clave] !== undefined;
         return `<span class="pal pal-${x.clase}${cambiada ? ' cambiada' : ''}${seleccion === x.clave ? ' elegida' : ''}" data-k="${x.clave}" ${cambiada ? `title="Original: ${esc(x.texto)}"` : ''}>${esc(actual(x.clave))}</span>`;
       }).join('')}</p>`).join('');
@@ -184,9 +233,7 @@ export default {
     }
 
     function pintarComparacion() {
-      const col = usarActual => parrafos.map(ps => `<p>${ps.map(x => x.t === 'sep' ? esc(x.texto)
-        : usarActual && cambios[x.clave] !== undefined ? `<span class="v-cambiada">${esc(actual(x.clave))}</span>` : esc(x.texto)).join('')}</p>`).join('');
-      $('#comparacion').innerHTML = `<div class="columnas-s7"><div><div class="rotulo">Original</div>${col(false)}</div><div><div class="rotulo">Nueva versión</div>${col(true)}</div></div>`;
+      $('#comparacion').innerHTML = comparacionHTML(T.parrafos, cambios, POEMA);
     }
 
     function aplicar(k, palabra) {
@@ -226,7 +273,6 @@ export default {
     $('#panel').addEventListener('change', ev => { if (ev.target.id === 's7-clase') { claseVista = ev.target.value; pintarPanel(); } });
     $('#panel').addEventListener('keydown', ev => { if (ev.target.id === 's7-libre' && ev.key === 'Enter' && seleccion) aplicar(seleccion, ev.target.value); });
     $('#titulo').addEventListener('input', ev => { titulo = ev.target.value; cambio(); });
-    $('#elegir-texto')?.addEventListener('change', ev => { location.hash = `#/d/s7/${encodeURIComponent(ev.target.value)}`; });
     $('#comparar').addEventListener('click', ev => {
       const c = $('#comparacion');
       c.classList.toggle('oculto');
@@ -240,29 +286,32 @@ export default {
       const n = Object.keys(cambios).length;
       if (!n) return;
       const credito = `Reescritura S+7 de «${T.titulo}»${T.autor ? `, de ${T.autor}` : ''}.`;
-      const vista = `<div class="v-s7">${parrafos.map(ps => `<p>${ps.map(x => x.t === 'sep' ? esc(x.texto)
+      const vista = `<div class="v-s7${POEMA ? ' v-s7-poema' : ''}">${parrafos.map(ps => `<p>${ps.map(x => x.t === 'sep' ? sep(x.texto)
         : cambios[x.clave] !== undefined ? `<span class="v-cambiada">${esc(actual(x.clave))}</span>` : esc(x.texto)).join('')}</p>`).join('')}</div><p class="v-credito">${esc(credito)}</p>`;
       const plano = parrafos.map(ps => ps.map(x => x.t === 'sep' ? x.texto : actual(x.clave)).join('')).join('\n\n') + `\n\n${credito}`;
       if (!editando && !(await confirmar(avisoPublicar('su versión', 'la'), { si: 'Publicar', no: 'Seguir cambiando' }))) return;
       const b = $('#publicar');
       b.disabled = true;
       try {
-        await publicarEntrega({ dinamica: 's7', item_id: texto.item_id, titulo: titulo.trim(), texto: plano, vista, modulo_version: '1.0', datos: { cambios, n_cambios: n } }, { entregaExistente: editando });
+        await publicarEntrega({ dinamica: 's7', item_id: texto.item_id, titulo: titulo.trim(), texto: plano, vista, modulo_version: '1.1',
+          datos: { cambios, n_cambios: n, original: { titulo: T.titulo || '', autor: T.autor || '', forma: QUE, parrafos: T.parrafos } } }, { entregaExistente: editando });
         guardarNube.cancelar();
+        publicado = true;
         if (!editando) { local(claveLocal, null); estado.api.borrarBorrador(clave).catch(() => {}); }
       } catch (e) { errorAviso(e); b.disabled = false; }
     });
 
     pintarPanel();
     pintarCuento();
-    return () => { if (!editando && Object.keys(cambios).length) guardarNube.ahora(); };
+    // Al salir se guarda el borrador (no después de publicar: ya no es borrador).
+    return () => { if (!editando && !publicado && Object.keys(cambios).length) guardarNube.ahora(); };
   },
 
   paquete: {
     plantilla: 'plantillas/s7.json',
     describir: d => d.tipo === 'diccionario'
       ? `Diccionario · ${['sust', 'adj', 'verb', 'adv'].reduce((s, k) => s + (d[k]?.length || 0), 0)} palabras`
-      : `${d.titulo} · ${d.autor || ''}`,
+      : `${d.titulo} · ${d.autor || ''}${esPoema(d) ? ' · poema' : ''}`,
     validar(json) {
       const errores = [];
       const items = [];
@@ -278,14 +327,21 @@ export default {
         else if (vistos.has(id)) errores.push(`${n}: el id "${id}" está repetido.`);
         vistos.add(id);
         if (!String(t?.titulo || '').trim()) errores.push(`${n} (${id}): falta "titulo".`);
-        const par = Array.isArray(t?.parrafos) ? t.parrafos.filter(p => typeof p === 'string' && p.trim()) : [];
-        if (!par.length) errores.push(`${n} (${id}): necesita "parrafos" (una lista de textos).`);
+        // Cuento: "parrafos" (lista de textos). Poema: "estrofas" (lista de estrofas, cada una una lista de versos).
+        const limpio = p => p.replace(/\r\n?/g, '\n').split('\n').map(l => l.replace(/\s+$/, '')).join('\n').replace(/^\n+|\n+$/g, '');
+        const conEstrofas = Array.isArray(t?.estrofas);
+        const par = (conEstrofas
+          ? t.estrofas.map(e => (Array.isArray(e) ? e.filter(v => typeof v === 'string').join('\n') : typeof e === 'string' ? e : ''))
+          : Array.isArray(t?.parrafos) ? t.parrafos.filter(p => typeof p === 'string') : []).map(limpio).filter(p => p.trim());
+        if (!par.length) errores.push(`${n} (${id}): necesita "parrafos" (un cuento) o "estrofas" (un poema).`);
+        if (t?.forma !== undefined && !['cuento', 'poema'].includes(t.forma)) errores.push(`${n} (${id}): "forma" debe ser "cuento" o "poema".`);
+        const forma = t?.forma === 'poema' || (t?.forma === undefined && conEstrofas) ? 'poema' : 'cuento';
         const clases = {};
         for (const [k, v] of Object.entries(t?.clases || {})) {
           if (!validas.has(v)) errores.push(`${n} (${id}): la palabra "${k}" tiene una clase desconocida ("${v}"). Use sust, adj, verb o adv.`);
           else if (v !== 'otra') clases[k.toLowerCase()] = v;
         }
-        items.push({ item_id: id, datos: { titulo: String(t?.titulo || '').trim(), autor: String(t?.autor || '').trim(), parrafos: par, clases } });
+        items.push({ item_id: id, datos: { titulo: String(t?.titulo || '').trim(), autor: String(t?.autor || '').trim(), forma, parrafos: par, clases } });
       });
       if (json?.diccionario) {
         const d = json.diccionario;
@@ -300,3 +356,53 @@ export default {
     },
   },
 };
+
+// ---------------------------------------------------------------------
+// Portada: elegir el texto (cuando hay más de uno)
+// ---------------------------------------------------------------------
+async function portada(cont, textos) {
+  const yo = estado.yo.id;
+  const [mias, nubes] = await Promise.all([
+    estado.api.entregas({ dinamica: 's7', autor: yo }).catch(() => []),
+    Promise.all(textos.map(t => estado.api.borrador(`s7:${t.item_id}`).catch(() => null))),
+  ]);
+  const publicadas = {};
+  for (const e of mias) if (e.autor === yo) publicadas[e.item_id] = (publicadas[e.item_id] || 0) + 1;
+  const empezado = (t, k) => [local(`borrador:${yo}:s7:${t.item_id}`), nubes[k]].some(b => b?.cambios && Object.keys(b.cambios).length);
+
+  const tarjeta = (t, k) => {
+    const d = t.datos;
+    const poema = esPoema(d);
+    const palabras = (d.parrafos || []).join(' ').match(RE_PALABRA)?.length || 0;
+    const primero = d.parrafos?.[0] || '';
+    let extracto = poema ? primero.split('\n').slice(0, 3).join('\n') : primero.replace(/\s+/g, ' ');
+    if (!poema && extracto.length > 170) extracto = extracto.slice(0, 168) + '…';
+    else if (poema && (primero.split('\n').length > 3 || d.parrafos.length > 1)) extracto += ' …';
+    const n = publicadas[t.item_id] || 0;
+    const curso = empezado(t, k);
+    const href = `#/d/s7/${encodeURIComponent(t.item_id)}`;
+    return `<article class="fm-tarjeta s7-tarjeta">
+      <a class="fm-tarjeta-enlace" href="${href}">
+        <span class="rotulo">${poema ? 'Poema' : 'Cuento'} · ${palabras} palabras</span>
+        <span class="fm-tarjeta-titulo">${esc(d.titulo)}</span>
+        ${d.autor ? `<span class="s7-tarjeta-autor">${esc(d.autor)}</span>` : ''}
+        <span class="fm-tarjeta-extracto${poema ? ' s7-extracto-poema' : ''}">${esc(extracto)}</span>
+      </a>
+      <div class="fm-tarjeta-pie">
+        ${n ? `<span class="estado-pill si">${icono('check', 13)}${n === 1 ? 'Publicada' : `${n} versiones`}</span>` : ''}
+        ${curso ? '<span class="estado-pill">En curso</span>' : ''}
+        <span class="espaciador"></span>
+        <a class="btn btn-chico btn-fantasma" href="#/muro?dinamica=s7&item=${encodeURIComponent(t.item_id)}">Versiones</a>
+        <a class="btn btn-chico btn-primario" href="${href}">${curso ? 'Seguir' : n ? 'Otra versión' : 'Reescribir'}</a>
+      </div>
+    </article>`;
+  };
+
+  cont.innerHTML = `
+  <div class="contenedor s7-portada" style="--acento:${ACENTO}">
+    <span class="rotulo">S+7 · Oulipo</span>
+    <h1 class="saludo">Elija un texto</h1>
+    <p class="s7-portada-intro">Cambie sus palabras por otras de la misma clase, tomadas del diccionario: un sustantivo por un sustantivo, un verbo por un verbo. La <strong>★</strong> marca la que está siete entradas después.</p>
+    <div class="fm-rejilla">${textos.map(tarjeta).join('')}</div>
+  </div>`;
+}

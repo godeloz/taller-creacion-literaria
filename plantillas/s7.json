@@ -1,11 +1,12 @@
 {
   "tipo": "s7",
-  "nombre": "Ejemplo de paquete de S+7 (texto de dominio público)",
+  "nombre": "Ejemplo de paquete de S+7 (textos de dominio público: un cuento y un poema)",
   "textos": [
     {
       "id": "ejemplo-quijote",
       "titulo": "El hidalgo",
       "autor": "Miguel de Cervantes",
+      "forma": "cuento",
       "parrafos": [
         "En un lugar de la Mancha, de cuyo nombre no quiero acordarme, no ha mucho tiempo que vivía un hidalgo de los de lanza en astillero, adarga antigua, rocín flaco y galgo corredor."
       ],
@@ -14,6 +15,21 @@
         "mucho": "adv", "tiempo": "sust", "vivía": "verb", "hidalgo": "sust", "lanza": "sust",
         "astillero": "sust", "adarga": "sust", "antigua": "adj", "rocín": "sust", "flaco": "adj",
         "galgo": "sust", "corredor": "adj"
+      }
+    },
+    {
+      "id": "ejemplo-becquer",
+      "titulo": "Rima LIII (fragmento)",
+      "autor": "Gustavo Adolfo Bécquer",
+      "forma": "poema",
+      "estrofas": [
+        ["Volverán las oscuras golondrinas", "en tu balcón sus nidos a colgar,", "y otra vez con el ala a sus cristales", "jugando llamarán."],
+        ["Pero aquellas que el vuelo refrenaban", "tu hermosura y mi dicha a contemplar,", "aquellas que aprendieron nuestros nombres...", "ésas... ¡no volverán!"]
+      ],
+      "clases": {
+        "volverán": "verb", "oscuras": "adj", "golondrinas": "sust", "balcón": "sust", "nidos": "sust", "colgar": "verb",
+        "vez": "sust", "ala": "sust", "cristales": "sust", "jugando": "verb", "llamarán": "verb", "vuelo": "sust",
+        "refrenaban": "verb", "hermosura": "sust", "dicha": "sust", "contemplar": "verb", "aprendieron": "verb", "nombres": "sust"
       }
     }
   ],

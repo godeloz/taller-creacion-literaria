@@ -14,7 +14,7 @@ const DINAMICAS = [
   { slug: 'maraton', nombre: 'Maratón de ejercicios', descripcion: 'Cartas de escritura para escribir mucho, escribir raro, escribir lo que no se había escrito antes.', color: '#4D7CFF', estado: 'abierta', orden: 1, en_menu: true, desbloqueo: null },
   { slug: 'poema', nombre: 'El poema desarmado', descripcion: 'Desmonte un poema y escriba otro con sus mismas palabras.', color: '#FF4F7B', estado: 'abierta', orden: 2, en_menu: true, desbloqueo: null },
   { slug: 'cutup', nombre: 'Cut Up', descripcion: 'Construya un relato alrededor de frases ajenas, al modo de Burroughs.', color: '#00A884', estado: 'abierta', orden: 3, en_menu: true, desbloqueo: null },
-  { slug: 's7', nombre: 'S+7', descripcion: 'Reescriba un cuento con el diccionario, al modo oulipiano.', color: '#FF8A00', estado: 'abierta', orden: 4, en_menu: true, desbloqueo: null },
+  { slug: 's7', nombre: 'S+7', descripcion: 'Reescriba un cuento o un poema con el diccionario, al modo oulipiano.', color: '#FF8A00', estado: 'abierta', orden: 4, en_menu: true, desbloqueo: null },
   { slug: 'forma', nombre: 'La forma de las historias', descripcion: 'Trace el arco emocional de una historia, al modo de Vonnegut.', color: '#8B6CFF', estado: 'abierta', orden: 5, en_menu: true, desbloqueo: null },
   { slug: 'fallar', nombre: 'Fallar mejor', descripcion: 'Revise un borrador con control de cambios y compárelo con la versión final.', color: '#5B3DF5', estado: 'abierta', orden: 6, en_menu: true, desbloqueo: null },
   { slug: 'pliegues', nombre: 'Pliegues', descripcion: 'Pliegue un texto y reescríbalo a partir de las frases que emergen.', color: '#FFB547', estado: 'abierta', orden: 8, en_menu: true, desbloqueo: null },

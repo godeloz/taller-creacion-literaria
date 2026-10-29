@@ -23,6 +23,7 @@ export default async function vistaEntrega(cont, { params, query = {} }) {
   const d = dinamica(e.dinamica);
   let consigna = '';
   let conFinal = false;
+  let originalS7 = null;
   if (e.dinamica === 'consignas' && e.item_id) {
     const cs = await estado.api.consigna(e.item_id).catch(() => null);
     if (cs) consigna = `<div class="consigna-ref"><b>Consigna</b>${esc(cs.titulo)}${enlaceRespuestas(e)}</div>`;
@@ -35,6 +36,7 @@ export default async function vistaEntrega(cont, { params, query = {} }) {
       const c = await estado.api.contenido(e.dinamica, e.item_id);
       if (c) {
         conFinal = !!c.datos.con_final;
+        if (e.dinamica === 's7') originalS7 = c.datos;
         const etiqueta = e.dinamica === 'reto' ? `Reto del ${fechaLarga(e.reto_fecha)}`
           : e.dinamica === 'maraton' ? 'Carta del Maratón'
           : e.dinamica === 'poema' ? 'Poema fuente'
@@ -107,6 +109,25 @@ export default async function vistaEntrega(cont, { params, query = {} }) {
       const b = ev.target.closest('[data-plv]');
       if (!b) return;
       vp.classList.toggle('ver-pliegues', b.dataset.plv === 'pliegues');
+      b.parentElement.querySelectorAll('button').forEach(x => { x.classList.toggle('on', x === b); x.setAttribute('aria-selected', x === b); });
+    });
+  }
+
+  // S+7: la reescritura o, al lado, el original (las entregas desde la versión 1.1 guardan el original con que se escribieron).
+  const orig = e.dinamica === 's7' ? (e.datos?.original?.parrafos ? e.datos.original : originalS7) : null;
+  if (orig?.parrafos?.length && e.datos?.cambios && Object.keys(e.datos.cambios).length) {
+    const { comparacionHTML, esPoema } = await import('../modulos/s7.js');
+    const lect = cont.querySelector('.lectura');
+    lect.insertAdjacentHTML('beforebegin', `<div class="conmutador s7-conmutador" role="tablist" aria-label="Versión">
+      <button type="button" role="tab" data-s7v="nueva" class="on" aria-selected="true">Reescritura</button>
+      <button type="button" role="tab" data-s7v="comparar" aria-selected="false">Comparar con el original</button></div>`);
+    lect.insertAdjacentHTML('afterend', `<div class="s7-comparar oculto">${comparacionHTML(orig.parrafos, e.datos.cambios, esPoema(orig))}</div>`);
+    cont.querySelector('.s7-conmutador').addEventListener('click', ev => {
+      const b = ev.target.closest('[data-s7v]');
+      if (!b) return;
+      const comparar = b.dataset.s7v === 'comparar';
+      lect.classList.toggle('oculto', comparar);
+      cont.querySelector('.s7-comparar').classList.toggle('oculto', !comparar);
       b.parentElement.querySelectorAll('button').forEach(x => { x.classList.toggle('on', x === b); x.setAttribute('aria-selected', x === b); });
     });
   }

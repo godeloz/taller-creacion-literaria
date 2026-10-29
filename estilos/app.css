@@ -1630,3 +1630,30 @@ body.enfoque .campana, body.enfoque .panel-notif, body.enfoque .notif-velo { dis
   .jd-dado.cae .jd-cara { animation: none; }
   .jd-cara { transition: none; }
 }
+
+/* ---------- S+7 · elegir texto, poemas y comparación con el original ---------- */
+.s7-portada-intro { max-width: 62ch; margin: 6px 0 22px; color: var(--tinta-2); font-size: 15.5px; line-height: 1.55; }
+.s7-tarjeta-autor { font-size: 14px; color: var(--tinta-2); margin-top: -2px; }
+.s7-extracto-poema { white-space: pre-line; font-style: italic; }
+.s7-rotulo { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
+.s7-otro { flex-shrink: 0; }
+.s7-poema p, .v-s7-poema p { margin-bottom: 1.4em; }
+.s7-conmutador { margin: 4px 0 18px; }
+.s7-comp { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); column-gap: 28px; font-family: var(--f-lectura); font-size: 16.5px; line-height: 1.75; color: var(--tinta); }
+.s7-comp-cab { display: block; margin-bottom: 8px; }
+.s7-comp-nota { display: none; }
+.s7-comp-o { color: var(--tinta-2); }
+.s7-comp:not(.s7-comp-poema) .s7-comp-o, .s7-comp:not(.s7-comp-poema) .s7-comp-n { margin-bottom: 1.05em; }
+.s7-comp-hueco { grid-column: 1 / -1; height: .9em; }
+.s7-quitada { background: var(--fondo-2); color: var(--tinta); font-weight: 600; padding: 0 .1em; border-radius: 3px; }
+.hoja .s7-comparar { margin-top: 4px; }
+@media (max-width: 760px) {
+  .s7-comp { grid-template-columns: minmax(0, 1fr); font-size: 16px; }
+  .s7-comp-cab { display: none; }
+  .s7-comp-nota { display: block; font-family: var(--f-ui); font-size: 13px; color: var(--tenue); margin: 0 0 12px; }
+  .s7-comp-o { color: var(--tenue); font-size: 14.5px; line-height: 1.55; border-left: 2px solid var(--linea-2); padding-left: 10px; }
+  .s7-comp-n { padding-left: 12px; margin-bottom: 8px; }
+  .s7-comp:not(.s7-comp-poema) .s7-comp-o { margin-bottom: 6px; }
+  .s7-comp-poema .s7-comp-n { margin-bottom: 4px; }
+}
+@media print { .s7-conmutador, .s7-comparar { display: none !important; } .lectura.oculto { display: block !important; } }
