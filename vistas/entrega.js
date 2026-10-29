@@ -88,7 +88,6 @@ export default async function vistaEntrega(cont, { params, query = {} }) {
         <span class="espaciador"></span>
         ${etiquetaDinamica(e.dinamica)}
       </div>
-      ${e.dinamica === 'juego-de-dados' ? jeroglifico(e.datos) : ''}
       ${e.titulo ? `<h1>${esc(e.titulo)}</h1>` : ''}
       ${consigna}
       <div class="lectura">${e.vista ? sanitizar(e.vista) : parrafos(e.texto)}</div>
@@ -158,22 +157,17 @@ function refSecreto(e) {
   </div>`;
 }
 
-// Juego de dados: la mesa y las tiradas, con el enlace a las demás historias de la mesa.
-// Los dados van arriba, en el encabezado (jeroglifico). La vista trae además una línea de texto con
-// los nombres de los dados (para el PDF); aquí se oculta.
+// Juego de dados: los dados con que se escribió la historia (los usados, resaltados), la mesa y las tiradas.
+// Sin el nombre de cada dado (solo como texto alternativo, para lectores de pantalla). La vista trae
+// además una línea de texto con los nombres de los dados (para el PDF); aquí se oculta.
 function refDados(e) {
   const d = e.datos || {};
+  const dados = Array.isArray(d.dados) ? d.dados.filter(x => /^[a-z0-9-]+$/.test(x)) : [];
   const n = Number(d.tiradas) || 0;
   return `<div class="consigna-ref jd-ref">
     <div><b>Juego de dados</b>${esc(d.mesa_nombre || 'Mesa')}${n ? ` · ${n} ${n === 1 ? 'tirada' : 'tiradas'}` : ''}${enlaceRespuestas(e)}</div>
+    ${dados.length ? `<div class="jd-ref-dados">${dados.map((x, k) => `<figure class="${d.usados?.[k] ? 'usado' : ''}">
+      <img src="img/juego-de-dados/mini/${x}.webp" width="240" height="240" alt="${esc(d.nombres?.[k] || x)}${d.usados?.[k] ? ' (usado)' : ''}" loading="lazy" decoding="async">
+      </figure>`).join('')}</div>` : ''}
   </div>`;
-}
-
-// Las figuras que le tocaron en el reparto, solas y en fila, como un jeroglífico.
-function jeroglifico(d = {}) {
-  const dados = Array.isArray(d?.dados) ? d.dados.filter(x => /^[a-z0-9-]+$/.test(x)) : [];
-  if (!dados.length) return '';
-  const nombres = dados.map((x, k) => d.nombres?.[k] || x);
-  return `<div class="jd-jeroglifico" role="img" aria-label="${esc(`Dados: ${nombres.join(', ')}`)}">${dados.map((x, k) =>
-    `<img src="img/juego-de-dados/mini/${x}.webp" width="240" height="240" alt="" title="${esc(nombres[k])}" decoding="async">`).join('')}</div>`;
 }

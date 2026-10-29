@@ -1605,8 +1605,6 @@ body.enfoque .campana, body.enfoque .panel-notif, body.enfoque .notif-velo { dis
 .jd-ref-dados figure.usado img { border: 2px solid #1FB5C9; }
 .jd-ref-dados figcaption { font-size: 12.5px; line-height: 1.25; color: var(--tinta-2); margin-top: 6px; }
 .lectura .jd-dados-texto { display: none; }
-.jd-jeroglifico { display: flex; flex-wrap: wrap; align-items: center; gap: clamp(8px, 1.6vw, 16px); margin: 6px 0 22px; }
-.jd-jeroglifico img { width: clamp(40px, 7vw, 58px); height: auto; display: block; }
 
 @media (max-width: 960px) {
   .jd-mesa { grid-template-columns: minmax(0, 1fr); }
