@@ -164,7 +164,8 @@ export function montarEscritorio(cont, op) {
     if (!datos.palabras) return;
     if (tituloObligatorio && !datos.titulo) { aviso('Escriba un título para publicar.', 'error'); tit?.focus(); return; }
     if (!editando) {
-      const ok = await confirmar(avisoPublicar || avisoGeneral(), { si: 'Publicar', no: 'Seguir escribiendo' });
+      // avisoPublicar puede ser una función, si el aviso depende de cómo va el trabajo (Fachadas).
+      const ok = await confirmar((typeof avisoPublicar === 'function' ? avisoPublicar() : avisoPublicar) || avisoGeneral(), { si: 'Publicar', no: 'Seguir escribiendo' });
       if (!ok) return;
     }
     botonPublicar.disabled = true;

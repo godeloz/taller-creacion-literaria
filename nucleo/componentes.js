@@ -13,7 +13,7 @@ export function colorTexto(hex) {
   return (L + 0.05) / 0.0588 >= 4.5 ? '#16141C' : '#FFFFFF';
 }
 
-export const ICONO_DINAMICA = { reto: 'chispa', maraton: 'cartas', poema: 'fichas', cutup: 'tijeras', s7: 'diccionario', forma: 'curva', fallar: 'revision', consignas: 'pagina', pliegues: 'pliegue', 'correo-secretos': 'sobre', 'juego-de-dados': 'dado', definicional: 'libro' };
+export const ICONO_DINAMICA = { reto: 'chispa', maraton: 'cartas', poema: 'fichas', cutup: 'tijeras', s7: 'diccionario', forma: 'curva', fallar: 'revision', consignas: 'pagina', pliegues: 'pliegue', 'correo-secretos': 'sobre', 'juego-de-dados': 'dado', definicional: 'libro', fachadas: 'fachada' };
 
 export function avatar(p, tam = 40) {
   if (!p) return `<span class="avatar" style="width:${tam}px;height:${tam}px;background:var(--linea)"></span>`;
@@ -58,6 +58,31 @@ function filaDados(d) {
   return `<div class="entrada-dados">${dados.map((x, k) => `<img src="img/juego-de-dados/mini/${x}.webp" width="40" height="40" alt="${esc(d.nombres?.[k] || x)}" title="${esc(d.nombres?.[k] || x)}" loading="lazy" decoding="async" class="${d.usados?.[k] ? 'usado' : ''}">`).join('')}</div>`;
 }
 
+// Fachadas: el trazo del recorrido (la línea entre los centros de los recuadros, con sus números), en SVG.
+// Es la «firma» del recorrido: va en la vista de la entrega (y en el PDF) y en la tarjeta del muro.
+// No usa la imagen: solo los números. Se encuadra en el trazo (no en la fachada completa).
+// d: { puntos: [[x, y, ancho, alto]…] (fracciones de la fachada), ancho, alto (medidas de la imagen) }
+export function trazoFachada(d, { ancho = 220 } = {}) {
+  const pts = (Array.isArray(d?.puntos) ? d.puntos : [])
+    .filter(p => Array.isArray(p) && p.length === 4 && p.every(n => Number.isFinite(Number(n)))).map(p => p.map(Number));
+  if (pts.length < 2) return '';
+  const W = 1000;
+  const H = W * (Number(d.alto) > 0 && Number(d.ancho) > 0 ? Number(d.alto) / Number(d.ancho) : 1);
+  const c = pts.map(([x, y, w, h]) => [(x + w / 2) * W, (y + h / 2) * H]);
+  const xs = c.map(p => p[0]), ys = c.map(p => p[1]);
+  const lado = Math.max(Math.max(...xs) - Math.min(...xs), Math.max(...ys) - Math.min(...ys), 120);
+  const u = lado / 100;   // los trazos se miden en centésimas del lado mayor: se ven igual en cualquier recorrido
+  // el encuadre: el trazo con margen, sin quedar demasiado angosto ni demasiado bajo
+  const bw = Math.max(Math.max(...xs) - Math.min(...xs), lado * 0.45) + 24 * u;
+  const bh = Math.max(Math.max(...ys) - Math.min(...ys), lado * 0.45) + 24 * u;
+  const bx = (Math.max(...xs) + Math.min(...xs)) / 2 - bw / 2, by = (Math.max(...ys) + Math.min(...ys)) / 2 - bh / 2;
+  const n = v => Math.round(v * 10) / 10;
+  return `<svg class="trazo-fachada" width="${ancho}" viewBox="${n(bx)} ${n(by)} ${n(bw)} ${n(bh)}" role="img" aria-label="Trazo del recorrido: ${pts.length} puntos">`
+    + `<polyline points="${c.map(p => `${n(p[0])},${n(p[1])}`).join(' ')}" fill="none" stroke="currentColor" stroke-width="${n(2.6 * u)}" stroke-linecap="round" stroke-linejoin="round"/>`
+    + c.map(([x, y], i) => `<circle cx="${n(x)}" cy="${n(y)}" r="${n(8 * u)}" fill="currentColor"/><text x="${n(x)}" y="${n(y + 3.2 * u)}" text-anchor="middle" font-size="${n(9 * u)}" font-family="Manrope, sans-serif" fill="#fff">${i + 1}</text>`).join('')
+    + '</svg>';
+}
+
 export function tarjetaEntrega(e, reacciones = []) {
   const mias = reacciones.filter(r => r.entrega_id === e.id);
   const conteo = t => mias.filter(r => r.tipo === t).length;
@@ -78,6 +103,7 @@ export function tarjetaEntrega(e, reacciones = []) {
     ${e.titulo ? `<div class="entrada-titulo">${esc(e.titulo)}</div>` : ''}
     ${e.dinamica === 'correo-secretos' && e.datos?.traduccion ? `<div class="entrada-epigrafe">${esc(/^[«"“]/.test(e.datos.traduccion.trim()) ? e.datos.traduccion.trim() : `«${e.datos.traduccion.trim()}»`)}</div>` : ''}
     ${e.dinamica === 'juego-de-dados' ? filaDados(e.datos) : ''}
+    ${e.dinamica === 'fachadas' && e.datos?.puntos ? `<div class="entrada-trazo">${trazoFachada(e.datos)}</div>` : ''}
     <div class="entrada-extracto">${e.dinamica === 'pliegues' && Array.isArray(e.datos?.marcas) ? extractoMarcado(extracto, e.datos.marcas) : esc(extracto)}</div>
     <div class="entrada-pie">
       <span class="mini-reacciones">

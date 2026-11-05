@@ -1841,3 +1841,149 @@ button.df-escalon:focus-visible { outline: 2px solid var(--violeta); outline-off
   .df-rotulo { display: none; }
 }
 @media print { .df-conmutador { display: none !important; } .v-definicional.limpia .v-df-d, .v-definicional.limpia .v-df-p { color: inherit; } }
+
+/* =====================================================================
+   Fachadas (1.0): mirar la fachada con zoom, planear el recorrido (recuadros y línea),
+   narrar con los recortes a la vista. Los recortes se dibujan con la misma imagen
+   (background-size y background-position): no hay recortes guardados.
+   ===================================================================== */
+.fa-cab { display: flex; align-items: flex-end; flex-wrap: wrap; gap: 8px 16px; margin-bottom: 16px; }
+.fa-cab-tit { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.fa-titulo { font-family: var(--f-display); font-weight: 500; font-size: clamp(26px, 3vw, 38px); line-height: 1.05; letter-spacing: -.01em; margin: 2px 0 0; }
+.fa-credito { font-size: 13.5px; color: var(--tenue); margin: 0; }
+.fa-cab-mias { margin-left: auto; font-size: 13.5px; color: var(--tinta-2); }
+.fa-plano { display: grid; grid-template-columns: minmax(0, 1fr) minmax(290px, 350px); gap: 20px; align-items: start; }
+
+/* el visor */
+.fa-visor-marco { position: relative; background: #1E1B22; border-radius: var(--r-lg); overflow: hidden; }
+.fa-visor { position: relative; height: calc(100vh - 210px); min-height: 440px; overflow: hidden; touch-action: none; cursor: grab; user-select: none; -webkit-user-select: none; outline: none; }
+.fa-visor:focus-visible { box-shadow: inset 0 0 0 3px var(--acento); }
+.fa-visor.arrastrando { cursor: grabbing; }
+.fa-visor.marcar { cursor: crosshair; }
+.fa-visor.marcar.espacio { cursor: grab; }
+.fa-img { position: absolute; left: 0; top: 0; transform-origin: 0 0; max-width: none; pointer-events: none; user-select: none; -webkit-user-drag: none; }
+.fa-capa { position: absolute; inset: 0; pointer-events: none; overflow: visible; }
+.fa-caja-halo { fill: none; stroke: rgba(22, 20, 28, .55); stroke-width: 4; }
+.fa-caja-linea { fill: rgba(255, 255, 255, .06); stroke: #fff; stroke-width: 1.8; }
+.fa-caja.on .fa-caja-linea { stroke: var(--acento); stroke-width: 3; fill: rgba(184, 92, 56, .14); }
+.fa-temporal { fill: rgba(255, 255, 255, .14); stroke: #fff; stroke-width: 1.8; stroke-dasharray: 6 4; }
+.fa-linea-halo { fill: none; stroke: rgba(22, 20, 28, .5); stroke-width: 5.5; stroke-linecap: round; stroke-linejoin: round; }
+.fa-linea { fill: none; stroke: #fff; stroke-width: 2.4; stroke-linecap: round; stroke-linejoin: round; }
+.fa-centro { fill: #fff; stroke: rgba(22, 20, 28, .6); stroke-width: 1.5; }
+.fa-num circle { fill: var(--acento); stroke: #fff; stroke-width: 1.5; }
+.fa-num text { fill: #fff; font-family: var(--f-ui); font-weight: 700; font-size: 12.5px; }
+.fa-num.on circle { fill: var(--tinta); }
+.fa-controles { position: absolute; left: 12px; right: 12px; bottom: 12px; display: flex; align-items: center; gap: 10px; pointer-events: none; }
+.fa-controles > * { pointer-events: auto; }
+.fa-herramientas, .fa-zoom { background: rgba(255, 255, 255, .95); box-shadow: 0 6px 20px -8px rgba(0, 0, 0, .5); }
+.fa-zoom { display: flex; align-items: center; gap: 2px; border-radius: 999px; padding: 3px 6px; }
+.fa-zoom .herr { width: 34px; height: 34px; border-radius: 999px; }
+.fa-zoom-n { font-family: var(--f-mono); font-size: 12.5px; min-width: 46px; text-align: center; color: var(--tinta-2); font-variant-numeric: tabular-nums; }
+
+/* el panel del lado */
+.fa-lado { position: sticky; top: 90px; background: #fff; border-radius: var(--r-lg); padding: 22px; border-top: 6px solid var(--acento); max-height: calc(100vh - 110px); overflow: auto; display: flex; flex-direction: column; gap: 14px; }
+.fa-lado .consigna-texto { font-size: 15.5px; }
+.fa-lado .consigna-texto p:last-child { margin-bottom: 0; }
+.fa-premisa { padding-top: 10px; border-top: 1px solid var(--linea); }
+.fa-pasos { margin: 0; padding-left: 1.3em; font-size: 14.5px; line-height: 1.55; color: var(--tinta-2); display: flex; flex-direction: column; gap: 8px; }
+.fa-pasos b { color: var(--tinta); }
+.fa-ancho { width: 100%; justify-content: center; }
+.fa-consigna-plegable summary { cursor: pointer; list-style: none; display: inline-flex; align-items: center; gap: 6px; font-size: 13.5px; font-weight: 700; color: var(--tinta-2); }
+.fa-consigna-plegable summary::-webkit-details-marker { display: none; }
+.fa-consigna-plegable[open] summary { margin-bottom: 10px; }
+.fa-lado-cab { align-items: center; padding-top: 12px; border-top: 1px solid var(--linea); }
+.fa-cuenta { font-family: var(--f-mono); font-size: 12.5px; color: var(--tenue); }
+.fa-cuenta.lleno { color: var(--acento); font-weight: 700; }
+.fa-puntos { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
+.fa-punto { display: flex; align-items: center; gap: 4px; border-radius: 14px; padding: 4px; background: var(--fondo); }
+.fa-punto:hover { box-shadow: inset 0 0 0 1.5px var(--acento); }
+.fa-punto-ir { flex: 1; min-width: 0; display: flex; align-items: center; gap: 10px; border: 0; background: transparent; padding: 0; text-align: left; font: inherit; color: var(--tinta); cursor: pointer; }
+.fa-punto-n { width: 24px; height: 24px; flex: none; border-radius: 50%; background: var(--acento); color: #fff; display: grid; place-items: center; font-size: 12.5px; font-weight: 700; }
+.fa-punto-txt { font-size: 14px; font-weight: 700; }
+.fa-punto-acc { display: flex; }
+.fa-punto-acc .herr { width: 32px; height: 32px; }
+.fa-punto-acc .herr:disabled { opacity: .3; pointer-events: none; }
+.fa-vacio, .fa-nota { margin: 0; font-size: 13.5px; line-height: 1.5; color: var(--tenue); }
+.fa-vacio { padding: 14px; border: 1.5px dashed var(--linea-2); border-radius: 14px; text-align: center; }
+.fa-lado-acciones { display: flex; flex-direction: column; align-items: center; gap: 6px; }
+
+/* un recorte: la caja tiene la proporción pedida y adentro va el recorte, centrado y sin deformar */
+.fa-recorte { display: grid; place-items: center; width: 100%; background: var(--fondo-2); border-radius: 10px; overflow: hidden; }
+.fa-recorte i { display: block; background-repeat: no-repeat; background-color: #d9d2c6; }
+.fa-recorte-mini { width: 46px; flex: none; border-radius: 8px; }
+.fa-recorte-grande { border-radius: 14px; background: transparent; height: 100%; }
+
+/* narrar */
+.fa-panel { display: flex; flex-direction: column; gap: 12px; }
+.fa-panel-cab { display: flex; align-items: center; gap: 8px; }
+.fa-panel-titulo { font-family: var(--f-display); font-weight: 500; font-size: 28px; line-height: 1.08; margin: 0; }
+.fa-panel .consigna-texto { font-size: 15.5px; }
+.fa-panel-rec { display: flex; flex-direction: column; gap: 10px; padding-top: 14px; border-top: 1px solid var(--linea); }
+.fa-recortes { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px 8px; }
+.fa-recorte-item { display: flex; flex-direction: column; gap: 4px; }
+.fa-recorte-btn { position: relative; display: block; width: 100%; border: 0; padding: 0; background: transparent; border-radius: 10px; cursor: zoom-in; }
+.fa-recorte-btn:hover .fa-recorte, .fa-recorte-btn:focus-visible .fa-recorte { box-shadow: 0 0 0 2px var(--acento); }
+.fa-recorte-n { position: absolute; left: 5px; top: 5px; width: 22px; height: 22px; border-radius: 50%; background: var(--acento); color: #fff; font-size: 12px; font-weight: 700; display: grid; place-items: center; box-shadow: 0 0 0 1.5px #fff; }
+.fa-recorte-item.hecho .fa-recorte { opacity: .55; }
+.fa-recorte-item.hecho .fa-recorte-n { background: var(--verde); }
+.fa-check { display: inline-flex; align-items: center; gap: 5px; font-size: 12.5px; color: var(--tenue); cursor: pointer; user-select: none; }
+.fa-check input { width: 16px; height: 16px; accent-color: var(--verde); margin: 0; }
+.fa-check-grande { font-size: 14px; color: var(--tinta-2); }
+.fa-check-grande input { width: 18px; height: 18px; }
+
+/* un punto ampliado */
+.fa-ampliado { display: flex; flex-direction: column; align-items: center; gap: 14px; }
+.fa-ampliado-img { max-width: 100%; }
+.fa-ampliado-pie { width: 100%; display: flex; align-items: center; flex-wrap: wrap; gap: 10px 16px; }
+.fa-ubicacion { position: relative; display: block; width: 64px; flex: none; border-radius: 6px; overflow: hidden; background: var(--fondo-2); }
+.fa-ubicacion img { display: block; width: 100%; height: 100%; object-fit: fill; }
+.fa-ubicacion i { position: absolute; border: 2px solid var(--acento); box-shadow: 0 0 0 1px #fff; border-radius: 2px; min-width: 4px; min-height: 4px; }
+.fa-ampliado-nav { display: flex; align-items: center; gap: 8px; flex: 1; justify-content: center; }
+.fa-ampliado-n { font-family: var(--f-mono); font-size: 13px; color: var(--tenue); }
+
+/* la entrega publicada */
+.fa-ref { --acento: #B85C38; display: flex; flex-direction: column; gap: 14px; border-left-color: #B85C38; }
+.fa-ref-credito { display: block; font-size: 13px; color: var(--tenue); margin-top: 2px; }
+.fa-figura { position: relative; margin: 0; width: 100%; max-width: 560px; border-radius: 14px; overflow: hidden; background: var(--fondo-2); }
+.fa-figura img { display: block; width: 100%; height: 100%; }
+.fa-figura-capa { position: absolute; inset: 0; width: 100%; height: 100%; }
+.fa-figura-capa .fa-caja, .fa-figura-capa .fa-num { cursor: zoom-in; }
+.fa-figura-capa .fa-caja:hover .fa-caja-linea { stroke: var(--acento); stroke-width: 3; }
+.fa-figura-capa .fa-num text { font-size: 17px; }
+.fa-figura-capa .fa-caja-linea, .fa-figura-capa .fa-caja-halo, .fa-figura-capa .fa-linea, .fa-figura-capa .fa-linea-halo { vector-effect: non-scaling-stroke; }
+.fa-tira { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(64px, 1fr)); gap: 8px; max-width: 560px; }
+.lectura .v-fachadas { display: none; }
+.v-fachadas { color: #B85C38; margin: 0 0 18px; }
+.entrada-trazo { color: #B85C38; margin: 0 0 10px; }
+.entrada-trazo .trazo-fachada { width: auto; max-width: 100%; height: 88px; display: block; }
+
+/* portada (más de una fachada) */
+.fa-portada-intro { max-width: 62ch; margin: 6px 0 22px; color: var(--tinta-2); font-size: 15.5px; line-height: 1.55; }
+.fa-tarjeta-img { display: block; height: 170px; margin: -18px -20px 6px; background: var(--fondo-2); overflow: hidden; }
+.fa-tarjeta-img img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.fa-tarjeta-credito { font-size: 13.5px; color: var(--tenue); }
+
+@media (max-width: 960px) {
+  .fa-plano { grid-template-columns: minmax(0, 1fr); gap: 14px; }
+  .fa-visor { height: min(62vh, 115vw); min-height: 300px; }
+  .fa-lado { position: static; max-height: none; padding: 18px; border-top-width: 4px; }
+  .fa-escritorio .consigna-panel { max-height: 40vh; }
+  .fa-panel-cab { order: 0; }
+  .fa-panel-rec { order: 1; padding-top: 0; border-top: 0; }
+  .fa-panel-titulo, .fa-panel .fa-credito, .fa-panel .consigna-texto { order: 2; }
+  .fa-panel-titulo { display: none; }
+  .fa-panel { gap: 8px; }
+  .fa-recortes { display: flex; overflow-x: auto; gap: 8px; padding-bottom: 4px; }
+  .fa-recorte-item { flex: 0 0 80px; }
+  .fa-panel-rec > .fa-nota { display: none; }
+}
+@media (max-width: 760px) {
+  .fa-cab-mias { margin-left: 0; width: 100%; }
+  .fa-controles { left: 8px; right: 8px; bottom: 8px; flex-wrap: wrap; gap: 6px; }
+  .fa-herramientas button span { display: none; }
+  .fa-herramientas button { padding: 6px 10px; }
+  .fa-zoom .herr { width: 32px; height: 32px; }
+  .fa-zoom-n { display: none; }
+  .fa-ampliado-nav .btn { padding: 0 10px; }
+}
+@media print { .fa-figura, .fa-tira { display: none !important; } .lectura .v-fachadas { display: block; } }

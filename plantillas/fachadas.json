@@ -1,0 +1,10 @@
+{
+  "fachadas": [
+    {
+      "id": "fachada-4",
+      "titulo": "Fachada 4",
+      "imagen": "fachada-4",
+      "credito": "Obra de la artista Sandra Scolnik"
+    }
+  ]
+}

@@ -24,6 +24,7 @@ export default async function vistaEntrega(cont, { params, query = {} }) {
   let consigna = '';
   let conFinal = false;
   let originalS7 = null;
+  let fachadas = null;   // Fachadas: el módulo pinta la fachada con el recorrido
   if (e.dinamica === 'consignas' && e.item_id) {
     const cs = await estado.api.consigna(e.item_id).catch(() => null);
     if (cs) consigna = `<div class="consigna-ref"><b>Consigna</b>${esc(cs.titulo)}${enlaceRespuestas(e)}</div>`;
@@ -31,6 +32,9 @@ export default async function vistaEntrega(cont, { params, query = {} }) {
     consigna = refSecreto(e);
   } else if (e.dinamica === 'juego-de-dados') {
     consigna = refDados(e);
+  } else if (e.dinamica === 'fachadas') {
+    fachadas = await import('../modulos/fachadas.js');
+    consigna = refFachada(e, fachadas);
   } else if (e.item_id) {
     try {
       const c = await estado.api.contenido(e.dinamica, e.item_id);
@@ -137,6 +141,9 @@ export default async function vistaEntrega(cont, { params, query = {} }) {
     });
   }
 
+  // Fachadas: tocar un recuadro o un recorte lo amplía.
+  if (fachadas) fachadas.activarFigura(cont.querySelector('.fa-ref'), e.datos || {});
+
   // Literatura definicional: la escalera con sus colores (diccionario y escritura propia) o en lectura limpia.
   const vdf = cont.querySelector('.lectura .v-definicional');
   if (vdf?.querySelector('.v-df-d, .v-df-p')) {
@@ -180,7 +187,7 @@ function enlaceRespuestas(e) {
   if (e.dinamica === 'consignas' && e.item_id) return `<a class="enlace-respuestas" href="#/consignas/${encodeURIComponent(e.item_id)}">Ver los textos de esta consigna</a>`;
   const href = e.dinamica === 'reto' && e.reto_fecha ? `#/muro?reto=${e.reto_fecha}`
     : e.item_id && !e.item_id.startsWith('propio-') ? `#/muro?dinamica=${encodeURIComponent(e.dinamica)}&item=${encodeURIComponent(e.item_id)}` : '';
-  const a = { reto: 'a este reto', maraton: 'a esta carta', poema: 'a este poema', s7: 'a este texto', fallar: 'a este texto', pliegues: 'a este texto', 'correo-secretos': 'a este secreto', 'juego-de-dados': 'a esta mesa', definicional: 'a esta frase' }[e.dinamica] || 'a esta consigna';
+  const a = { reto: 'a este reto', maraton: 'a esta carta', poema: 'a este poema', s7: 'a este texto', fallar: 'a este texto', pliegues: 'a este texto', 'correo-secretos': 'a este secreto', 'juego-de-dados': 'a esta mesa', definicional: 'a esta frase', fachadas: 'a esta fachada' }[e.dinamica] || 'a esta consigna';
   return href ? `<a class="enlace-respuestas" href="${href}">Ver todas las respuestas ${a}</a>` : '';
 }
 
@@ -209,5 +216,17 @@ function refDados(e) {
     ${dados.length ? `<div class="jd-ref-dados">${dados.map((x, k) => `<figure class="${d.usados?.[k] ? 'usado' : ''}">
       <img src="img/juego-de-dados/mini/${x}.webp" width="240" height="240" alt="${esc(d.nombres?.[k] || x)}${d.usados?.[k] ? ' (usado)' : ''}" loading="lazy" decoding="async">
       </figure>`).join('')}</div>` : ''}
+  </div>`;
+}
+
+// Fachadas: la fachada con los recuadros y el trazo del recorrido, y la tira de recortes (los dibuja el módulo
+// con la imagen de GitHub y los números de datos.puntos; no hay recortes guardados). La vista trae el trazo
+// en SVG (para el muro y el PDF); aquí se oculta.
+function refFachada(e, fa) {
+  const d = e.datos || {};
+  const n = Array.isArray(d.puntos) ? d.puntos.length : 0;
+  return `<div class="consigna-ref fa-ref">
+    <div><b>Fachadas</b>${esc(d.titulo_fachada || 'Una fachada')}${n ? ` · ${n} puntos` : ''}${d.credito ? `<span class="fa-ref-credito">${esc(d.credito)}</span>` : ''}${enlaceRespuestas(e)}</div>
+    ${fa.figuraHTML(d)}
   </div>`;
 }
