@@ -1987,3 +1987,124 @@ button.df-escalon:focus-visible { outline: 2px solid var(--violeta); outline-off
   .fa-ampliado-nav .btn { padding: 0 10px; }
 }
 @media print { .fa-figura, .fa-tira { display: none !important; } .lectura .v-fachadas { display: block; } }
+
+/* =====================================================================
+   Contrapuntos (1.0, acento musgo): la conversación con una voz, la revelación y la
+   versión preliminar con colores (la voz / quien escribe), guía de convenciones y revisor.
+   ===================================================================== */
+.cp-escritorio [hidden] { display: none !important; }
+.cp-c-v, .v-cp-v { color: #4F6B12; }
+.cp-c-s { color: var(--tenue); font-style: italic; background: rgba(110, 143, 26, .12); border-radius: 4px; }
+.v-cp-s { display: none; }
+.v-contrapuntos.limpia .v-cp-v { color: inherit; }
+
+/* portada */
+.cp-intro { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 22px; align-items: start; background: #fff; border-radius: var(--r-lg); padding: clamp(22px, 4vw, 40px); border-top: 6px solid var(--acento); margin-bottom: 22px; }
+.cp-sello { width: 56px; height: 56px; border-radius: 16px; display: grid; place-items: center; background: var(--acento); color: #fff; flex: none; }
+.cp-intro .saludo { margin: 8px 0 14px; font-size: clamp(32px, 4.4vw, 50px); }
+.cp-intro-texto { font-family: var(--f-lectura); font-size: 17.5px; line-height: 1.7; color: var(--tinta-2); max-width: 64ch; }
+.cp-intro-texto p { margin: 0 0 .7em; }
+.cp-intro-acciones { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; margin-top: 18px; }
+.cp-descartar { color: var(--tenue); }
+.cp-descartar:hover { color: var(--rojo); }
+.cp-titulo-sec { margin: 0 0 14px; }
+
+/* conversación */
+.cp-rotulo { margin-left: 6px; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.cp-cuenta { margin-top: 16px; padding: 14px 16px; border-radius: var(--r-md); background: var(--fondo); }
+.cp-barra { height: 6px; border-radius: 999px; background: #fff; overflow: hidden; margin-top: 8px; }
+.cp-barra i { display: block; height: 100%; background: var(--acento); border-radius: 999px; transition: width .3s ease; }
+.cp-hoja { gap: 0; }
+.cp-empieza { font-family: var(--f-lectura); font-size: 16px; line-height: 1.6; color: var(--tenue); font-style: italic; margin: 0 0 18px; }
+.cp-hilo { display: flex; flex-direction: column; gap: 14px; margin-bottom: 18px; }
+.cp-voz, .cp-resp-dicha, .cp-silencio { margin: 0; font-family: var(--f-lectura); font-size: 19px; line-height: 1.6; }
+.cp-voz { color: var(--tinta); max-width: 88%; }
+.cp-voz.cp-actual { padding: 12px 16px; background: #fff; border: 1.5px solid var(--acento); border-radius: var(--r-md); box-shadow: var(--sombra); max-width: 100%; }
+.cp-resp-dicha, .cp-silencio { align-self: flex-end; max-width: 84%; padding-left: 14px; border-left: 3px solid var(--acento); color: var(--tinta-2); }
+.cp-silencio { font-style: italic; color: var(--tenue); font-size: 16px; }
+.cp-espera { display: inline-flex; gap: 6px; padding: 14px 16px; background: #fff; border-radius: var(--r-md); align-self: flex-start; }
+.cp-espera span { width: 8px; height: 8px; border-radius: 50%; background: var(--acento); opacity: .35; animation: cp-punto 1s infinite ease-in-out; }
+.cp-espera span:nth-child(2) { animation-delay: .15s; }
+.cp-espera span:nth-child(3) { animation-delay: .3s; }
+@keyframes cp-punto { 0%, 100% { opacity: .25; transform: translateY(0); } 50% { opacity: 1; transform: translateY(-3px); } }
+@media (prefers-reduced-motion: reduce) { .cp-espera span { animation: none; } }
+.cp-responder { display: flex; flex-direction: column; gap: 8px; position: sticky; bottom: 0; background: var(--papel); padding: 12px 0 4px; border-top: 1px solid var(--linea); }
+.cp-resp { width: 100%; min-height: 64px; resize: none; overflow: hidden; border: 1.5px solid var(--linea-2); border-radius: var(--r-md); padding: 12px 14px; background: #fff;
+  font-family: var(--f-lectura); font-size: 18px; line-height: 1.6; color: var(--tinta); caret-color: var(--acento); }
+.cp-resp:focus { outline: none; border-color: var(--acento); box-shadow: 0 0 0 3px rgba(110, 143, 26, .18); }
+.cp-resp:disabled { background: var(--fondo); }
+.cp-resp::placeholder { color: #B5AEA3; font-style: italic; }
+.cp-responder-pie { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.cp-tecla { font-size: 12.5px; color: var(--tenue); }
+
+/* revelación */
+.cp-revelacion { display: flex; flex-direction: column; align-items: flex-start; gap: 10px; padding: clamp(24px, 5vw, 44px); border-top: 6px solid var(--acento); }
+.cp-revelacion .cp-sello { margin-bottom: 6px; }
+.cp-revela { font-family: var(--f-display); font-size: clamp(26px, 3.4vw, 38px); line-height: 1.15; margin: 4px 0 0; }
+.cp-revela strong { color: #4F6B12; font-weight: 600; }
+.cp-revela-trad { margin: 0; font-size: 14px; }
+.cp-revela-cuenta { margin: 6px 0 0; font-family: var(--f-mono); font-size: 13.5px; color: var(--tinta-2); }
+.cp-revela-nota { margin: 0; font-size: 15.5px; line-height: 1.55; color: var(--tinta-2); max-width: 56ch; }
+.cp-revela-acciones { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 10px; }
+
+/* la conversación (modal y entrega) */
+.cp-conv { display: flex; flex-direction: column; gap: 10px; font-family: var(--f-lectura); font-size: 17px; line-height: 1.6; }
+.cp-conv p { margin: 0; }
+.cp-conv-voz { color: #4F6B12; }
+.cp-conv-resp, .cp-conv-silencio { margin-left: 8% !important; padding-left: 12px; border-left: 3px solid rgba(110, 143, 26, .45); color: var(--tinta); }
+.cp-conv-silencio { font-style: italic; color: var(--tenue); }
+.cp-modal { max-height: 62vh; overflow: auto; padding-right: 4px; }
+.cp-conv-nota { font-size: 13.5px; margin: 0 0 14px; }
+
+/* versión preliminar: guía, editor con colores y revisor */
+.cp-detalle { margin-top: 18px; padding-top: 14px; border-top: 1px solid var(--linea); }
+.cp-detalle summary { cursor: pointer; font-weight: 700; color: var(--tinta); list-style: none; display: flex; align-items: center; gap: 8px; }
+.cp-detalle summary::-webkit-details-marker { display: none; }
+.cp-detalle[open] summary { margin-bottom: 12px; }
+.cp-guia { margin: 0; padding-left: 1.3em; display: flex; flex-direction: column; gap: 12px; font-size: 14.5px; line-height: 1.5; color: var(--tinta-2); }
+.cp-guia li::marker { color: var(--acento); font-weight: 700; }
+.cp-guia b { color: var(--tinta); }
+.cp-guia li > span { display: block; }
+.cp-ej { margin-top: 5px; padding: 4px 10px; border-left: 3px solid rgba(110, 143, 26, .5); background: var(--fondo); border-radius: 0 8px 8px 0; font-family: var(--f-lectura); font-size: 15px; color: var(--tinta); }
+.cp-raya { font-family: var(--f-lectura); font-size: 22px; font-weight: 600; color: var(--tinta-2); }
+.cp-leyenda { margin: 0 0 10px; font-size: 12.5px; color: var(--tenue); }
+.cp-leyenda span { font-weight: 700; }
+.cp-editor { position: relative; }
+.cp-fondo, .cp-editor .cp-texto {
+  font-family: var(--f-lectura); font-size: 19.5px; line-height: 1.85; letter-spacing: normal; word-spacing: normal;
+  white-space: pre-wrap; overflow-wrap: break-word; word-break: normal; tab-size: 4;
+  margin: 0; border: 0; box-sizing: border-box; width: 100%; padding: 0 0 8vh;
+}
+.cp-fondo { position: absolute; inset: 0; color: var(--tinta); pointer-events: none; }
+.cp-editor .cp-texto { position: relative; display: block; z-index: 1; color: transparent; background: transparent; caret-color: var(--acento); resize: none; overflow: hidden; outline: none; min-height: 240px; }
+.cp-texto::selection { background: rgba(110, 143, 26, .25); }
+.cp-marca { background: rgba(255, 216, 77, .55); color: inherit; border-radius: 4px; }
+.cp-avisos { margin-top: 6px; padding: 12px 16px; border-radius: var(--r-md); background: #fff; border: 1px solid var(--linea); }
+.cp-avisos-cab { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; }
+.cp-avisos-n { font-size: 13px; font-weight: 700; color: var(--tinta-2); }
+.cp-avisos ul { list-style: none; margin: 10px 0 0; padding: 0; display: flex; flex-direction: column; gap: 4px; }
+.cp-avisos li button { width: 100%; text-align: left; border: 0; background: var(--fondo); border-radius: 10px; padding: 7px 12px; font: inherit; font-size: 14px; color: var(--tinta-2); cursor: pointer; display: flex; gap: 10px; align-items: baseline; }
+.cp-avisos li button:hover { box-shadow: inset 0 0 0 1.5px var(--acento); }
+.cp-avisos li b { font-family: var(--f-mono); font-size: 11.5px; letter-spacing: .06em; text-transform: uppercase; color: #4F6B12; flex: none; }
+.cp-aviso-silencio { margin: 8px 0 0; font-size: 13.5px; color: var(--tinta-2); }
+
+/* la entrega publicada */
+.cp-ref { border-left-color: #6E8F1A; }
+.cp-ref strong { font-weight: 700; }
+.cp-conmutador { margin: 0 0 8px; }
+.cp-leyenda-entrega { margin: 0 0 14px; }
+.cp-conversacion { margin-top: 4px; }
+
+@media (max-width: 760px) {
+  .cp-intro { grid-template-columns: 1fr; gap: 12px; }
+  .cp-voz, .cp-resp-dicha { font-size: 17.5px; }
+  .cp-voz { max-width: 100%; }
+  .cp-resp-dicha, .cp-silencio { max-width: 92%; }
+  .cp-fondo, .cp-editor .cp-texto { font-size: 18px; }
+  .cp-rotulo { display: none; }
+  .cp-tecla { display: none; }
+  .cp-escritorio .mesa-pie { flex-wrap: wrap; gap: 8px; }
+  .cp-escritorio .mesa-pie .contador { width: 100%; }
+  .cp-responder-pie .btn { flex: 1; justify-content: center; }
+}
+@media print { .cp-conmutador, .cp-leyenda-entrega, .cp-conversacion { display: none !important; } .v-contrapuntos .v-cp-v { color: inherit; } }

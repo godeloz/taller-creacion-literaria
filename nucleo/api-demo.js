@@ -22,6 +22,7 @@ const DINAMICAS = [
   { slug: 'juego-de-dados', nombre: 'Juego de dados', descripcion: 'Lance cinco dados, guarde los que quiera y escriba la historia que el azar le asigne.', color: '#1FB5C9', estado: 'abierta', orden: 10, en_menu: true, desbloqueo: null },
   { slug: 'definicional', nombre: 'Literatura definicional', descripcion: 'Reescriba una frase con las definiciones de sus palabras y expándala nivel por nivel.', color: '#9E2B4E', estado: 'abierta', orden: 11, en_menu: true, desbloqueo: null },
   { slug: 'fachadas', nombre: 'Fachadas', descripcion: 'Trace un recorrido por una casa abierta y nárrelo punto por punto.', color: '#B85C38', estado: 'abierta', orden: 12, en_menu: true, desbloqueo: null },
+  { slug: 'contrapuntos', nombre: 'Contrapuntos', descripcion: 'Responda a una voz que no conoce y convierta la conversación en una historia.', color: '#6E8F1A', estado: 'abierta', orden: 13, en_menu: true, desbloqueo: null },
   { slug: 'consignas', nombre: 'Consignas de escritura', descripcion: 'Un ejercicio por semana: se escribe, se publica y se lee en taller.', color: '#C6F24E', estado: 'abierta', orden: 7, en_menu: false, desbloqueo: null },
 ];
 
@@ -42,6 +43,7 @@ const INSIGNIAS = [
   ['aprendiz-de-tahur', 'Aprendiz de tahúr', 'Escribió su primera historia con los dados.', 'dado', '#1FB5C9', 'auto'],
   ['cuatro-peldanos', 'Cuatro peldaños', 'Publicó una escalera de cuatro niveles en Literatura definicional.', 'libro', '#9E2B4E', 'auto'],
   ['siete-estancias', 'Siete estancias', 'Narró un recorrido de siete puntos en Fachadas.', 'fachada', '#B85C38', 'auto'],
+  ['hay-un-arbol', 'Hay un árbol', 'Conversó con una voz hasta su último parlamento en Contrapuntos.', 'dialogo', '#6E8F1A', 'auto'],
 ].map(([slug, nombre, descripcion, icono, color, tipo], i) => ({ slug, nombre, descripcion, icono, color, tipo, orden: i + 1 }));
 
 const PERSONAS = [
@@ -300,6 +302,7 @@ export async function crearApiDemo() {
     if (mias.some(e => e.dinamica === 'juego-de-dados')) dar('aprendiz-de-tahur');
     if (mias.some(e => e.dinamica === 'definicional' && (e.datos?.niveles?.length || 0) >= 4)) dar('cuatro-peldanos');
     if (mias.some(e => e.dinamica === 'fachadas' && (e.datos?.puntos?.length || 0) >= 7)) dar('siete-estancias');
+    if (mias.some(e => e.dinamica === 'contrapuntos' && e.datos?.completo === true)) dar('hay-un-arbol');
     const largos = db.comentarios.filter(c => c.autor === u && contarPalabras(c.texto) >= 20 && db.entregas.find(e => e.id === c.entrega_id)?.autor !== u);
     if (largos.length >= 10) dar('lector-atento');
     const menu = db.dinamicas.filter(d => d.en_menu && abierta(d.slug));
@@ -608,7 +611,7 @@ export async function crearApiDemo() {
       if (aCiegas(e) && 'datos' in c && JSON.stringify(c.datos?.runs) !== JSON.stringify(e.datos?.runs)) throw new Error('Su versión ya está publicada y no se puede cambiar. Solo puede completar sus explicaciones.');
       for (const k of ['titulo', 'texto', 'vista', 'datos']) if (k in c) e[k] = c[k];
       e.palabras = contarPalabras(e.texto); e.editada = true; e.actualizado = ahora();
-      if (e.dinamica === 'definicional' || e.dinamica === 'fachadas') evaluarInsignias(e.autor); // como los disparadores de 17 y 18, también al editar
+      if (e.dinamica === 'definicional' || e.dinamica === 'fachadas' || e.dinamica === 'contrapuntos') evaluarInsignias(e.autor); // como los disparadores de 17, 18 y 19, también al editar
       emitir('entregas', 'UPDATE', e);
     },
     // ---------- archivo (mismas reglas que 11-archivo.sql) ----------

@@ -1,0 +1,24 @@
+{
+  "bancos": [
+    {
+      "id": "ejemplo-anden",
+      "titulo": "Una voz en el andén",
+      "voz": "una voz de ejemplo",
+      "revelacion": "Usted conversó con una voz de ejemplo, escrita para el taller. Los bancos del curso traen voces de obras de teatro.",
+      "parlamentos": [
+        "Por fin llega. Ya empezaba a pensar que me había equivocado de día.",
+        "¿Trajo lo que le pedí?",
+        "No me mire así. Usted sabe muy bien de qué le hablo.",
+        "Llevo toda la mañana contando los trenes que no se detienen.",
+        "¿Y usted? ¿A qué vino, si se puede saber?",
+        "Eso mismo dijo la última vez.",
+        "Escuche. ¿No oye nada?",
+        "A veces pienso que el reloj de la estación está adelantado. Otras veces, que somos nosotros los que vamos atrasados.",
+        "No tiene que contestarme ahora.",
+        "Le confieso algo: yo tampoco sé qué estamos esperando.",
+        "Ya casi es de noche.",
+        "Entonces, ¿nos quedamos?"
+      ]
+    }
+  ]
+}

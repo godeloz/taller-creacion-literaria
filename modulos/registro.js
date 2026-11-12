@@ -26,4 +26,5 @@ export const MODULOS = {
   'juego-de-dados': () => import('./juego-de-dados.js'),
   definicional: () => import('./definicional.js'),
   fachadas: () => import('./fachadas.js'),
+  contrapuntos: () => import('./contrapuntos.js'),
 };

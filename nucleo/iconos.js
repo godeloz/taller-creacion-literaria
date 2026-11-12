@@ -64,6 +64,7 @@ const P = {
   medalla: '<circle cx="12" cy="15" r="5"/><path d="M8.5 11L6 3h4l2 5 2-5h4l-2.5 8"/>',
   // Fallar mejor: revisión con control de cambios
   sobre: '<rect x="3.5" y="6" width="17" height="12.5" rx="2"/><path d="M4.5 7.5l7.5 5.5 7.5-5.5"/>',
+  dialogo: '<path d="M4 4.5h10a1 1 0 0 1 1 1V12a1 1 0 0 1-1 1H8.5L5.5 15.5V13H4a1 1 0 0 1-1-1V5.5a1 1 0 0 1 1-1z"/><path d="M6 8.75h6"/><path d="M17.5 9H20a1 1 0 0 1 1 1v6.5a1 1 0 0 1-1 1h-1.5V20l-3-2.5H11a1 1 0 0 1-1-1v-1"/>',
   dado: '<rect x="4" y="4" width="16" height="16" rx="3.5"/><circle cx="8.8" cy="8.8" r=".9"/><circle cx="12" cy="12" r=".9"/><circle cx="15.2" cy="15.2" r=".9"/>',
   pliegue: '<path d="M3.5 6.5L9 4v15l-5.5 2.5z"/><path d="M9 4l6 2.5v15L9 19z"/><path d="M15 6.5L20.5 4v15L15 21.5z"/>',
   revision: '<path d="M4 7h7M4 17h9"/><path d="M3 12h12"/><path d="M14.5 17.5L20 7.5M18.2 6.5l2.6 1.4"/>',

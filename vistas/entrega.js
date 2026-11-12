@@ -25,6 +25,7 @@ export default async function vistaEntrega(cont, { params, query = {} }) {
   let conFinal = false;
   let originalS7 = null;
   let fachadas = null;   // Fachadas: el módulo pinta la fachada con el recorrido
+  let contrapuntos = null;   // Contrapuntos: el módulo pinta la conversación
   if (e.dinamica === 'consignas' && e.item_id) {
     const cs = await estado.api.consigna(e.item_id).catch(() => null);
     if (cs) consigna = `<div class="consigna-ref"><b>Consigna</b>${esc(cs.titulo)}${enlaceRespuestas(e)}</div>`;
@@ -35,6 +36,9 @@ export default async function vistaEntrega(cont, { params, query = {} }) {
   } else if (e.dinamica === 'fachadas') {
     fachadas = await import('../modulos/fachadas.js');
     consigna = refFachada(e, fachadas);
+  } else if (e.dinamica === 'contrapuntos') {
+    contrapuntos = await import('../modulos/contrapuntos.js');
+    consigna = refContrapunto(e, contrapuntos);
   } else if (e.item_id) {
     try {
       const c = await estado.api.contenido(e.dinamica, e.item_id);
@@ -158,6 +162,28 @@ export default async function vistaEntrega(cont, { params, query = {} }) {
     });
   }
 
+  // Contrapuntos: la historia con los colores (la voz y quien escribe), en lectura limpia o la conversación tal como se dio.
+  const vcp = cont.querySelector('.lectura .v-contrapuntos');
+  if (vcp && contrapuntos) {
+    const lect = vcp.closest('.lectura');
+    lect.insertAdjacentHTML('beforebegin', `<div class="conmutador cp-conmutador" role="tablist" aria-label="Lectura">
+      <button type="button" role="tab" data-cpv="color" class="on" aria-selected="true">Con colores</button>
+      <button type="button" role="tab" data-cpv="limpia" aria-selected="false">Lectura limpia</button>
+      <button type="button" role="tab" data-cpv="conversacion" aria-selected="false">La conversación</button></div>
+      <p class="cp-leyenda cp-leyenda-entrega"><span class="cp-c-v">La voz</span> · <span>Quien escribe</span></p>`);
+    lect.insertAdjacentHTML('afterend', `<div class="cp-conversacion oculto"><p class="tenue cp-conv-nota">La conversación tal como se dio, antes de la versión preliminar.</p>${contrapuntos.conversacionHTML(e.datos?.turnos)}</div>`);
+    cont.querySelector('.cp-conmutador').addEventListener('click', ev => {
+      const b = ev.target.closest('[data-cpv]');
+      if (!b) return;
+      const ver = b.dataset.cpv;
+      vcp.classList.toggle('limpia', ver === 'limpia');
+      lect.classList.toggle('oculto', ver === 'conversacion');
+      cont.querySelector('.cp-conversacion').classList.toggle('oculto', ver !== 'conversacion');
+      cont.querySelector('.cp-leyenda-entrega').classList.toggle('oculto', ver !== 'color');
+      b.parentElement.querySelectorAll('button').forEach(x => { x.classList.toggle('on', x === b); x.setAttribute('aria-selected', x === b); });
+    });
+  }
+
   activarReacciones(cont.querySelector('#reacciones'), reacciones);
   await montarComentarios(cont.querySelector('#comentarios'), e);
   // Desde una notificación de comentario: ir a los comentarios.
@@ -187,7 +213,7 @@ function enlaceRespuestas(e) {
   if (e.dinamica === 'consignas' && e.item_id) return `<a class="enlace-respuestas" href="#/consignas/${encodeURIComponent(e.item_id)}">Ver los textos de esta consigna</a>`;
   const href = e.dinamica === 'reto' && e.reto_fecha ? `#/muro?reto=${e.reto_fecha}`
     : e.item_id && !e.item_id.startsWith('propio-') ? `#/muro?dinamica=${encodeURIComponent(e.dinamica)}&item=${encodeURIComponent(e.item_id)}` : '';
-  const a = { reto: 'a este reto', maraton: 'a esta carta', poema: 'a este poema', s7: 'a este texto', fallar: 'a este texto', pliegues: 'a este texto', 'correo-secretos': 'a este secreto', 'juego-de-dados': 'a esta mesa', definicional: 'a esta frase', fachadas: 'a esta fachada' }[e.dinamica] || 'a esta consigna';
+  const a = { reto: 'a este reto', maraton: 'a esta carta', poema: 'a este poema', s7: 'a este texto', fallar: 'a este texto', pliegues: 'a este texto', 'correo-secretos': 'a este secreto', 'juego-de-dados': 'a esta mesa', definicional: 'a esta frase', fachadas: 'a esta fachada', contrapuntos: 'a esta voz' }[e.dinamica] || 'a esta consigna';
   return href ? `<a class="enlace-respuestas" href="${href}">Ver todas las respuestas ${a}</a>` : '';
 }
 
@@ -229,4 +255,12 @@ function refFachada(e, fa) {
     <div><b>Fachadas</b>${esc(d.titulo_fachada || 'Una fachada')}${n ? ` · ${n} puntos` : ''}${d.credito ? `<span class="fa-ref-credito">${esc(d.credito)}</span>` : ''}${enlaceRespuestas(e)}</div>
     ${fa.figuraHTML(d)}
   </div>`;
+}
+
+// Contrapuntos: con quién se conversó (la voz se revela en la entrega; su nombre no hace parte de la historia).
+function refContrapunto(e, cp) {
+  const d = e.datos || {};
+  const t = Array.isArray(d.turnos) ? d.turnos : [];
+  const r = t.filter(x => typeof x?.r === 'string').length;
+  return `<div class="consigna-ref cp-ref"><b>La voz</b>${d.banco?.revelacion ? esc(d.banco.revelacion) : d.banco ? cp.vozHTML(d.banco) : 'Una voz'}${t.length ? ` · ${r} ${r === 1 ? 'respuesta' : 'respuestas'}` : ''}${enlaceRespuestas(e)}</div>`;
 }

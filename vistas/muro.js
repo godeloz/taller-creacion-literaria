@@ -6,7 +6,7 @@ import { tarjetaEntrega, vacio, ICONO_DINAMICA, colorTexto, acordeonReto } from 
 import { miAsignacion, estadoDe } from '../nucleo/consignas.js';
 
 // Segundo nivel del muro: las respuestas a un mismo elemento de una dinámica.
-const TODOS = { reto: 'Todos los días', maraton: 'Todas las cartas', poema: 'Todos los poemas', cutup: 'Todos los juegos', s7: 'Todos los textos', forma: 'Todas las consignas', fallar: 'Todos los textos', pliegues: 'Todos los textos', consignas: 'Todas las consignas', 'correo-secretos': 'Todos los secretos', 'juego-de-dados': 'Todas las mesas', fachadas: 'Todas las fachadas' };
+const TODOS = { reto: 'Todos los días', maraton: 'Todas las cartas', poema: 'Todos los poemas', cutup: 'Todos los juegos', s7: 'Todos los textos', forma: 'Todas las consignas', fallar: 'Todos los textos', pliegues: 'Todos los textos', consignas: 'Todas las consignas', 'correo-secretos': 'Todos los secretos', 'juego-de-dados': 'Todas las mesas', fachadas: 'Todas las fachadas', contrapuntos: 'Todas las voces' };
 const PROPIOS = '_propios';
 // En estas dinámicas, las respuestas a un texto se abren cuando uno publica la suya.
 const A_CIEGAS = ['fallar', 'consignas'];
