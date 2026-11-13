@@ -103,6 +103,10 @@ function describir(n) {
         : `Su racha de ${b(d.actual + (d.actual === 1 ? ' día' : ' días'))} se pierde hoy a medianoche. Publique el reto para mantenerla` };
     case 'racha-perdida':
       return { ico: 'llama', href: '#/reto', html: `Perdió su racha de ${b(d.n + (d.n === 1 ? ' día' : ' días'))}. Escriba el reto de hoy para empezar otra` };
+    case 'sugerencias':
+      return { ico: 'lapiz', href: `${aTexto}?sugerencias`, html: `El tutor le sugirió ${d.n > 1 ? `${d.n} cambios` : d.n === 1 ? 'un cambio' : 'cambios'} en ${texto(n)}`, extra: 'Puede aceptarlos o rechazarlos uno por uno' };
+    case 'sug-resuelta':
+      return { ico: 'check', href: aTexto, html: `${quien(a0)} revisó sus cambios sugeridos en ${texto(n)}`, extra: `Aceptó ${d.aceptados ?? 0} de ${d.total ?? 0}` };
     case 'archivo-enviado':
       return { ico: 'archivo', href: aTexto, html: `El tutor envió ${texto(n)} a su archivo` };
     case 'archivo-publicado':

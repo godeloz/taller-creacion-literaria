@@ -379,6 +379,14 @@ export async function crearApiDemo() {
       const e = db.entregas.find(x => x.id === entrega_id);
       if (e && !e.archivada_en) notifSumar(e.autor, 'revisado', `rev:${e.id}`, { actor: por, entrega_id: e.id, cuando });
     },
+    sugerencias(s) {
+      const e = db.entregas.find(x => x.id === s.entrega_id);
+      if (e && !e.archivada_en) notifSumar(e.autor, 'sugerencias', `sug:${e.id}:${s.id}`, { actor: s.tutor, entrega_id: e.id, datos: { n: s.cambios.filter(c => c.estado === 'pendiente').length } });
+    },
+    sugResuelta(s, e) {
+      notifSumar(s.tutor, 'sug-resuelta', `sug-res:${s.id}`, { actor: e.autor, entrega_id: e.id, grupo_id: e.grupo_id,
+        datos: { aceptados: s.cambios.filter(c => c.estado === 'aceptado').length, total: s.cambios.length } });
+    },
     insignia(usuario, slug, por = null) {
       notifSumar(usuario, 'insignia', `insig:${slug}`, { actor: por, datos: { insignia: slug } });
     },
@@ -826,6 +834,74 @@ export async function crearApiDemo() {
         c.ancla = { inicio: a.inicio, fin: a.fin, cita: String(a.cita).slice(0, 2000), ...(a.antes ? { antes: String(a.antes).slice(0, 2000) } : {}) };
       }
       guardar();
+    },
+    // ---------- cambios sugeridos (mismas reglas que 21-cambios-sugeridos.sql) ----------
+    async sugerencias(entrega_id) {
+      const e = db.entregas.find(x => x.id === entrega_id);
+      if (!e) return [];
+      return (db.sugerencias || []).filter(s => s.entrega_id === entrega_id && (tutor() || (e.autor === yo.id && s.estado !== 'borrador')))
+        .map(s => JSON.parse(JSON.stringify(s))).sort((a, b) => b.creado.localeCompare(a.creado));
+    },
+    async guardarSugerencia({ id, ...c }) {
+      if (!tutor()) throw new Error('No tiene permiso para hacer esto.');
+      db.sugerencias ||= [];
+      let s;
+      if (id) {
+        s = db.sugerencias.find(x => x.id === id);
+        if (!s) throw new Error('Estas sugerencias ya no están disponibles.');
+        if (s.estado === 'resuelta') throw new Error('Esta ronda ya terminó: abra una nueva.');
+        if (c.estado === 'resuelta') throw new Error('Solo el autor termina una ronda.');
+        if (s.estado === 'enviada' && s.cambios.some(x => x.estado === 'aceptado' || x.estado === 'rechazado')) throw new Error('El autor ya empezó a revisar estos cambios.');
+        const antes = s.estado;
+        for (const k of ['estado', 'base', 'cambios', 'mensaje']) if (k in c) s[k] = c[k];
+        if (s.estado === 'enviada' && antes === 'borrador') { s.enviada_en = ahora(); avisar.sugerencias(s); }
+      } else {
+        const e = db.entregas.find(x => x.id === c.entrega_id);
+        if (!e || e.autor === yo.id || e.archivada_en) throw new Error('En este texto no se pueden sugerir cambios.');
+        if (db.sugerencias.some(x => x.entrega_id === e.id && (x.estado === 'borrador' || x.estado === 'enviada'))) throw new Error('Ya hay una ronda abierta en este texto.');
+        s = { id: crypto.randomUUID(), entrega_id: e.id, tutor: yo.id, estado: c.estado === 'enviada' ? 'enviada' : 'borrador', base: c.base || '', cambios: c.cambios || [],
+          mensaje: c.mensaje || null, creado: ahora(), enviada_en: c.estado === 'enviada' ? ahora() : null, resuelta_en: null };
+        db.sugerencias.push(s);
+        if (s.estado === 'enviada') avisar.sugerencias(s);
+      }
+      s.actualizado = ahora();
+      emitir('sugerencias', 'UPDATE', s);
+      return JSON.parse(JSON.stringify(s));
+    },
+    async descartarSugerencia(id) {
+      if (!tutor()) throw new Error('No tiene permiso para hacer esto.');
+      const s = (db.sugerencias || []).find(x => x.id === id);
+      if (s && s.estado !== 'borrador') throw new Error('Solo se descarta una ronda que no se ha enviado.');
+      db.sugerencias = (db.sugerencias || []).filter(x => x.id !== id);
+      guardar();
+    },
+    async resolverSugerencia(id, { cambios, base, texto = null, vista = null, datos = null }) {
+      const s = (db.sugerencias || []).find(x => x.id === id);
+      if (!s) throw new Error('Estas sugerencias ya no están disponibles.');
+      const e = db.entregas.find(x => x.id === s.entrega_id);
+      if (!e || e.autor !== yo.id) throw new Error('No tiene permiso para hacer esto.');
+      if (s.estado !== 'enviada') throw new Error('Estas sugerencias ya no están abiertas.');
+      if (e.archivada_en) throw new Error('El texto está en el archivo.');
+      s.cambios = s.cambios.map(c => {
+        const x = (cambios || []).find(y => y.id === c.id);
+        if (c.estado !== 'pendiente' || !x) return c;
+        const est = ['pendiente', 'aceptado', 'rechazado', 'caduco'].includes(x.estado) ? x.estado : 'pendiente';
+        return est === 'pendiente' && Number.isInteger(x.inicio) && Number.isInteger(x.fin) ? { ...c, inicio: x.inicio, fin: x.fin } : { ...c, estado: est };
+      });
+      if (base != null) s.base = base;
+      if (vista != null) {
+        // se acepta aunque el texto esté fijo y sin límite de palabras (como en 21)
+        e.vista = vista; if (texto != null) e.texto = texto; if (datos != null) e.datos = datos;
+        e.palabras = contarPalabras(e.texto); e.editada = true; e.actualizado = ahora();
+        emitir('entregas', 'UPDATE', e);
+      }
+      const quedan = s.cambios.filter(c => c.estado === 'pendiente').length;
+      s.estado = quedan ? 'enviada' : 'resuelta';
+      s.resuelta_en = quedan ? null : ahora();
+      s.actualizado = ahora();
+      if (!quedan) avisar.sugResuelta(s, e);
+      emitir('sugerencias', 'UPDATE', s);
+      return s.estado;
     },
     async borrarComentario(id) {
       const c = db.comentarios.find(x => x.id === id);

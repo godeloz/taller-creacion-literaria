@@ -17,7 +17,7 @@ export default async function vistaEntrega(cont, { params, query = {} }) {
   // Los textos de las consignas: la lectura crítica arma también su encabezado.
   if (e.dinamica === 'consignas' && e.item_id) {
     const { default: lecturaCritica } = await import('./lectura-critica.js');
-    return lecturaCritica(cont, e, { nota: query.nota });
+    return lecturaCritica(cont, e, { nota: query.nota, sugerencias: 'sugerencias' in query });
   }
   const d = dinamica(e.dinamica);
   let consigna = '';
@@ -159,6 +159,7 @@ export default async function vistaEntrega(cont, { params, query = {} }) {
   const { default: lecturaCritica } = await import('./lectura-critica.js');
   return lecturaCritica(cont, e, {
     nota: query.nota,
+    sugerencias: 'sugerencias' in query,   // desde el aviso: abrir los cambios sugeridos
     volver: `<a class="btn btn-fantasma btn-chico" href="#/muro">${icono('izquierda', 16)}Muro</a>`,
     acciones: `${mia && !e.archivada_en && e.dinamica === 'fallar' && conFinal ? `<a class="btn btn-chico btn-fantasma" href="#/d/fallar/${encodeURIComponent(e.item_id)}?autora">${icono('libro', 16)}Versión final</a>` : ''}
       ${mia && !e.archivada_en ? `<a class="btn btn-chico" href="#/editar/${e.id}">${icono('lapiz', 16)}${e.dinamica === 'fallar' && !e.item_id?.startsWith('propio-') ? 'Explicaciones' : 'Editar'}</a>` : ''}`,

@@ -127,7 +127,7 @@ export function conversacionHTML(turnos = []) {
     ${t?.r === null || t?.r === undefined ? '<p class="cp-conv-silencio">Silencio</p>' : `<p class="cp-conv-resp">${esc(t.r)}</p>`}`).join('')}</div>`;
 }
 
-function vistaHTML(d) {
+export function vistaHTML(d) {
   return `<div class="v-contrapuntos">${coloreadoOrg(d.historia, deTramos(d.tramos, d.historia.length))}</div><p class="v-credito">${esc(creditoDe(d.banco))}</p>`;
 }
 

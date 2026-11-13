@@ -327,6 +327,23 @@ export function crearApiSupabase(CONFIG) {
     async reubicarNotas(entrega_id, cambios) {
       ok(await sb.rpc('reubicar_notas', { p_entrega: entrega_id, p_anclas: cambios }));
     },
+    // Cambios sugeridos (21-cambios-sugeridos.sql): rondas de un texto. El tutor las ve todas;
+    // el autor, las enviadas y las terminadas.
+    async sugerencias(entrega_id) {
+      return ok(await sb.from('sugerencias').select('*').eq('entrega_id', entrega_id).order('creado', { ascending: false })) || [];
+    },
+    async guardarSugerencia({ id, ...campos }) {
+      const f = {};
+      for (const k of ['entrega_id', 'estado', 'base', 'cambios', 'mensaje']) if (k in campos) f[k] = campos[k];
+      if (id) { delete f.entrega_id; return ok(await sb.from('sugerencias').update(f).eq('id', id).select().single()); }
+      return ok(await sb.from('sugerencias').insert(f).select().single());
+    },
+    async descartarSugerencia(id) {
+      ok(await sb.from('sugerencias').delete().eq('id', id));
+    },
+    async resolverSugerencia(id, { cambios, base, texto = null, vista = null, datos = null }) {
+      return ok(await sb.rpc('resolver_sugerencia', { p_id: id, p_cambios: cambios, p_base: base, p_texto: texto, p_vista: vista, p_datos: datos }));
+    },
 
     // ---------- insignias ----------
     async insignias() {

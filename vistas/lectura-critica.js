@@ -22,6 +22,7 @@ import { descargarTXT, imprimir } from '../nucleo/exportar.js';
 import { botonBorrar, franjaArchivo, activarArchivo, irA } from '../nucleo/archivo.js';
 import { motivoTextoFijo } from '../nucleo/consignas.js';
 import { textoCompleto, posicion, pintarMarcas, ubicar, baseDe, textoDeHTML } from '../nucleo/anclas.js';
+import { SUGERIBLES } from '../nucleo/sugerencias.js';
 
 export const TIPOS = {
   acierto: { nombre: 'Acierto', ico: 'check' },
@@ -74,7 +75,7 @@ export default async function lecturaCritica(cont, e, { nota = null, ...op } = {
   };
   await cargar();
 
-  const baseHTML = baseDe(e);
+  let baseHTML = baseDe(e);   // cambia si el autor acepta cambios sugeridos
   const etiquetaAutor = e.perfil?.nombre || 'Autor/a';
 
   cont.innerHTML = `
@@ -100,6 +101,7 @@ export default async function lecturaCritica(cont, e, { nota = null, ...op } = {
       <span class="lc-ayuda tenue" id="lc-ayuda"></span>
       <span class="espaciador"></span>
       <span id="lc-nuevas"></span>
+      <span class="lc-sug" id="lc-sug"></span>
       <button class="btn btn-chico btn-fantasma lc-solo-tactil" id="lc-toques">${icono('lapiz', 15)}Marcar con toques</button>
       ${tutorYo ? `<button class="btn btn-chico" id="lc-revisado"></button>` : ''}
     </div>
@@ -217,7 +219,9 @@ export default async function lecturaCritica(cont, e, { nota = null, ...op } = {
 
   // ---------- pintar todo ----------
   let temporal = null;   // primer toque en «Marcar con toques»
+  let externo = false;   // el modo de cambios sugeridos está usando el texto y la columna de notas
   function pintar() {
+    if (externo) return;
     const lista = notasVisibles();
     const marcas = lista.filter(x => x.pos).map(x => ({ id: x.c.id, inicio: x.pos.inicio, fin: x.pos.fin, n: x.n, clase: claseNota(x.c) }));
     if (temporal) marcas.push({ id: '_t', ...temporal, temporal: true, clase: 'temporal' });
@@ -290,6 +294,7 @@ export default async function lecturaCritica(cont, e, { nota = null, ...op } = {
   pintar();
   op.alMontar?.(cont, textoEl);
 
+
   // Desde una notificación: mostrar la nota que se avisa (si el modo la escondía, se pasa a «Todas»).
   if (nota) {
     const c = comentarios.find(x => x.id === nota);
@@ -323,6 +328,7 @@ export default async function lecturaCritica(cont, e, { nota = null, ...op } = {
   }
   let pendiente = null;
   function ubicarBoton() {
+    if (externo) { botonComentar.hidden = true; return; }
     if (modoToques) return;
     pendiente = rangoActual();
     if (!pendiente) { botonComentar.hidden = true; return; }
@@ -382,6 +388,7 @@ export default async function lecturaCritica(cont, e, { nota = null, ...op } = {
   }
   $('#lc-toques', cont).addEventListener('click', () => activarToques(!modoToques));
   textoEl.addEventListener('click', ev => {
+    if (externo) return;
     if (modoToques) {
       ev.preventDefault();
       const w = palabraEn(ev.clientX, ev.clientY);
@@ -704,6 +711,27 @@ export default async function lecturaCritica(cont, e, { nota = null, ...op } = {
     avisarNuevas();
   });
 
+  // Cambios sugeridos por el tutor (solo él y el autor del texto los ven): vistas/sugerencias.js.
+  let quitarSug = null;
+  if (SUGERIBLES.has(e.dinamica) && !e.archivada_en && ((tutorYo && !mia) || mia)) {
+    const { montarSugerencias } = await import('./sugerencias.js');
+    quitarSug = await montarSugerencias({
+      cont, e, textoEl, notasEl, slot: $('#lc-sug', cont), abrir: !!op.sugerencias,
+      control: {
+        baseHTML: () => baseHTML,
+        tomar() {
+          externo = true;
+          if (modoToques) activarToques(false);
+          botonComentar.hidden = true;
+          if (!sheet.hidden) cerrarSheet();
+          cont.classList.add('lc-externo');
+        },
+        soltar() { externo = false; cont.classList.remove('lc-externo'); pintar(); },
+        async textoCambio() { baseHTML = baseDe(e); await cargar(); },
+      },
+    }).catch(err => { console.warn('Sugerencias', err); return null; });
+  }
+
   return () => {
     cont.removeEventListener('click', alClic);
     cont.removeEventListener('submit', alEnviar);
@@ -711,5 +739,6 @@ export default async function lecturaCritica(cont, e, { nota = null, ...op } = {
     window.removeEventListener('scroll', alDesplazar);
     clearTimeout(tSel);
     quitar1?.();
+    quitarSug?.();
   };
 }

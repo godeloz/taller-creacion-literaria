@@ -157,7 +157,7 @@ export function tramosIguales(viejo, nuevo) {
 
 // Lleva una posición del texto viejo al nuevo. Dentro de un tramo cambiado, «inicio» va al comienzo
 // de lo que lo reemplazó y «fin», al final (así el fragmento abarca lo que se reescribió en él).
-function mapear(iguales, p, lado, largoNuevo) {
+export function mapear(iguales, p, lado, largoNuevo) {
   let antes = null;
   for (let k = 0; k < iguales.length; k++) {
     const [a, b, L] = iguales[k];
