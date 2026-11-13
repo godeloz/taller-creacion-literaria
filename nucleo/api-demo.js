@@ -809,6 +809,24 @@ export async function crearApiDemo() {
       const s = new Set(ids);
       return [...new Set(db.comentarios.filter(c => c.autor === yo.id && s.has(c.entrega_id)).map(c => c.entrega_id))];
     },
+    // Al editar un texto: las anclas de todas sus notas (también las que su autor no puede leer) y su cambio.
+    async notasParaReubicar(entrega_id) {
+      const e = db.entregas.find(x => x.id === entrega_id);
+      if (!e || (e.autor !== yo.id && !tutor())) throw new Error('No tiene permiso para hacer esto.');
+      return db.comentarios.filter(c => c.entrega_id === entrega_id && !c.padre_id && c.ancla).map(c => ({ id: c.id, ancla: { ...c.ancla } }));
+    },
+    async reubicarNotas(entrega_id, cambios) {
+      const e = db.entregas.find(x => x.id === entrega_id);
+      if (!e || (e.autor !== yo.id && !tutor())) throw new Error('No tiene permiso para hacer esto.');
+      for (const { id, ancla: a } of cambios || []) {
+        const c = db.comentarios.find(x => x.id === id && x.entrega_id === entrega_id && !x.padre_id && x.ancla);
+        if (!c || !a) continue;
+        if (a.suelta) { c.ancla = { ...c.ancla, suelta: true }; continue; }
+        if (!(Number.isInteger(a.inicio) && Number.isInteger(a.fin) && a.inicio >= 0 && a.fin > a.inicio && a.cita)) continue;
+        c.ancla = { inicio: a.inicio, fin: a.fin, cita: String(a.cita).slice(0, 2000), ...(a.antes ? { antes: String(a.antes).slice(0, 2000) } : {}) };
+      }
+      guardar();
+    },
     async borrarComentario(id) {
       const c = db.comentarios.find(x => x.id === id);
       if (!c || (c.autor !== yo.id && !tutor())) throw new Error('No puede borrar este comentario');

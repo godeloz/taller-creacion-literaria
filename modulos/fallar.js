@@ -14,6 +14,7 @@ import { estado, esTutor, soyVisible } from '../nucleo/estado.js';
 import { esc, local, debounce, confirmar, aviso, errorAviso, hace, contarPalabras } from '../nucleo/ui.js';
 import { icono } from '../nucleo/iconos.js';
 import { publicarEntrega } from '../nucleo/publicar.js';
+import { reubicarNotas } from '../nucleo/anclas.js';
 import { vacio } from '../nucleo/componentes.js';
 
 const SLUG = 'fallar';
@@ -1171,6 +1172,8 @@ async function resultado(cont, { entrega = null, verAutora = false, soloAutora =
       try {
         const e = armarEntrega({ chars, expl, titulo: entrega.titulo || '', itemId, base: { titulo: d.base_titulo || B.titulo, autor: d.base_autor || B.autor, propio } });
         await estado.api.editarEntrega(entrega.id, { titulo: e.titulo, texto: e.texto, vista: e.vista, datos: e.datos });
+        await reubicarNotas(entrega, e.vista, e.texto);
+        entrega.vista = e.vista; entrega.texto = e.texto;
         entrega.datos = e.datos;
         expl = { ...e.datos.expl };
         $('#fr-estado').textContent = 'Guardado';

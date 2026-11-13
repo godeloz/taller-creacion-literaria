@@ -2,11 +2,13 @@
 import { estado, claseActiva } from './estado.js';
 import { aviso } from './ui.js';
 import { revisarInsigniasNuevas } from './componentes.js';
+import { reubicarNotas } from './anclas.js';
 
 // e: { dinamica, item_id, titulo, texto, vista, datos, modulo_version }
 export async function publicarEntrega(e, { entregaExistente = null, irA = null } = {}) {
   if (entregaExistente) {
     await estado.api.editarEntrega(entregaExistente.id, { titulo: e.titulo, texto: e.texto, vista: e.vista, datos: e.datos });
+    await reubicarNotas(entregaExistente, e.vista, e.texto);   // las notas sobre fragmentos siguen al texto
     aviso('Cambios guardados.', 'exito');
     location.hash = `#/entrega/${entregaExistente.id}`;
     return entregaExistente.id;

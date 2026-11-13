@@ -1,12 +1,19 @@
-// Lectura crítica de un texto de consigna: se selecciona un fragmento y se comenta.
-// Notas numeradas al margen, modos de lectura (Limpio, Mis notas, Todas, Tutor),
-// «Coincido», respuestas a un nivel (con marca Autor/a), notas del tutor con tipo
-// y visibilidad, devolución general, «Revisado» y PDF con comentarios.
-// Aquí el texto no se edita: su autor lo edita aparte (#/editar) mientras la consigna esté
-// abierta y nadie más lo haya comentado.
+// Lectura crítica de un texto (de una consigna, del reto del día o de cualquier dinámica):
+// se selecciona un fragmento y se comenta. Notas numeradas al margen, modos de lectura
+// (Limpio, Mis notas, Todas, Tutor), «Coincido», respuestas a un nivel (con marca Autor/a),
+// notas del tutor con tipo y visibilidad, devolución general, «Revisado» y PDF con comentarios.
+// Aquí el texto no se edita: su autor lo edita aparte (#/editar). En las consignas, mientras
+// esté abierta y nadie más lo haya comentado; en lo demás, cuando quiera (las notas se
+// reubican en el texto nuevo: nucleo/anclas.js).
+//
+// Las consignas arman aquí su encabezado. Para las demás entregas, vistas/entrega.js pasa en `op`:
+// volver (botón de regreso), acciones (Editar y otros botones), etiqueta (la dinámica), ref
+// (la referencia bajo el título), contexto (nombre para el PDF), alPintar(textoEl) (se llama
+// cada vez que se repinta el texto: los conmutadores de cada dinámica vuelven a aplicar su
+// estado) y alMontar(cont, textoEl).
 import { estado, esTutor, soloTutor, soyVisible } from '../nucleo/estado.js';
 import {
-  esc, enlazar, sanitizar, parrafos, hace, fechaHora, aviso, errorAviso, confirmar, modal, local, copiar,
+  esc, enlazar, hace, fechaHora, aviso, errorAviso, confirmar, modal, local, copiar,
   abrirImprimible, $,
 } from '../nucleo/ui.js';
 import { icono } from '../nucleo/iconos.js';
@@ -14,6 +21,7 @@ import { avatar, barraReacciones, activarReacciones, etiquetaSoloTutor, revisarI
 import { descargarTXT, imprimir } from '../nucleo/exportar.js';
 import { botonBorrar, franjaArchivo, activarArchivo, irA } from '../nucleo/archivo.js';
 import { motivoTextoFijo } from '../nucleo/consignas.js';
+import { textoCompleto, posicion, pintarMarcas, ubicar, baseDe, textoDeHTML } from '../nucleo/anclas.js';
 
 export const TIPOS = {
   acierto: { nombre: 'Acierto', ico: 'check' },
@@ -24,105 +32,33 @@ const MODOS_LECTURA = [['limpio', 'Limpio'], ['mias', 'Mis notas'], ['todas', 'T
 const esDeTutor = c => c.perfil?.rol === 'tutor';
 
 // ---------------------------------------------------------------------
-// Posiciones en el texto: se cuentan los caracteres del texto tal como se ve
-// (sin los números de las notas). Como el texto publicado no cambia, son estables.
-// ---------------------------------------------------------------------
-function nodosTexto(raiz) {
-  const w = document.createTreeWalker(raiz, NodeFilter.SHOW_TEXT, {
-    acceptNode: n => (n.parentElement?.closest('.lc-n') ? NodeFilter.FILTER_REJECT : NodeFilter.FILTER_ACCEPT),
-  });
-  const out = [];
-  for (let n = w.nextNode(); n; n = w.nextNode()) out.push(n);
-  return out;
-}
-function textoCompleto(raiz) { return nodosTexto(raiz).map(t => t.data).join(''); }
-function posicion(raiz, nodo, off) {
-  const r = document.createRange();
-  r.setStart(raiz, 0);
-  r.setEnd(nodo, off);
-  let total = 0;
-  for (const t of nodosTexto(raiz)) {
-    if (t === nodo) return total + off;
-    if (!r.intersectsNode(t)) break;
-    total += t.data.length;
-  }
-  return total;
-}
-
-// Pinta las marcas sobre el texto base. lista: [{ id, inicio, fin, n, clase }]
-function pintarMarcas(raiz, baseHTML, lista) {
-  raiz.innerHTML = baseHTML;
-  if (!lista.length) return;
-  const cortes = [...new Set(lista.flatMap(x => [x.inicio, x.fin]))];
-  let pos = 0;
-  for (const t of nodosTexto(raiz)) {
-    const L = t.data.length, ini = pos;
-    cortes.filter(c => c > ini && c < ini + L).sort((a, b) => b - a).forEach(c => t.splitText(c - ini));
-    pos += L;
-  }
-  pos = 0;
-  for (const t of nodosTexto(raiz)) {
-    const s = pos, f = pos + t.data.length;
-    pos = f;
-    if (!t.data.trim()) continue;
-    const cubren = lista.filter(x => x.inicio < f && x.fin > s);
-    if (!cubren.length) continue;
-    const m = document.createElement('mark');
-    const clases = new Set(['lc-marca']);
-    cubren.forEach(x => (x.clase || '').split(' ').filter(Boolean).forEach(k => clases.add(k)));
-    if (cubren.filter(x => !x.temporal).length > 1) clases.add('varias');
-    m.className = [...clases].join(' ');
-    m.dataset.ids = cubren.filter(x => !x.temporal).map(x => x.id).join(' ');
-    t.replaceWith(m);
-    m.appendChild(t);
-  }
-  for (const x of lista) {
-    if (x.temporal || !x.n) continue;
-    const ms = [...raiz.querySelectorAll('mark.lc-marca')].filter(m => m.dataset.ids.split(' ').includes(x.id));
-    let ult = ms[ms.length - 1];
-    if (!ult) continue;
-    while (ult.nextSibling?.classList?.contains('lc-n')) ult = ult.nextSibling;   // varias notas que terminan en el mismo punto
-    const sup = document.createElement('sup');
-    sup.className = 'lc-n';
-    sup.dataset.ids = x.id;
-    sup.textContent = x.n;
-    ult.after(sup);
-  }
-}
-
-// Ubica el fragmento de una nota; si la posición no coincide con la cita, la busca.
-function ubicar(completo, a) {
-  if (!a) return null;
-  if (completo.slice(a.inicio, a.fin) === a.cita) return { inicio: a.inicio, fin: a.fin };
-  const i = completo.indexOf(a.cita);
-  return i >= 0 ? { inicio: i, fin: i + a.cita.length } : null;
-}
-
-// ---------------------------------------------------------------------
-export default async function lecturaCritica(cont, e, { nota = null } = {}) {
+export default async function lecturaCritica(cont, e, { nota = null, ...op } = {}) {
   const api = estado.api;
   const yo = estado.yo.id;
   const tutorYo = esTutor();
   const mia = e.autor === yo;
   const puedeDescargar = mia || tutorYo;
+  const esConsigna = e.dinamica === 'consignas' && !!e.item_id;
 
   const [consigna, vistoAntes, reacciones] = await Promise.all([
-    api.consigna(e.item_id).catch(() => null),
+    esConsigna ? api.consigna(e.item_id).catch(() => null) : null,
     api.abrirLectura(e.id).catch(() => null),
     api.reacciones([e.id]).catch(() => []),
   ]);
   let revisado = mia || tutorYo ? (await api.revisiones([e.id]).catch(() => []))[0] || null : null;
   // ¿Su autor todavía puede editarlo? ('' = sí)
-  const motivoFijo = mia ? await motivoTextoFijo(e, consigna) : 'no';
+  const motivoFijo = esConsigna && mia ? await motivoTextoFijo(e, consigna) : 'no';
 
-  // Textos de la misma consigna: avance («ha comentado X de N») y siguiente texto.
+  // Textos de la misma consigna (o del mismo reto del día): avance («ha comentado X de N») y siguiente texto.
   let recorrido = [], hechos = new Set();
-  if (tutorYo) {
-    recorrido = (await api.entregas({ dinamica: 'consignas', item_id: e.item_id, incluirOcultas: true }).catch(() => []))
+  const delMismo = esConsigna ? { dinamica: 'consignas', item_id: e.item_id }
+    : e.dinamica === 'reto' && e.reto_fecha && !e.archivada_en ? { dinamica: 'reto', reto_fecha: e.reto_fecha } : null;
+  if (delMismo && tutorYo) {
+    recorrido = (await api.entregas({ ...delMismo, incluirOcultas: true }).catch(() => []))
       .filter(x => (x.grupo_id ?? x.perfil?.grupo_id) === (e.grupo_id ?? e.perfil?.grupo_id));
     hechos = new Set((await api.revisiones(recorrido.map(x => x.id)).catch(() => [])).map(r => r.entrega_id));
-  } else if (!mia) {
-    recorrido = (await api.entregas({ dinamica: 'consignas', item_id: e.item_id }).catch(() => [])).filter(x => x.autor !== yo);
+  } else if (delMismo && !mia) {
+    recorrido = (await api.entregas(delMismo).catch(() => [])).filter(x => x.autor !== yo);
     hechos = new Set(await api.comentadas(recorrido.map(x => x.id)).catch(() => []));
   }
   recorrido.sort((a, b) => a.creado.localeCompare(b.creado));
@@ -138,17 +74,19 @@ export default async function lecturaCritica(cont, e, { nota = null } = {}) {
   };
   await cargar();
 
-  const baseHTML = e.vista ? sanitizar(e.vista) : parrafos(e.texto);
+  const baseHTML = baseDe(e);
   const etiquetaAutor = e.perfil?.nombre || 'Autor/a';
 
   cont.innerHTML = `
   <div class="contenedor lc">
     <div class="fila lc-arriba">
       ${e.archivada_en ? `<a class="btn btn-fantasma btn-chico" href="${mia ? '#/archivo' : '#/tutor/archivo'}">${icono('izquierda', 16)}${mia ? 'Mi archivo' : 'Archivo'}</a>`
-        : `<a class="btn btn-fantasma btn-chico" href="#/consignas/${encodeURIComponent(e.item_id)}">${icono('izquierda', 16)}Consigna</a>`}
+        : esConsigna ? `<a class="btn btn-fantasma btn-chico" href="#/consignas/${encodeURIComponent(e.item_id)}">${icono('izquierda', 16)}Consigna</a>`
+        : op.volver || ''}
       <span id="lc-avance"></span>
       <span class="espaciador"></span>
       ${!motivoFijo ? `<a class="btn btn-chico" href="#/editar/${e.id}">${icono('lapiz', 16)}Editar</a>` : ''}
+      ${op.acciones || ''}
       ${puedeDescargar ? `<button class="btn btn-chico btn-fantasma" id="b-copiar">${icono('copiar', 16)}Copiar</button>
         <button class="btn btn-chico btn-fantasma" id="b-txt">${icono('descargar', 16)}.txt</button>
         <button class="btn btn-chico btn-fantasma" id="b-pdf">${icono('imprimir', 16)}PDF</button>
@@ -172,16 +110,18 @@ export default async function lecturaCritica(cont, e, { nota = null } = {}) {
             <a href="#/perfil/${e.autor}" style="display:flex;gap:12px;align-items:center;text-decoration:none">
               ${avatar(e.perfil, 44)}
               <div><div class="autor-nombre" style="font-size:17px">${esc(e.perfil?.nombre || '')}</div>
-              <div class="autor-meta">${esc(fechaHora(e.creado))}${e.estado === 'oculta' ? ' · oculto para el grupo' : ''}</div>
+              <div class="autor-meta">${esc(fechaHora(e.creado))}${e.editada ? ` · <span class="marca-editada">editado</span>` : ''}${e.estado === 'oculta' ? ' · oculto para el grupo' : ''}</div>
               ${etiquetaSoloTutor(e.perfil) ? `<div style="margin-top:4px">${etiquetaSoloTutor(e.perfil)}</div>` : ''}</div>
             </a>
             <span class="espaciador"></span>
             <span id="lc-revisado-pill"></span>
+            ${op.etiqueta || ''}
           </div>
           ${e.titulo ? `<h1>${esc(e.titulo)}</h1>` : ''}
           ${consigna ? `<div class="consigna-ref"><b>Consigna</b>${esc(consigna.titulo)}<a class="enlace-respuestas" href="#/consignas/${encodeURIComponent(e.item_id)}">Ver los textos de esta consigna</a></div>` : ''}
+          ${op.ref || ''}
           <div class="lectura lc-texto" id="lc-texto"></div>
-          <div class="tenue" style="font-size:13px;margin-top:22px">${e.palabras} palabras${!mia ? ' · el texto no se puede editar, solo comentar' : e.archivada_en ? '' : motivoFijo ? ` · ${esc(motivoFijo)}` : ' · puede editarlo mientras la consigna esté abierta y nadie lo haya comentado'}</div>
+          <div class="tenue" style="font-size:13px;margin-top:22px">${e.palabras} palabras${!esConsigna ? '' : !mia ? ' · el texto no se puede editar, solo comentar' : e.archivada_en ? '' : motivoFijo ? ` · ${esc(motivoFijo)}` : ' · puede editarlo mientras la consigna esté abierta y nadie lo haya comentado'}</div>
         </article>
         <section id="lc-devolucion"></section>
         <div style="margin-top:18px" id="reacciones">${barraReacciones(e.id, reacciones)}</div>
@@ -193,8 +133,8 @@ export default async function lecturaCritica(cont, e, { nota = null } = {}) {
   <button type="button" class="lc-comentar" id="lc-comentar" hidden>${icono('comentario', 18)}Comentar</button>
   <div class="lc-hoja-inf" id="lc-sheet" hidden></div>`;
 
-  // En el menú, estos textos pertenecen a Consignas.
-  document.querySelectorAll('.nav a').forEach(a => a.classList.toggle('activo', a.dataset.ruta === 'consignas'));
+  // En el menú, los textos de las consignas pertenecen a Consignas.
+  if (esConsigna) document.querySelectorAll('.nav a').forEach(a => a.classList.toggle('activo', a.dataset.ruta === 'consignas'));
   const textoEl = $('#lc-texto', cont);
   const notasEl = $('#lc-notas', cont);
   const sheet = $('#lc-sheet', cont);
@@ -211,7 +151,7 @@ export default async function lecturaCritica(cont, e, { nota = null } = {}) {
 
   function notasVisibles(m = modo) {
     const antes = modo; modo = m;
-    const completo = textoCompleto(Object.assign(document.createElement('div'), { innerHTML: baseHTML }));
+    const completo = textoDeHTML(baseHTML);
     const lista = raices().filter(c => c.ancla && c.tipo !== 'devolucion' && m !== 'limpio' && enModo(c))
       .map(c => ({ c, pos: ubicar(completo, c.ancla) }))
       .sort((a, b) => (a.pos?.inicio ?? 1e9) - (b.pos?.inicio ?? 1e9) || (a.pos?.fin ?? 0) - (b.pos?.fin ?? 0) || a.c.creado.localeCompare(b.c.creado))
@@ -239,7 +179,7 @@ export default async function lecturaCritica(cont, e, { nota = null } = {}) {
       <p>${enlazar(r.texto)}</p>
     </div>`;
   }
-  function tarjetaNota(c, { n = null, devol = false } = {}) {
+  function tarjetaNota(c, { n = null, devol = false, suelta = false } = {}) {
     const cs = coinc.filter(x => x.comentario_id === c.id);
     const yoCoincido = cs.some(x => x.usuario === yo);
     const nombres = cs.map(x => x.usuario === yo ? 'Usted' : estado.perfiles.find(p => p.id === x.usuario)?.nombre || '').filter(Boolean).join(', ');
@@ -250,7 +190,9 @@ export default async function lecturaCritica(cont, e, { nota = null } = {}) {
         ${n ? `<span class="lc-num">${n}</span>` : ''}${avatar(c.perfil, 26)}
         <b>${esc(c.autor === yo ? 'Usted' : c.perfil?.nombre || '')}</b>${sellos(c)}
       </div>
-      ${cita ? `<blockquote class="lc-cita" ${n ? `data-ir="${c.id}" title="Ver en el texto"` : ''}>«${esc(cita.length > 160 ? cita.slice(0, 157) + '…' : cita)}»</blockquote>` : ''}
+      ${cita ? `<blockquote class="lc-cita ${suelta ? 'suelta' : ''}" ${n && !suelta ? `data-ir="${c.id}" title="Ver en el texto"` : ''}>«${esc(cita.length > 160 ? cita.slice(0, 157) + '…' : cita)}»</blockquote>` : ''}
+      ${suelta ? `<p class="lc-cambio">${icono('info', 13)}El fragmento cambió: ya no está en el texto.</p>`
+        : c.ancla?.antes ? `<p class="lc-cambio" title="${esc(`Decía: «${c.ancla.antes}»`)}">${icono('info', 13)}El autor editó este fragmento después de la nota.</p>` : ''}
       ${c.tipo && TIPOS[c.tipo] ? `<span class="lc-tipo t-${c.tipo}">${icono(TIPOS[c.tipo].ico, 13)}${TIPOS[c.tipo].nombre}</span>` : ''}
       <p class="lc-cuerpo">${enlazar(c.texto)}</p>
       <div class="lc-pie">
@@ -280,6 +222,7 @@ export default async function lecturaCritica(cont, e, { nota = null } = {}) {
     const marcas = lista.filter(x => x.pos).map(x => ({ id: x.c.id, inicio: x.pos.inicio, fin: x.pos.fin, n: x.n, clase: claseNota(x.c) }));
     if (temporal) marcas.push({ id: '_t', ...temporal, temporal: true, clase: 'temporal' });
     pintarMarcas(textoEl, baseHTML, marcas);
+    op.alPintar?.(textoEl);
 
     const todas = raices().filter(c => c.ancla && c.tipo !== 'devolucion');
     const cuenta = m => m === 'limpio' ? '' : m === 'todas' ? todas.length : todas.filter(c => (m === 'mias' ? c.autor === yo : esDeTutor(c))).length;
@@ -292,7 +235,7 @@ export default async function lecturaCritica(cont, e, { nota = null } = {}) {
     notasEl.innerHTML = modo === 'limpio'
       ? `<div class="lc-vacio"><b>Modo Limpio</b><p>Lea el texto sin marcas ni comentarios. Cuando quiera, seleccione un fragmento para dejar su nota.</p></div>`
       : `<div class="lc-notas-cab"><span class="rotulo">Notas${lista.length ? ` · ${lista.length}` : ''}</span></div>
-        ${lista.length ? lista.map(x => tarjetaNota(x.c, { n: x.n })).join('')
+        ${lista.length ? lista.map(x => tarjetaNota(x.c, { n: x.n, suelta: !x.pos })).join('')
           : `<div class="lc-vacio"><p>${modo === 'mias' ? 'Todavía no ha dejado notas en este texto.' : modo === 'tutor' ? 'El tutor todavía no ha dejado notas.' : 'Todavía no hay notas. Seleccione un fragmento del texto para comentarlo.'}</p></div>`}`;
 
     // devolución general
@@ -345,6 +288,7 @@ export default async function lecturaCritica(cont, e, { nota = null } = {}) {
   let silencio = 0;   // no avisar de «notas nuevas» por lo que uno mismo acaba de hacer
   async function recargar() { silencio = Date.now() + 2500; await cargar(); pintar(); }
   pintar();
+  op.alMontar?.(cont, textoEl);
 
   // Desde una notificación: mostrar la nota que se avisa (si el modo la escondía, se pasa a «Todas»).
   if (nota) {
@@ -512,7 +456,7 @@ export default async function lecturaCritica(cont, e, { nota = null } = {}) {
     if (angosto()) {
       sheet.innerHTML = `<div class="lc-sheet-cab"><span class="rotulo">${sel.length === 1 ? 'Nota' : `${sel.length} notas`}</span><span class="espaciador"></span>
         <button class="btn btn-fantasma btn-chico btn-icono" data-cerrar-sheet aria-label="Cerrar">${icono('x', 18)}</button></div>
-        ${sel.map(x => tarjetaNota(x.c, { n: x.n })).join('')}`;
+        ${sel.map(x => tarjetaNota(x.c, { n: x.n, suelta: !x.pos })).join('')}`;
       sheet.hidden = false;
       requestAnimationFrame(() => sheet.classList.add('ver'));
     } else {
@@ -623,7 +567,7 @@ export default async function lecturaCritica(cont, e, { nota = null } = {}) {
     cont.querySelectorAll(`[data-nota="${id}"]`).forEach(viejo => {
       const n = viejo.querySelector('.lc-num')?.textContent;
       const nuevo = document.createElement('div');
-      nuevo.innerHTML = tarjetaNota(c, { n: n ? Number(n) : null, devol: c.tipo === 'devolucion' });
+      nuevo.innerHTML = tarjetaNota(c, { n: n ? Number(n) : null, devol: c.tipo === 'devolucion', suelta: !!viejo.querySelector('.lc-cita.suelta') });
       viejo.replaceWith(nuevo.firstElementChild);
     });
   }
@@ -723,10 +667,10 @@ export default async function lecturaCritica(cont, e, { nota = null } = {}) {
   });
 
   // ---------- descargas ----------
-  const nombre = `${e.perfil?.nombre || 'texto'} ${e.titulo || consigna?.titulo || ''}`;
+  const nombre = `${e.perfil?.nombre || 'texto'} ${e.titulo || consigna?.titulo || op.contexto || ''}`;
   $('#b-copiar', cont)?.addEventListener('click', () => copiar([e.titulo, e.texto].filter(Boolean).join('\n\n')));
   $('#b-txt', cont)?.addEventListener('click', () => descargarTXT([e], nombre));
-  $('#b-pdf', cont)?.addEventListener('click', () => imprimir([e], e.titulo || consigna?.titulo || 'Texto', e.perfil?.nombre || ''));
+  $('#b-pdf', cont)?.addEventListener('click', () => imprimir([e], e.titulo || consigna?.titulo || op.contexto || 'Texto', e.perfil?.nombre || ''));
   $('#b-pdf-notas', cont)?.addEventListener('click', () => {
     const lista = notasVisibles('todas');
     const tmp = document.createElement('div');
@@ -738,13 +682,13 @@ export default async function lecturaCritica(cont, e, { nota = null } = {}) {
     const dv = devolucion();
     const generales = raices().filter(c => !c.ancla && c.tipo !== 'devolucion');
     const cuerpo = `<h1>${esc(e.titulo || 'Sin título')}</h1>
-      <div class="meta">${esc(e.perfil?.nombre || '')} · ${esc(consigna?.titulo || 'Consigna')} · ${esc(fechaHora(e.creado))}</div>
+      <div class="meta">${esc(e.perfil?.nombre || '')} · ${esc(consigna?.titulo || op.contexto || 'Consigna')} · ${esc(fechaHora(e.creado))}</div>
       <div style="margin-top:18px">${tmp.innerHTML}</div>
       ${lista.length ? `<h2>Notas sobre el texto</h2><ol style="padding-left:1.2em">${lista.map(x => `<li style="margin-bottom:10px;font-size:11pt">
         <i>«${esc(x.c.ancla?.cita || '')}»</i><br><b>${quien(x.c)}</b>${x.c.tipo && TIPOS[x.c.tipo] ? ` · ${TIPOS[x.c.tipo].nombre}` : ''}${x.c.privado ? ' · solo para el autor' : ''}: ${esc(x.c.texto)}${resp(x.c)}</li>`).join('')}</ol>` : ''}
       ${dv ? `<h2>Devolución del tutor</h2><p>${esc(dv.texto).replace(/\n/g, '<br>')}</p>${resp(dv)}` : ''}
       ${generales.length ? `<h2>Comentarios generales</h2>${generales.map(c => `<p style="font-size:11pt"><b>${quien(c)}:</b> ${esc(c.texto)}</p>${resp(c)}`).join('')}` : ''}`;
-    abrirImprimible(`${e.titulo || consigna?.titulo || 'Texto'} · comentarios`, cuerpo);
+    abrirImprimible(`${e.titulo || consigna?.titulo || op.contexto || 'Texto'} · comentarios`, cuerpo);
   });
 
   // ---------- notas nuevas mientras se lee ----------

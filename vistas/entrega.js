@@ -1,10 +1,9 @@
-// Lectura de una entrega: texto, consigna, reacciones y comentarios.
-import { estado, esTutor, dinamica } from '../nucleo/estado.js';
-import { esc, sanitizar, parrafos, fechaHora, fechaLarga, errorAviso, confirmar, aviso, copiar } from '../nucleo/ui.js';
+// Lectura de una entrega: la referencia de cada dinámica (consigna, postal, dados, fachada, la voz…)
+// y sus conmutadores; el texto, las reacciones y las notas los pinta la lectura crítica.
+import { estado, dinamica } from '../nucleo/estado.js';
+import { esc, fechaLarga } from '../nucleo/ui.js';
 import { icono } from '../nucleo/iconos.js';
-import { avatar, etiquetaDinamica, barraReacciones, activarReacciones, montarComentarios, vacio, etiquetaSoloTutor, acordeonReto } from '../nucleo/componentes.js';
-import { descargarTXT, imprimir } from '../nucleo/exportar.js';
-import { botonBorrar, franjaArchivo, activarArchivo, irA } from '../nucleo/archivo.js';
+import { etiquetaDinamica, vacio, acordeonReto } from '../nucleo/componentes.js';
 
 export default async function vistaEntrega(cont, { params, query = {} }) {
   const id = params[0];
@@ -15,7 +14,7 @@ export default async function vistaEntrega(cont, { params, query = {} }) {
       '<a class="btn" href="#/muro">Volver al muro</a>')}</div>`;
     return;
   }
-  // Los textos de las consignas se leen en la vista de lectura crítica.
+  // Los textos de las consignas: la lectura crítica arma también su encabezado.
   if (e.dinamica === 'consignas' && e.item_id) {
     const { default: lecturaCritica } = await import('./lectura-critica.js');
     return lecturaCritica(cont, e, { nota: query.nota });
@@ -72,139 +71,102 @@ export default async function vistaEntrega(cont, { params, query = {} }) {
     const o = e.datos?.origen || {};
     consigna = `<div class="consigna-ref"><b>Frase de partida</b>${o.autor ? `Una frase de ${esc(o.autor)}${o.obra ? `, ${esc(o.obra)}` : ''}` : 'Una frase propia'}</div>`;
   }
-  const reacciones = await estado.api.reacciones([e.id]).catch(() => []);
   const mia = e.autor === estado.yo.id;
-  const puedeDescargar = mia || esTutor();
 
-  cont.innerHTML = `
-  <div class="contenedor contenedor-estrecho">
-    <div class="fila" style="margin-bottom:16px">
-      ${e.archivada_en ? `<a class="btn btn-fantasma btn-chico" href="${mia ? '#/archivo' : '#/tutor/archivo'}">${icono('izquierda', 16)}${mia ? 'Mi archivo' : 'Archivo'}</a>`
-        : e.dinamica === 'consignas' && e.item_id ? `<a class="btn btn-fantasma btn-chico" href="#/consignas/${encodeURIComponent(e.item_id)}">${icono('izquierda', 16)}Consigna</a>`
-        : `<a class="btn btn-fantasma btn-chico" href="#/muro">${icono('izquierda', 16)}Muro</a>`}
-      <span class="espaciador"></span>
-      ${mia && !e.archivada_en && e.dinamica === 'fallar' && conFinal ? `<a class="btn btn-chico btn-fantasma" href="#/d/fallar/${encodeURIComponent(e.item_id)}?autora">${icono('libro', 16)}Versión final</a>` : ''}
-      ${mia && !e.archivada_en && e.dinamica !== 'consignas' ? `<a class="btn btn-chico" href="#/editar/${e.id}">${icono('lapiz', 16)}${e.dinamica === 'fallar' && !e.item_id?.startsWith('propio-') ? 'Explicaciones' : 'Editar'}</a>` : ''}
-      ${puedeDescargar ? `<button class="btn btn-chico btn-fantasma" id="b-copiar">${icono('copiar', 16)}Copiar</button>
-        <button class="btn btn-chico btn-fantasma" id="b-txt">${icono('descargar', 16)}.txt</button>
-        <button class="btn btn-chico btn-fantasma" id="b-pdf">${icono('imprimir', 16)}PDF</button>` : ''}
-      ${esTutor() && !e.archivada_en ? `<button class="btn btn-chico" id="b-ocultar">${icono(e.estado === 'oculta' ? 'ojo' : 'ojoNo', 16)}${e.estado === 'oculta' ? 'Mostrar' : 'Ocultar'}</button>` : ''}
-      ${botonBorrar(e)}
-    </div>
-    ${franjaArchivo(e)}
-    <article class="hoja">
-      <div class="hoja-cab">
-        <a href="#/perfil/${e.autor}" style="display:flex;gap:12px;align-items:center;text-decoration:none">
-          ${avatar(e.perfil, 48)}
-          <div><div class="autor-nombre" style="font-size:17px">${esc(e.perfil?.nombre || '')}</div>
-          <div class="autor-meta">${esc(fechaHora(e.creado))}${e.editada ? ` · <span class="marca-editada">editado</span>` : ''}${e.estado === 'oculta' ? ' · oculto para el grupo' : ''}</div>
-          ${etiquetaSoloTutor(e.perfil) ? `<div style="margin-top:4px">${etiquetaSoloTutor(e.perfil)}</div>` : ''}</div>
-        </a>
-        <span class="espaciador"></span>
-        ${etiquetaDinamica(e.dinamica)}
-      </div>
-      ${e.titulo ? `<h1>${esc(e.titulo)}</h1>` : ''}
-      ${consigna}
-      <div class="lectura">${e.vista ? sanitizar(e.vista) : parrafos(e.texto)}</div>
-      <div class="tenue" style="font-size:13px;margin-top:22px">${e.palabras} palabras</div>
-    </article>
-    <div style="margin-top:18px" id="reacciones">${barraReacciones(e.id, reacciones)}</div>
-    <div class="comentarios" id="comentarios"></div>
-  </div>`;
+  // Cada dinámica conserva sus conmutadores. La lectura crítica repinta el texto cada vez que
+  // cambian las notas: lo que se eligió se vuelve a aplicar en alPintar.
+  const ver = { pl: 'final', df: 'color', cp: 'color' };
+  const alPintar = t => {
+    t.querySelector('.v-pliegues')?.classList.toggle('ver-pliegues', ver.pl === 'pliegues');
+    t.querySelector('.v-definicional')?.classList.toggle('limpia', ver.df === 'limpia');
+    t.querySelector('.v-contrapuntos')?.classList.toggle('limpia', ver.cp === 'limpia');
+  };
+  const marcar = b => b.parentElement.querySelectorAll('button').forEach(x => { x.classList.toggle('on', x === b); x.setAttribute('aria-selected', x === b); });
 
-  // Pliegues: la entrega trae dos caras (texto final y pliegues); se elige cuál leer.
-  const vp = cont.querySelector('.lectura .v-pliegues');
-  if (vp) {
-    vp.closest('.lectura').insertAdjacentHTML('beforebegin', `<div class="conmutador v-pl-conmutador" role="tablist" aria-label="Versión">
-      <button type="button" role="tab" data-plv="final" class="on" aria-selected="true">Texto final</button>
-      <button type="button" role="tab" data-plv="pliegues" aria-selected="false">Pliegues</button></div>`);
-    cont.querySelector('.v-pl-conmutador').addEventListener('click', ev => {
-      const b = ev.target.closest('[data-plv]');
-      if (!b) return;
-      vp.classList.toggle('ver-pliegues', b.dataset.plv === 'pliegues');
-      b.parentElement.querySelectorAll('button').forEach(x => { x.classList.toggle('on', x === b); x.setAttribute('aria-selected', x === b); });
-    });
-  }
+  const alMontar = async (cont, lect) => {
+    // Pliegues: la entrega trae dos caras (texto final y pliegues); se elige cuál leer.
+    if (lect.querySelector('.v-pliegues')) {
+      lect.insertAdjacentHTML('beforebegin', `<div class="conmutador v-pl-conmutador" role="tablist" aria-label="Versión">
+        <button type="button" role="tab" data-plv="final" class="on" aria-selected="true">Texto final</button>
+        <button type="button" role="tab" data-plv="pliegues" aria-selected="false">Pliegues</button></div>`);
+      cont.querySelector('.v-pl-conmutador').addEventListener('click', ev => {
+        const b = ev.target.closest('[data-plv]');
+        if (!b) return;
+        ver.pl = b.dataset.plv;
+        alPintar(lect);
+        marcar(b);
+      });
+    }
 
-  // S+7: la reescritura o, al lado, el original (las entregas desde la versión 1.1 guardan el original con que se escribieron).
-  const orig = e.dinamica === 's7' ? (e.datos?.original?.parrafos ? e.datos.original : originalS7) : null;
-  if (orig?.parrafos?.length && e.datos?.cambios && Object.keys(e.datos.cambios).length) {
-    const { comparacionHTML, esPoema } = await import('../modulos/s7.js');
-    const lect = cont.querySelector('.lectura');
-    lect.insertAdjacentHTML('beforebegin', `<div class="conmutador s7-conmutador" role="tablist" aria-label="Versión">
-      <button type="button" role="tab" data-s7v="nueva" class="on" aria-selected="true">Reescritura</button>
-      <button type="button" role="tab" data-s7v="comparar" aria-selected="false">Comparar con el original</button></div>`);
-    lect.insertAdjacentHTML('afterend', `<div class="s7-comparar oculto">${comparacionHTML(orig.parrafos, e.datos.cambios, esPoema(orig))}</div>`);
-    cont.querySelector('.s7-conmutador').addEventListener('click', ev => {
-      const b = ev.target.closest('[data-s7v]');
-      if (!b) return;
-      const comparar = b.dataset.s7v === 'comparar';
-      lect.classList.toggle('oculto', comparar);
-      cont.querySelector('.s7-comparar').classList.toggle('oculto', !comparar);
-      b.parentElement.querySelectorAll('button').forEach(x => { x.classList.toggle('on', x === b); x.setAttribute('aria-selected', x === b); });
-    });
-  }
+    // S+7: la reescritura o, al lado, el original (las entregas desde la versión 1.1 guardan el original con que se escribieron).
+    const orig = e.dinamica === 's7' ? (e.datos?.original?.parrafos ? e.datos.original : originalS7) : null;
+    if (orig?.parrafos?.length && e.datos?.cambios && Object.keys(e.datos.cambios).length) {
+      const { comparacionHTML, esPoema } = await import('../modulos/s7.js');
+      lect.insertAdjacentHTML('beforebegin', `<div class="conmutador s7-conmutador" role="tablist" aria-label="Versión">
+        <button type="button" role="tab" data-s7v="nueva" class="on" aria-selected="true">Reescritura</button>
+        <button type="button" role="tab" data-s7v="comparar" aria-selected="false">Comparar con el original</button></div>`);
+      lect.insertAdjacentHTML('afterend', `<div class="s7-comparar oculto">${comparacionHTML(orig.parrafos, e.datos.cambios, esPoema(orig))}</div>`);
+      cont.querySelector('.s7-conmutador').addEventListener('click', ev => {
+        const b = ev.target.closest('[data-s7v]');
+        if (!b) return;
+        const comparar = b.dataset.s7v === 'comparar';
+        lect.classList.toggle('oculto', comparar);
+        cont.querySelector('.s7-comparar').classList.toggle('oculto', !comparar);
+        marcar(b);
+      });
+    }
 
-  // Fachadas: tocar un recuadro o un recorte lo amplía.
-  if (fachadas) fachadas.activarFigura(cont.querySelector('.fa-ref'), e.datos || {});
+    // Fachadas: tocar un recuadro o un recorte lo amplía.
+    if (fachadas) fachadas.activarFigura(cont.querySelector('.fa-ref'), e.datos || {});
 
-  // Literatura definicional: la escalera con sus colores (diccionario y escritura propia) o en lectura limpia.
-  const vdf = cont.querySelector('.lectura .v-definicional');
-  if (vdf?.querySelector('.v-df-d, .v-df-p')) {
-    vdf.closest('.lectura').insertAdjacentHTML('beforebegin', `<div class="conmutador df-conmutador" role="tablist" aria-label="Lectura">
-      <button type="button" role="tab" data-dfv="color" class="on" aria-selected="true">Con colores</button>
-      <button type="button" role="tab" data-dfv="limpia" aria-selected="false">Lectura limpia</button></div>`);
-    cont.querySelector('.df-conmutador').addEventListener('click', ev => {
-      const b = ev.target.closest('[data-dfv]');
-      if (!b) return;
-      vdf.classList.toggle('limpia', b.dataset.dfv === 'limpia');
-      b.parentElement.querySelectorAll('button').forEach(x => { x.classList.toggle('on', x === b); x.setAttribute('aria-selected', x === b); });
-    });
-  }
+    // Literatura definicional: la escalera con sus colores (diccionario y escritura propia) o en lectura limpia.
+    if (lect.querySelector('.v-definicional')?.querySelector('.v-df-d, .v-df-p')) {
+      lect.insertAdjacentHTML('beforebegin', `<div class="conmutador df-conmutador" role="tablist" aria-label="Lectura">
+        <button type="button" role="tab" data-dfv="color" class="on" aria-selected="true">Con colores</button>
+        <button type="button" role="tab" data-dfv="limpia" aria-selected="false">Lectura limpia</button></div>`);
+      cont.querySelector('.df-conmutador').addEventListener('click', ev => {
+        const b = ev.target.closest('[data-dfv]');
+        if (!b) return;
+        ver.df = b.dataset.dfv;
+        alPintar(lect);
+        marcar(b);
+      });
+    }
 
-  // Contrapuntos: la historia con los colores (la voz y quien escribe), en lectura limpia o la conversación tal como se dio.
-  const vcp = cont.querySelector('.lectura .v-contrapuntos');
-  if (vcp && contrapuntos) {
-    const lect = vcp.closest('.lectura');
-    lect.insertAdjacentHTML('beforebegin', `<div class="conmutador cp-conmutador" role="tablist" aria-label="Lectura">
-      <button type="button" role="tab" data-cpv="color" class="on" aria-selected="true">Con colores</button>
-      <button type="button" role="tab" data-cpv="limpia" aria-selected="false">Lectura limpia</button>
-      <button type="button" role="tab" data-cpv="conversacion" aria-selected="false">La conversación</button></div>
-      <p class="cp-leyenda cp-leyenda-entrega"><span class="cp-c-v">La voz</span> · <span>Quien escribe</span></p>`);
-    lect.insertAdjacentHTML('afterend', `<div class="cp-conversacion oculto"><p class="tenue cp-conv-nota">La conversación tal como se dio, antes de la versión preliminar.</p>${contrapuntos.conversacionHTML(e.datos?.turnos)}</div>`);
-    cont.querySelector('.cp-conmutador').addEventListener('click', ev => {
-      const b = ev.target.closest('[data-cpv]');
-      if (!b) return;
-      const ver = b.dataset.cpv;
-      vcp.classList.toggle('limpia', ver === 'limpia');
-      lect.classList.toggle('oculto', ver === 'conversacion');
-      cont.querySelector('.cp-conversacion').classList.toggle('oculto', ver !== 'conversacion');
-      cont.querySelector('.cp-leyenda-entrega').classList.toggle('oculto', ver !== 'color');
-      b.parentElement.querySelectorAll('button').forEach(x => { x.classList.toggle('on', x === b); x.setAttribute('aria-selected', x === b); });
-    });
-  }
+    // Contrapuntos: la historia con los colores (la voz y quien escribe), en lectura limpia o la conversación tal como se dio.
+    if (lect.querySelector('.v-contrapuntos') && contrapuntos) {
+      lect.insertAdjacentHTML('beforebegin', `<div class="conmutador cp-conmutador" role="tablist" aria-label="Lectura">
+        <button type="button" role="tab" data-cpv="color" class="on" aria-selected="true">Con colores</button>
+        <button type="button" role="tab" data-cpv="limpia" aria-selected="false">Lectura limpia</button>
+        <button type="button" role="tab" data-cpv="conversacion" aria-selected="false">La conversación</button></div>
+        <p class="cp-leyenda cp-leyenda-entrega"><span class="cp-c-v">La voz</span> · <span>Quien escribe</span></p>`);
+      lect.insertAdjacentHTML('afterend', `<div class="cp-conversacion oculto"><p class="tenue cp-conv-nota">La conversación tal como se dio, antes de la versión preliminar.</p>${contrapuntos.conversacionHTML(e.datos?.turnos)}</div>`);
+      cont.querySelector('.cp-conmutador').addEventListener('click', ev => {
+        const b = ev.target.closest('[data-cpv]');
+        if (!b) return;
+        const v = b.dataset.cpv;
+        if (v !== 'conversacion') ver.cp = v;
+        alPintar(lect);
+        lect.classList.toggle('oculto', v === 'conversacion');
+        cont.querySelector('.cp-conversacion').classList.toggle('oculto', v !== 'conversacion');
+        cont.querySelector('.cp-leyenda-entrega').classList.toggle('oculto', v !== 'color');
+        marcar(b);
+      });
+    }
+  };
 
-  activarReacciones(cont.querySelector('#reacciones'), reacciones);
-  await montarComentarios(cont.querySelector('#comentarios'), e);
-  // Desde una notificación de comentario: ir a los comentarios.
-  if (query.nota) cont.querySelector('#comentarios')?.scrollIntoView({ block: 'start', behavior: 'smooth' });
-
-  const nombre = `${e.perfil?.nombre || 'texto'} ${e.titulo || d?.nombre || ''}`;
-  cont.querySelector('#b-copiar')?.addEventListener('click', () => copiar([e.titulo, e.texto].filter(Boolean).join('\n\n')));
-  cont.querySelector('#b-txt')?.addEventListener('click', () => descargarTXT([e], nombre));
-  cont.querySelector('#b-pdf')?.addEventListener('click', () => imprimir([e], e.titulo || d?.nombre || 'Texto', e.perfil?.nombre || ''));
-  cont.querySelector('#b-ocultar')?.addEventListener('click', async () => {
-    try {
-      await estado.api.cambiarEstadoEntrega(e.id, e.estado === 'oculta' ? 'publicada' : 'oculta');
-      aviso(e.estado === 'oculta' ? 'El texto vuelve a estar visible.' : 'El texto quedó oculto para el grupo.');
-      location.reload();
-    } catch (err) { errorAviso(err); }
-  });
-  // Borrar (al archivo), volver a publicar, borrar definitivamente; y, para el tutor, devolver o borrar para siempre.
-  activarArchivo(cont.firstElementChild, async () => e, accion => {
-    if (accion === 'definitivo') location.hash = '#/archivo';
-    else if (accion === 'eliminar') location.hash = '#/tutor/archivo';
-    else irA(location.hash);
+  // El texto se lee y se comenta como en las consignas: fragmentos con notas al margen.
+  const { default: lecturaCritica } = await import('./lectura-critica.js');
+  return lecturaCritica(cont, e, {
+    nota: query.nota,
+    volver: `<a class="btn btn-fantasma btn-chico" href="#/muro">${icono('izquierda', 16)}Muro</a>`,
+    acciones: `${mia && !e.archivada_en && e.dinamica === 'fallar' && conFinal ? `<a class="btn btn-chico btn-fantasma" href="#/d/fallar/${encodeURIComponent(e.item_id)}?autora">${icono('libro', 16)}Versión final</a>` : ''}
+      ${mia && !e.archivada_en ? `<a class="btn btn-chico" href="#/editar/${e.id}">${icono('lapiz', 16)}${e.dinamica === 'fallar' && !e.item_id?.startsWith('propio-') ? 'Explicaciones' : 'Editar'}</a>` : ''}`,
+    etiqueta: etiquetaDinamica(e.dinamica),
+    ref: consigna,
+    contexto: d?.nombre || '',
+    alPintar,
+    alMontar,
   });
 }
 

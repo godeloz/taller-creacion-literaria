@@ -2108,3 +2108,8 @@ button.df-escalon:focus-visible { outline: 2px solid var(--violeta); outline-off
   .cp-responder-pie .btn { flex: 1; justify-content: center; }
 }
 @media print { .cp-conmutador, .cp-leyenda-entrega, .cp-conversacion { display: none !important; } .v-contrapuntos .v-cp-v { color: inherit; } }
+
+/* ---------- Lectura crítica en todos los textos (notas sobre fragmentos fuera de las consignas) ---------- */
+.lc-cita.suelta { cursor: default; border-left-color: var(--linea-2); color: var(--tenue); text-decoration: line-through; text-decoration-color: rgba(106, 100, 115, .45); }
+.lc-cambio { display: flex; align-items: center; gap: 5px; margin: 0 0 6px; font-size: 12.5px; font-weight: 600; color: var(--tenue); }
+.lc-cambio[title] { cursor: help; }

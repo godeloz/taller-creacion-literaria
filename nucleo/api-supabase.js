@@ -319,6 +319,14 @@ export function crearApiSupabase(CONFIG) {
     async borrarComentario(id) {
       ok(await sb.from('comentarios').delete().eq('id', id));
     },
+    // Al editar un texto: las anclas de todas sus notas (también las que su autor no puede leer)
+    // y el cambio de esas anclas. Solo el autor del texto o el tutor (20-notas-en-todos-los-textos.sql).
+    async notasParaReubicar(entrega_id) {
+      return ok(await sb.rpc('notas_para_reubicar', { p_entrega: entrega_id })) || [];
+    },
+    async reubicarNotas(entrega_id, cambios) {
+      ok(await sb.rpc('reubicar_notas', { p_entrega: entrega_id, p_anclas: cambios }));
+    },
 
     // ---------- insignias ----------
     async insignias() {
