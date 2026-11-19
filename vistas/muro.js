@@ -6,7 +6,7 @@ import { tarjetaEntrega, vacio, ICONO_DINAMICA, colorTexto, acordeonReto } from 
 import { miAsignacion, estadoDe } from '../nucleo/consignas.js';
 
 // Segundo nivel del muro: las respuestas a un mismo elemento de una dinámica.
-const TODOS = { reto: 'Todos los días', maraton: 'Todas las cartas', poema: 'Todos los poemas', cutup: 'Todos los juegos', s7: 'Todos los textos', forma: 'Todas las consignas', fallar: 'Todos los textos', pliegues: 'Todos los textos', consignas: 'Todas las consignas', 'correo-secretos': 'Todos los secretos', 'juego-de-dados': 'Todas las mesas', fachadas: 'Todas las fachadas', contrapuntos: 'Todas las voces' };
+const TODOS = { reto: 'Todos los días', maraton: 'Todas las cartas', poema: 'Todos los poemas', cutup: 'Todos los juegos', s7: 'Todos los textos', forma: 'Todas las consignas', fallar: 'Todos los textos', pliegues: 'Todos los textos', consignas: 'Todas las consignas', 'correo-secretos': 'Todos los secretos', 'juego-de-dados': 'Todas las mesas', fachadas: 'Todas las fachadas', contrapuntos: 'Todas las voces', partituras: 'Todas las partituras' };
 const PROPIOS = '_propios';
 // En estas dinámicas, las respuestas a un texto se abren cuando uno publica la suya.
 const A_CIEGAS = ['fallar', 'consignas'];
@@ -178,8 +178,9 @@ export default async function muro(cont, { query }) {
     entregas = entregas.filter(deGrupo);
     if (soloPropios) entregas = entregas.filter(e => e.item_id?.startsWith('propio-'));
     // Pliegues (resalta lo que viene del texto de origen), Correo de secretos (epígrafe con el secreto)
-    // Juego de dados (la fila de dados) y Fachadas (el trazo del recorrido): la tarjeta necesita datos, que la lista no trae.
-    for (const din of ['pliegues', 'correo-secretos', 'juego-de-dados', 'fachadas']) {
+    // Juego de dados (la fila de dados), Fachadas (el trazo del recorrido) y Partituras (la curva de las frases):
+    // la tarjeta necesita datos, que la lista no trae.
+    for (const din of ['pliegues', 'correo-secretos', 'juego-de-dados', 'fachadas', 'partituras']) {
       if (!entregas.some(e => e.dinamica === din && !e.datos)) continue;
       const conDatos = await estado.api.entregas({ ...f, dinamica: din, conVista: true, incluirOcultas: esTutor() }).catch(() => []);
       const datos = new Map(conDatos.map(x => [x.id, x.datos]));

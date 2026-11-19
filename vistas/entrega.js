@@ -25,6 +25,7 @@ export default async function vistaEntrega(cont, { params, query = {} }) {
   let originalS7 = null;
   let fachadas = null;   // Fachadas: el módulo pinta la fachada con el recorrido
   let contrapuntos = null;   // Contrapuntos: el módulo pinta la conversación
+  let partituras = null;     // Partituras: el módulo pinta la partitura debajo del texto
   if (e.dinamica === 'consignas' && e.item_id) {
     const cs = await estado.api.consigna(e.item_id).catch(() => null);
     if (cs) consigna = `<div class="consigna-ref"><b>Consigna</b>${esc(cs.titulo)}${enlaceRespuestas(e)}</div>`;
@@ -38,6 +39,9 @@ export default async function vistaEntrega(cont, { params, query = {} }) {
   } else if (e.dinamica === 'contrapuntos') {
     contrapuntos = await import('../modulos/contrapuntos.js');
     consigna = refContrapunto(e, contrapuntos);
+  } else if (e.dinamica === 'partituras') {
+    partituras = await import('../modulos/partituras.js');
+    consigna = partituras.refHTML(e, ['libre', 'analizado'].includes(e.item_id) ? '' : enlaceRespuestas(e));
   } else if (e.item_id) {
     try {
       const c = await estado.api.contenido(e.dinamica, e.item_id);
@@ -75,11 +79,14 @@ export default async function vistaEntrega(cont, { params, query = {} }) {
 
   // Cada dinámica conserva sus conmutadores. La lectura crítica repinta el texto cada vez que
   // cambian las notas: lo que se eligió se vuelve a aplicar en alPintar.
-  const ver = { pl: 'final', df: 'color', cp: 'color' };
+  const ver = { pl: 'final', df: 'color', cp: 'color', pt: 'color' };
+  let panelPt = null;
   const alPintar = t => {
     t.querySelector('.v-pliegues')?.classList.toggle('ver-pliegues', ver.pl === 'pliegues');
     t.querySelector('.v-definicional')?.classList.toggle('limpia', ver.df === 'limpia');
     t.querySelector('.v-contrapuntos')?.classList.toggle('limpia', ver.cp === 'limpia');
+    t.querySelector('.v-partituras')?.classList.toggle('limpia', ver.pt === 'limpia');
+    panelPt?.repintar();
   };
   const marcar = b => b.parentElement.querySelectorAll('button').forEach(x => { x.classList.toggle('on', x === b); x.setAttribute('aria-selected', x === b); });
 
@@ -153,11 +160,28 @@ export default async function vistaEntrega(cont, { params, query = {} }) {
         marcar(b);
       });
     }
+
+    // Partituras: el texto con los colores de sus rachas (o limpio) y, debajo, la partitura que sigue la lectura.
+    if (lect.querySelector('.v-partituras') && partituras) {
+      if (lect.querySelector('.v-partituras [class*="pt-c-"]')) {
+        lect.insertAdjacentHTML('beforebegin', `<div class="conmutador pt-conmutador" role="tablist" aria-label="Lectura">
+          <button type="button" role="tab" data-ptv="color" class="on" aria-selected="true">Con colores</button>
+          <button type="button" role="tab" data-ptv="limpia" aria-selected="false">Lectura limpia</button></div>`);
+        cont.querySelector('.pt-conmutador').addEventListener('click', ev => {
+          const b = ev.target.closest('[data-ptv]');
+          if (!b) return;
+          ver.pt = b.dataset.ptv;
+          alPintar(lect);
+          marcar(b);
+        });
+      }
+      panelPt = partituras.montarEnEntrega(cont, lect, e);
+    }
   };
 
   // El texto se lee y se comenta como en las consignas: fragmentos con notas al margen.
   const { default: lecturaCritica } = await import('./lectura-critica.js');
-  return lecturaCritica(cont, e, {
+  const quitar = await lecturaCritica(cont, e, {
     nota: query.nota,
     sugerencias: 'sugerencias' in query,   // desde el aviso: abrir los cambios sugeridos
     volver: `<a class="btn btn-fantasma btn-chico" href="#/muro">${icono('izquierda', 16)}Muro</a>`,
@@ -169,6 +193,7 @@ export default async function vistaEntrega(cont, { params, query = {} }) {
     alPintar,
     alMontar,
   });
+  return () => { quitar?.(); panelPt?.destruir(); };
 }
 
 // Enlace a todas las respuestas a la misma consigna (texto, carta, poema o reto del día).
@@ -176,7 +201,7 @@ function enlaceRespuestas(e) {
   if (e.dinamica === 'consignas' && e.item_id) return `<a class="enlace-respuestas" href="#/consignas/${encodeURIComponent(e.item_id)}">Ver los textos de esta consigna</a>`;
   const href = e.dinamica === 'reto' && e.reto_fecha ? `#/muro?reto=${e.reto_fecha}`
     : e.item_id && !e.item_id.startsWith('propio-') ? `#/muro?dinamica=${encodeURIComponent(e.dinamica)}&item=${encodeURIComponent(e.item_id)}` : '';
-  const a = { reto: 'a este reto', maraton: 'a esta carta', poema: 'a este poema', s7: 'a este texto', fallar: 'a este texto', pliegues: 'a este texto', 'correo-secretos': 'a este secreto', 'juego-de-dados': 'a esta mesa', definicional: 'a esta frase', fachadas: 'a esta fachada', contrapuntos: 'a esta voz' }[e.dinamica] || 'a esta consigna';
+  const a = { reto: 'a este reto', maraton: 'a esta carta', poema: 'a este poema', s7: 'a este texto', fallar: 'a este texto', pliegues: 'a este texto', 'correo-secretos': 'a este secreto', 'juego-de-dados': 'a esta mesa', definicional: 'a esta frase', fachadas: 'a esta fachada', contrapuntos: 'a esta voz', partituras: 'a esta partitura' }[e.dinamica] || 'a esta consigna';
   return href ? `<a class="enlace-respuestas" href="${href}">Ver todas las respuestas ${a}</a>` : '';
 }
 

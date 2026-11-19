@@ -1,0 +1,33 @@
+{
+  "partituras": [
+    {
+      "id": "veintidos-llaves",
+      "titulo": "Veintidós llaves",
+      "autor": "Taller de Creación Literaria",
+      "anio": "2026",
+      "nota": "Texto escrito para el ejemplo. Lo reemplaza un cuento del banco.",
+      "parrafos": [
+        "La casa de la abuela tenía veintidós llaves y ninguna abría nada. Las encontramos en una lata de galletas, envueltas en un pañuelo con unas iniciales que no eran de nadie de la familia. Mi hermano quiso probarlas todas. Yo no.",
+        "Empezamos por el portón. Después la alacena, el baúl del pasillo, el reloj de pared que llevaba años detenido en las cuatro y diez. Ninguna entró. Ninguna giró. Ninguna se rompió tampoco, y eso, no sé por qué, nos pareció lo más extraño de todo.",
+        "—¿Y si son de otra casa? —preguntó él.",
+        "—Entonces la abuela tuvo otra casa —le dije.",
+        "Esa noche, mientras mi madre dormía en el sofá con la radio encendida, volvimos a contar las llaves sobre la mesa de la cocina, las ordenamos por tamaño, por color, por el desgaste de los dientes, y descubrimos que una de ellas, la más pequeña, tenía grabada una fecha: el día en que la abuela se había casado. La guardamos aparte, como quien guarda un diente de leche, y no le dijimos nada a nadie.",
+        "Al día siguiente vendimos la casa."
+      ]
+    },
+    {
+      "id": "la-estacion",
+      "titulo": "La estación",
+      "autor": "Taller de Creación Literaria",
+      "anio": "2026",
+      "nota": "Texto escrito para el ejemplo: tiene una monotonía, una ráfaga, un diálogo y un caudal.",
+      "parrafos": [
+        "La estación quedó vacía a las once y media de la noche. El último tren se llevó el ruido de las maletas y los pasos. En el andén solo quedaron el reloj, la lluvia y una mujer. Ella miraba la vía como quien espera que algo vuelva atrás.",
+        "Nada volvió. Un perro cruzó los rieles, despacio, y se perdió. Ella contó hasta diez.",
+        "—¿Espera a alguien? —preguntó el guarda desde la puerta de su caseta, sin levantarse.",
+        "—A nadie —dijo ella—. Espero que deje de llover, nada más.",
+        "El guarda volvió a su periódico, a la radio que crepitaba sobre la mesa, al termo de café que su mujer le llenaba cada tarde (siempre a la misma hora, siempre con la misma bufanda), y ella siguió de pie bajo el alero, contando los vagones que no llegaban. Pensó en la casa: en la llave debajo de la maceta, en la luz del pasillo que nadie había apagado, en la carta que dejó sobre la mesa sin firmar y que ahora, con esta lluvia, ya habría leído alguien. Cuando por fin dejó de llover, el reloj marcaba la una y diez, y ella —sin saber muy bien por qué— tomó su maleta y caminó hacia la salida."
+      ]
+    }
+  ]
+}

@@ -27,4 +27,5 @@ export const MODULOS = {
   definicional: () => import('./definicional.js'),
   fachadas: () => import('./fachadas.js'),
   contrapuntos: () => import('./contrapuntos.js'),
+  partituras: () => import('./partituras.js'),
 };

@@ -35,6 +35,7 @@ const P = {
   fichas: '<rect x="3" y="5" width="7" height="5" rx="1"/><rect x="12" y="5" width="9" height="5" rx="1"/><rect x="6" y="14" width="10" height="5" rx="1"/>',
   tijeras: '<circle cx="6" cy="7" r="3"/><circle cx="6" cy="17" r="3"/><path d="M8.5 8.5L20 19M8.5 15.5L20 5"/>',
   curva: '<path d="M2 16c3 0 4-9 8-9s4 11 12 3"/>',
+  partitura: '<path d="M9 17.5V6.5l11-2.5v11"/><path d="M9 10l11-2.5"/><ellipse cx="6.5" cy="17.5" rx="2.5" ry="2"/><ellipse cx="17.5" cy="15" rx="2.5" ry="2"/>',
   diccionario: '<path d="M6 4h12v16H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2z"/><path d="M9 9l2 5 2-5M9.8 12h2.4"/><path d="M15 9v5"/>',
   llama: '<path d="M12 21c-3.9 0-6.8-2.6-6.8-6.3 0-3.5 2.6-5.4 3.7-9.2 2.3 1.4 3.1 3.5 3.1 5.2 1.1-.7 1.8-1.9 2-3.2 2.1 1.7 4.8 4.5 4.8 7.3 0 3.6-2.8 6.2-6.8 6.2z"/>',
   chispa: '<path d="M12 3l1.8 5.7 5.7 1.8-5.7 1.8L12 18l-1.8-5.7-5.7-1.8 5.7-1.8z"/>',

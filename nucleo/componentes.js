@@ -13,7 +13,7 @@ export function colorTexto(hex) {
   return (L + 0.05) / 0.0588 >= 4.5 ? '#16141C' : '#FFFFFF';
 }
 
-export const ICONO_DINAMICA = { reto: 'chispa', maraton: 'cartas', poema: 'fichas', cutup: 'tijeras', s7: 'diccionario', forma: 'curva', fallar: 'revision', consignas: 'pagina', pliegues: 'pliegue', 'correo-secretos': 'sobre', 'juego-de-dados': 'dado', definicional: 'libro', fachadas: 'fachada', contrapuntos: 'dialogo' };
+export const ICONO_DINAMICA = { reto: 'chispa', maraton: 'cartas', poema: 'fichas', cutup: 'tijeras', s7: 'diccionario', forma: 'curva', fallar: 'revision', consignas: 'pagina', pliegues: 'pliegue', 'correo-secretos': 'sobre', 'juego-de-dados': 'dado', definicional: 'libro', fachadas: 'fachada', contrapuntos: 'dialogo', partituras: 'partitura' };
 
 export function avatar(p, tam = 40) {
   if (!p) return `<span class="avatar" style="width:${tam}px;height:${tam}px;background:var(--linea)"></span>`;
@@ -83,6 +83,22 @@ export function trazoFachada(d, { ancho = 220 } = {}) {
     + '</svg>';
 }
 
+// Partituras: la curva de las frases (una por nota, a su altura) con el color de sus rachas. Va en la tarjeta del muro.
+// d.firma: [[palabras, racha]…] (racha: m, r, c, a o '').
+const COLOR_RACHA = { m: '#D93025', r: '#3D6BE8', c: '#D98A00', a: '#00A884' };
+export function firmaPartitura(d, { ancho = 260, alto = 46 } = {}) {
+  const f = (Array.isArray(d?.firma) ? d.firma : []).filter(x => Array.isArray(x) && Number(x[0]) > 0);
+  if (f.length < 2) return '';
+  const total = f.reduce((s, x) => s + Number(x[0]), 0);
+  const max = Math.max(45, ...f.map(x => Number(x[0])));
+  const n = v => Math.round(v * 10) / 10;
+  let x = 4;
+  const pts = f.map(([w, r]) => { const a = (ancho - 8) * Number(w) / total; const p = [x + a / 2, alto - 6 - (alto - 14) * Math.min(Number(w), max) / max, COLOR_RACHA[r] || '#16141C']; x += a; return p; });
+  return `<svg class="firma-partitura" width="${ancho}" height="${alto}" viewBox="0 0 ${ancho} ${alto}" role="img" aria-label="Partitura: ${f.length} frases">`
+    + `<polyline points="${pts.map(p => `${n(p[0])},${n(p[1])}`).join(' ')}" fill="none" stroke="#16141C" stroke-opacity=".28" stroke-width="1.6" stroke-linejoin="round"/>`
+    + pts.map(p => `<circle cx="${n(p[0])}" cy="${n(p[1])}" r="2.6" fill="${p[2]}"/>`).join('') + '</svg>';
+}
+
 export function tarjetaEntrega(e, reacciones = []) {
   const mias = reacciones.filter(r => r.entrega_id === e.id);
   const conteo = t => mias.filter(r => r.tipo === t).length;
@@ -104,6 +120,7 @@ export function tarjetaEntrega(e, reacciones = []) {
     ${e.dinamica === 'correo-secretos' && e.datos?.traduccion ? `<div class="entrada-epigrafe">${esc(/^[«"“]/.test(e.datos.traduccion.trim()) ? e.datos.traduccion.trim() : `«${e.datos.traduccion.trim()}»`)}</div>` : ''}
     ${e.dinamica === 'juego-de-dados' ? filaDados(e.datos) : ''}
     ${e.dinamica === 'fachadas' && e.datos?.puntos ? `<div class="entrada-trazo">${trazoFachada(e.datos)}</div>` : ''}
+    ${e.dinamica === 'partituras' && e.datos?.firma ? `<div class="entrada-firma">${firmaPartitura(e.datos)}</div>` : ''}
     <div class="entrada-extracto">${e.dinamica === 'pliegues' && Array.isArray(e.datos?.marcas) ? extractoMarcado(extracto, e.datos.marcas) : esc(extracto)}</div>
     <div class="entrada-pie">
       <span class="mini-reacciones">
